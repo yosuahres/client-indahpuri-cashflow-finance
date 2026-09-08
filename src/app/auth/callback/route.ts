@@ -7,7 +7,7 @@ import { safeRedirectPath } from "@/lib/site-url"
  * PKCE code exchange.
  *
  * Supabase sends the user here after they click an email confirmation link or
- * complete an OAuth flow: `/auth/callback?code=...&next=/cash-flow`.
+ * complete an OAuth flow: `/auth/callback?code=...&next=/dashboard`.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl

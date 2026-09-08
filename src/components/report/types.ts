@@ -1,12 +1,29 @@
-/** How a row renders. Shared by the Cash Flow and Profit & Loss statements. */
-export type RowVariant = "section" | "item" | "total" | "grand" | "spacer"
-
-export type ReportRow = {
-  id: string
+/** One plotted series. Colors come from the validated categorical palette. */
+export type ChartSeries = {
+  key: string
   label: string
-  variant: RowVariant
-  /** One value per period, in the report currency. */
+  /** Used in the tooltip, where the full label does not fit. */
+  shortLabel: string
+  color: string
   values: number[]
-  /** Section rows own the item rows that follow them, and can collapse them. */
-  sectionId?: string
+}
+
+/** One slice of a category breakdown, already resolved to a share and a color. */
+export type CategorySlice = {
+  label: string
+  value: number
+  /** Fraction of the pie, 0-1. */
+  share: number
+  color: string
+}
+
+/** One recorded transaction, as the statement's detail table shows it. */
+export type TransactionDetail = {
+  id: string
+  /** `YYYY-MM-DD`. */
+  occurredOn: string
+  kind: "income" | "expense"
+  category: string
+  account: string
+  amount: number
 }

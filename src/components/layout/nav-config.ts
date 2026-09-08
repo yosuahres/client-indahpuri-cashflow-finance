@@ -1,10 +1,21 @@
-import { PlusCircle, ScanEye, type LucideIcon } from "lucide-react"
+import { LayoutDashboard, PlusCircle, ScanEye, type LucideIcon } from "lucide-react"
 
 export type NavItem = {
   label: string
   /** Omitted while the page has not been built yet. */
   href?: string
 }
+
+export type NavLink = {
+  label: string
+  href: string
+  icon: LucideIcon
+}
+
+/** Standalone links, pinned above the collapsible groups. */
+export const NAV_LINKS: NavLink[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+]
 
 export type NavGroup = {
   label: string
@@ -23,7 +34,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: ScanEye,
     defaultOpen: true,
     items: [
-      { label: "Cash Flow", href: "/cash-flow" },
+      { label: "Laporan Keuangan", href: "/reporting" },
       { label: "Profit and Loss", href: "/profit-and-loss" },
     ],
   },

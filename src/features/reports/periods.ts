@@ -1,14 +1,7 @@
-import type { CashFlowSectionKey } from "./types"
+/** Period columns shared by every statement. */
 
 export const PERIODICITIES = ["Monthly", "Quarterly", "Yearly"] as const
 export type Periodicity = (typeof PERIODICITIES)[number]
-
-/** Categorical slots 1-3 of the validated palette (blue / orange / aqua). */
-export const SECTION_COLORS: Record<CashFlowSectionKey, string> = {
-  operations: "#2a78d6",
-  investing: "#eb6834",
-  financing: "#1baf7a",
-}
 
 export const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",

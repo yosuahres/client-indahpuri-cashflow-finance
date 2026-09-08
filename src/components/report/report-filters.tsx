@@ -6,7 +6,7 @@ import { useTransition } from "react"
 import { DatePicker } from "@/components/form/date-picker"
 import { Select } from "@/components/form/select"
 import { cn } from "@/lib/cn"
-import { PERIODICITIES } from "../constants"
+import { PERIODICITIES } from "@/features/reports/periods"
 
 const control =
   "h-10 w-full rounded-md bg-neutral-100 px-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-2 focus:outline-offset-0 focus:outline-neutral-800"

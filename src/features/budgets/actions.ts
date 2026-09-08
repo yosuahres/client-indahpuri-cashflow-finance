@@ -32,6 +32,7 @@ export async function createBudget(
     .insert({
       user_id: user.id,
       name: input.name,
+      kind: input.kind,
       section: input.section,
       category: input.category || null,
       cost_center: input.costCenter || null,
@@ -81,5 +82,5 @@ export async function createBudget(
   }
 
   refresh()
-  redirect("/cash-flow")
+  redirect("/dashboard")
 }

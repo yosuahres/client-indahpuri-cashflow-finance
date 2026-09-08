@@ -17,10 +17,10 @@ export default async function HomePage() {
 
         <div className="mt-8 flex flex-col gap-3">
           <Link
-            href={user ? "/cash-flow" : "/login"}
+            href={user ? "/dashboard" : "/login"}
             className="inline-flex h-10 items-center justify-center rounded-md bg-black px-4 text-sm font-medium text-white transition-opacity hover:opacity-80"
           >
-            {user ? "Open Cash Flow" : "Sign in"}
+            {user ? "Open Dashboard" : "Sign in"}
           </Link>
           {user ? null : (
             <Link

@@ -20,3 +20,26 @@ export function formatCompact(value: number) {
   if (value === 0) return "0"
   return idrCompact.format(value)
 }
+
+const percent = new Intl.NumberFormat("id-ID", {
+  style: "percent",
+  maximumFractionDigits: 1,
+})
+
+/** Share of a whole: "23,4%". Takes a fraction, not a percentage. */
+export function formatPercent(value: number) {
+  return percent.format(value)
+}
+
+const day = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  // occurred_on is a plain calendar date; UTC keeps it off the local clock.
+  timeZone: "UTC",
+})
+
+/** "8 Sep 2026" from a `YYYY-MM-DD` date. */
+export function formatDate(value: string) {
+  return day.format(new Date(`${value}T00:00:00Z`))
+}

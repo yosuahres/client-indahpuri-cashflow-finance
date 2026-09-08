@@ -12,7 +12,7 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/cn"
-import { NAV_GROUPS, type NavGroup } from "./nav-config"
+import { NAV_GROUPS, NAV_LINKS, type NavGroup } from "./nav-config"
 
 function initials(name: string) {
   return name
@@ -22,6 +22,37 @@ function initials(name: string) {
     .slice(0, 2)
     .join("")
     .toUpperCase()
+}
+
+function NavLinks() {
+  const pathname = usePathname()
+
+  return (
+    <ul className="mb-1">
+      {NAV_LINKS.map((link) => {
+        const active = pathname === link.href
+        const Icon = link.icon
+
+        return (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm",
+                active
+                  ? "bg-white font-medium text-neutral-900 shadow-sm ring-1 ring-black/5"
+                  : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900",
+              )}
+            >
+              <Icon className="size-4 shrink-0 text-neutral-500" strokeWidth={1.75} />
+              <span className="flex-1 truncate text-left">{link.label}</span>
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
+  )
 }
 
 function NavGroupBlock({ group }: { group: NavGroup }) {
@@ -100,10 +131,10 @@ export function AppSidebar({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold text-neutral-900">
-              Financial Reports
+              Indah Puri
             </span>
             <span className="block truncate text-xs text-neutral-500">
-              Indah Puri
+              Cash Flow
             </span>
           </span>
           <ChevronsUpDown className="size-4 shrink-0 text-neutral-400" strokeWidth={2} />
@@ -131,6 +162,7 @@ export function AppSidebar({
 
       {/* Report navigation */}
       <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+        <NavLinks />
         {NAV_GROUPS.map((group) => (
           <NavGroupBlock key={group.label} group={group} />
         ))}

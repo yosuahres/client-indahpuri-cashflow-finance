@@ -1,4 +1,4 @@
-import { PERIODICITIES, endOfYear, startOfYear, type Periodicity } from "./constants"
+import { PERIODICITIES, endOfYear, startOfYear, type Periodicity } from "./periods"
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 

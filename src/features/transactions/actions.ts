@@ -55,5 +55,5 @@ export async function createTransaction(
     return { message: "Transaction saved.", savedAt: Date.now() }
   }
 
-  redirect("/cash-flow")
+  redirect("/dashboard")
 }

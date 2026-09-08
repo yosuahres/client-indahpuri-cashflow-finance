@@ -4,7 +4,7 @@ import { useState } from "react"
 
 import { useElementWidth } from "@/hooks/use-element-size"
 import { formatCompact, formatCurrency } from "@/lib/format"
-import type { CashFlowSeries } from "../types"
+import type { ChartSeries } from "./types"
 
 const HEIGHT = 300
 const MARGIN = { top: 16, right: 12, bottom: 36, left: 84 }
@@ -74,12 +74,19 @@ function barPath(x: number, width: number, baselineY: number, valueY: number) {
   ].join(" ")
 }
 
-export function CashFlowChart({
+/**
+ * Grouped bars against a zero baseline: one group per period, one bar per
+ * series. Statement-agnostic — the caller supplies the labelled series.
+ */
+export function SeriesChart({
   periods,
   series,
+  label,
 }: {
   periods: string[]
-  series: CashFlowSeries[]
+  series: ChartSeries[]
+  /** Describes the whole plot to assistive tech. */
+  label: string
 }) {
   const { ref, width } = useElementWidth<HTMLDivElement>()
   const [hovered, setHovered] = useState<number | null>(null)
@@ -114,7 +121,7 @@ export function CashFlowChart({
             width={width}
             height={HEIGHT}
             role="img"
-            aria-label="Cash flow by section for each period"
+            aria-label={label}
             onPointerLeave={() => setHovered(null)}
           >
             {/* Gridlines and value axis */}
@@ -189,7 +196,7 @@ export function CashFlowChart({
                     fill="transparent"
                     tabIndex={0}
                     role="button"
-                    aria-label={`${period} cash flow detail`}
+                    aria-label={`${period} detail`}
                     onPointerEnter={() => setHovered(periodIndex)}
                     onFocus={() => setHovered(periodIndex)}
                     onBlur={() => setHovered(null)}

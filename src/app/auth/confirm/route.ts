@@ -9,7 +9,7 @@ import { safeRedirectPath } from "@/lib/site-url"
  *
  * Use this instead of `/auth/callback` if you switch the Supabase email
  * templates over to `{{ .TokenHash }}`, which produces links shaped like
- * `/auth/confirm?token_hash=...&type=signup&next=/cash-flow`.
+ * `/auth/confirm?token_hash=...&type=signup&next=/dashboard`.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl
