@@ -28,7 +28,7 @@ export default async function CashFlowPage({
 
   return (
     <>
-      <Topbar title="Cash Flow" statement="/cash-flow" />
+      <Topbar title="Cash Flow" />
 
       <main className="min-h-0 flex-1 overflow-y-auto">
         {!ok ? (

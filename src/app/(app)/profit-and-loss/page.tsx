@@ -26,7 +26,7 @@ export default async function ProfitAndLossPage({
 
   return (
     <>
-      <Topbar title="Profit and Loss" statement="/profit-and-loss" />
+      <Topbar title="Profit and Loss" />
 
       <main className="min-h-0 flex-1 overflow-y-auto">
         {!ok ? (
