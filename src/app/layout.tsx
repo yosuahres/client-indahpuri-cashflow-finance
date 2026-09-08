@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Finance Apps",
-    template: "%s · Finance Apps",
+    default: "Indah Puri Apps",
+    template: "%s · Apps",
   },
-  description: "Personal finance tracking.",
+  description: "Indah Puri CashFlow Management",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
