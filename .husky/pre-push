@@ -1,0 +1,5 @@
+# Last gate before code reaches GitHub — and, on main, before Vercel deploys it.
+# Runs the same checks as CI: lint, types, and a real production build.
+pnpm lint
+pnpm typecheck
+pnpm build

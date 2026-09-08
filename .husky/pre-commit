@@ -1,0 +1,6 @@
+# Lint (and auto-fix) only the files being committed. Fast enough to run every time.
+pnpm exec lint-staged
+
+# Types are project-wide: a change in one file can break another, so check the
+# whole project rather than just the staged files.
+pnpm typecheck
