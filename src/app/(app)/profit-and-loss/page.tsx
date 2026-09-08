@@ -1,10 +1,9 @@
 import type { Metadata } from "next"
 
 import { Topbar } from "@/components/layout/topbar"
-import { ReportTable } from "@/components/report/report-table"
-import { SummaryTiles } from "@/components/report/summary-tiles"
-import { ReportFilters } from "@/features/cash-flow/components/report-filters"
-import { readReportRange } from "@/features/cash-flow/range"
+import { ReportFilters } from "@/components/report/report-filters"
+import { TransactionTable } from "@/components/report/transaction-table"
+import { readReportRange } from "@/features/reports/range"
 import { loadProfitAndLossReport } from "@/features/profit-and-loss/report"
 
 export const metadata: Metadata = {
@@ -46,18 +45,9 @@ export default async function ProfitAndLossPage({
           today={range.today}
         />
 
-        <SummaryTiles
-          tiles={[
-            { label: "Total Income", value: report.totals.income },
-            { label: "Total Expense", value: report.totals.expense },
-            { label: "Net Profit", value: report.totals.netProfit, tone: "red" as const },
-          ]}
-        />
-
-        <ReportTable
-          periods={report.periods}
-          rows={report.rows}
-          caption="Income and expense by category and period."
+        <TransactionTable
+          transactions={report.transactions}
+          caption="Every transaction recorded in the range, newest first."
         />
       </main>
     </>
