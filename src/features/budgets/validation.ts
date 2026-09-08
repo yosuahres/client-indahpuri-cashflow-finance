@@ -1,7 +1,8 @@
-import { isFrequency, isSection } from "@/lib/finance"
+import { isFrequency, isKind, isSection } from "@/lib/finance"
 
 export type BudgetInput = {
   name: string
+  kind: string
   section: string
   category: string
   costCenter: string
@@ -15,6 +16,7 @@ export function readBudget(formData: FormData): BudgetInput {
   const read = (key: string) => String(formData.get(key) ?? "").trim()
   return {
     name: read("name"),
+    kind: read("kind"),
     section: read("section"),
     category: read("category"),
     costCenter: read("costCenter"),
@@ -29,6 +31,7 @@ export function validateBudget(input: BudgetInput) {
   const errors: Record<string, string> = {}
 
   if (!input.name) errors.name = "Give this budget a name."
+  if (!isKind(input.kind)) errors.kind = "Choose income or expense."
   if (!isSection(input.section)) errors.section = "Choose a cash flow section."
   if (!isFrequency(input.frequency)) errors.frequency = "Choose a frequency."
 

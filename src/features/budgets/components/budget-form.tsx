@@ -16,7 +16,7 @@ import {
   SaveButton,
 } from "@/components/form/form-shell"
 import { Select } from "@/components/form/select"
-import { FREQUENCIES, SECTIONS, type Frequency } from "@/lib/finance"
+import { FREQUENCIES, SECTIONS, TRANSACTION_KINDS, type Frequency } from "@/lib/finance"
 import { formatCurrency } from "@/lib/format"
 import type { FormState } from "@/lib/form-state"
 
@@ -35,6 +35,7 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
   const [amount, setAmount] = useState("")
   const [distributeEqually, setDistributeEqually] = useState(true)
   const [section, setSection] = useState("operations")
+  const [kind, setKind] = useState("expense")
 
   // Preview of exactly what the server will store, recomputed as you type.
   const rows = useMemo(
@@ -87,6 +88,26 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
               value={fromYear}
               onChange={(event) => setFromYear(event.target.value)}
               aria-invalid={Boolean(errors.fromYear)}
+            />
+          </Field>
+
+          <Field
+            label="Type"
+            htmlFor="kind"
+            required
+            error={errors.kind}
+            hint="Whether this plans money coming in or going out."
+          >
+            <Select
+              id="kind"
+              name="kind"
+              value={kind}
+              onValueChange={setKind}
+              options={TRANSACTION_KINDS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              invalid={Boolean(errors.kind)}
             />
           </Field>
 
