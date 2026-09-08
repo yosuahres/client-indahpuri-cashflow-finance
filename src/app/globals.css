@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
+/* Deliberately monochrome: white surfaces, black ink, no dark-mode inversion. */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #000000;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,15 +14,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
