@@ -2,6 +2,7 @@ import Link from "next/link"
 import type { ReactNode } from "react"
 import { House } from "lucide-react"
 
+import { SidebarTrigger } from "@/components/layout/sidebar-state"
 import { cn } from "@/lib/cn"
 
 /** Sticky document header: breadcrumb, dirty-state badge, primary action. */
@@ -17,13 +18,20 @@ export function FormHeader({
   action: ReactNode
 }) {
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-black/8 bg-white px-5">
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-black/8 bg-white px-3 sm:gap-3 sm:px-5">
+      <SidebarTrigger />
+
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2">
-        <Link href="/" aria-label="Home" className="text-neutral-500 hover:text-neutral-900">
+        {/* Only the page title survives on a phone; the trail needs the room. */}
+        <Link
+          href="/"
+          aria-label="Home"
+          className="hidden text-neutral-500 hover:text-neutral-900 sm:block"
+        >
           <House className="size-4" strokeWidth={1.75} />
         </Link>
         {crumbs.map((crumb) => (
-          <span key={crumb.label} className="flex items-center gap-2">
+          <span key={crumb.label} className="hidden items-center gap-2 sm:flex">
             <span aria-hidden className="text-neutral-300">
               /
             </span>
@@ -36,7 +44,7 @@ export function FormHeader({
             )}
           </span>
         ))}
-        <span aria-hidden className="text-neutral-300">
+        <span aria-hidden className="hidden text-neutral-300 sm:inline">
           /
         </span>
         <span aria-current="page" className="truncate text-sm font-semibold text-neutral-900">
@@ -45,14 +53,14 @@ export function FormHeader({
         {status}
       </nav>
 
-      <div className="ml-auto flex items-center gap-2">{action}</div>
+      <div className="ml-auto flex shrink-0 items-center gap-2">{action}</div>
     </header>
   )
 }
 
 export function NotSavedBadge() {
   return (
-    <span className="ml-1 rounded bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+    <span className="ml-1 hidden rounded bg-orange-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-orange-700 sm:inline">
       Not Saved
     </span>
   )
@@ -69,10 +77,10 @@ export function FormSection({
   className?: string
 }) {
   return (
-    <section className={cn("border-b border-black/8 px-6 py-8", className)}>
+    <section className={cn("border-b border-black/8 px-4 py-6 sm:px-6 sm:py-8", className)}>
       <div className="mx-auto max-w-4xl">
         {title ? (
-          <h2 className="mb-6 text-sm font-semibold text-neutral-900">{title}</h2>
+          <h2 className="mb-4 text-sm font-semibold text-neutral-900 sm:mb-6">{title}</h2>
         ) : null}
         {children}
       </div>
@@ -96,7 +104,7 @@ export function SaveButton({
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-8 items-center rounded-md bg-neutral-900 px-4 text-sm font-medium text-white transition-opacity hover:opacity-85 disabled:pointer-events-none disabled:opacity-40"
+      className="inline-flex h-9 items-center rounded-md bg-neutral-900 px-4 text-sm font-medium text-white transition-opacity hover:opacity-85 disabled:pointer-events-none disabled:opacity-40 sm:h-8"
     >
       {pending ? "Saving…" : children}
     </button>

@@ -15,7 +15,7 @@ const MONTH_TINT = "bg-amber-50"
  */
 const RULE = { borderLeft: "1px solid rgba(0, 0, 0, 0.10)" }
 
-const cell = "px-3 py-1.5 text-right tabular-nums whitespace-nowrap"
+const cell = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap sm:px-3"
 
 /** The six figures, always in this order. Index 0 and 3 open a column block. */
 const ORDER = [
@@ -134,7 +134,7 @@ function ColumnHead({
       scope="col"
       style={RULE}
       className={cn(
-        "min-w-[130px] px-3 pt-1.5 pb-2 text-right font-medium",
+        "min-w-[104px] px-2 pt-1.5 pb-2 text-right font-medium sm:min-w-[130px] sm:px-3",
         columnClass(index),
         !isMonthly(index) && "bg-neutral-50",
       )}
@@ -160,7 +160,7 @@ export function FinancialReportTable({ report }: { report: FinancialReport }) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse text-xs sm:text-sm">
         <caption className="sr-only">
           Rencana dan realisasi pemasukan dan pengeluaran untuk {longMonthName(month)}{" "}
           {year}, dibandingkan tahun sebelumnya.
@@ -178,7 +178,7 @@ export function FinancialReportTable({ report }: { report: FinancialReport }) {
             <th
               scope="col"
               rowSpan={2}
-              className="min-w-[280px] border-b border-black/10 px-3 py-2 text-left align-bottom font-semibold text-neutral-700"
+              className="min-w-[180px] border-b border-black/10 px-3 py-2 text-left align-bottom font-semibold text-neutral-700 sm:min-w-[280px]"
             >
               KETERANGAN
             </th>

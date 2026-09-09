@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 }
 
 const stepper =
-  "grid size-7 place-items-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+  "grid size-8 place-items-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 sm:size-7"
 
 export default async function ReportingPage({
   searchParams,
@@ -42,22 +42,23 @@ export default async function ReportingPage({
         actions={
           <a
             href={`/reporting/export?year=${year}&month=${month}${carried}`}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900"
+            aria-label="Export Excel"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900 sm:h-8"
           >
-            <Download className="size-4" strokeWidth={1.75} />
-            Export Excel
+            <Download className="size-4 shrink-0" strokeWidth={1.75} />
+            <span className="hidden sm:inline">Export Excel</span>
           </a>
         }
       />
 
       <main className="min-h-0 flex-1 overflow-y-auto">
         {!ok ? (
-          <p role="alert" className="border-b border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-900">
+          <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
             {error}
           </p>
         ) : null}
 
-        <div className="flex flex-wrap items-start justify-between gap-4 px-6 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:gap-4 sm:px-6">
           <div>
             <h1 className="text-sm font-bold tracking-tight text-neutral-900">
               LAPORAN KEUANGAN {company.toUpperCase()}
@@ -88,7 +89,7 @@ export default async function ReportingPage({
           <FinancialReportTable report={report} />
         </div>
 
-        <p className="px-6 py-4 text-xs text-neutral-500">
+        <p className="px-4 py-4 text-xs text-neutral-500 sm:px-6">
           Kolom ANGGARAN diambil dari halaman Anggaran (rencana bulanan). Kolom AKTUAL
           dihitung otomatis dari transaksi cashflow. Angka dalam{" "}
           <span className="text-rose-600">(kurung merah)</span> berarti negatif.

@@ -14,7 +14,7 @@ export function AuthCard({
 }) {
   return (
     <div className="w-full max-w-sm">
-      <div className="rounded-xl border border-black/15 bg-white p-8">
+      <div className="rounded-xl border border-black/15 bg-white p-6 sm:p-8">
         <h1 className="text-xl font-semibold tracking-tight text-black">
           {title}
         </h1>

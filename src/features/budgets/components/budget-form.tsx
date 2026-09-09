@@ -63,7 +63,7 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
       {state.error ? (
         <p
           role="alert"
-          className="border-b border-rose-200 bg-rose-50 px-6 py-3 text-sm text-rose-800"
+          className="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 sm:px-6"
         >
           {state.error}
         </p>

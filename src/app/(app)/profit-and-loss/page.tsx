@@ -29,7 +29,7 @@ export default async function ProfitAndLossPage({
 
       <main className="min-h-0 flex-1 overflow-y-auto">
         {!ok ? (
-          <p role="alert" className="border-b border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-900">
+          <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
             {error}
           </p>
         ) : null}

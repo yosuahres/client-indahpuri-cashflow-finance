@@ -66,9 +66,9 @@ export function CategoryManager({
       ref={dialogRef}
       onClose={onClose}
       aria-labelledby="category-manager-title"
-      className="m-auto w-[32rem] max-w-[calc(100vw-2rem)] rounded-xl border border-black/10 bg-white p-0 shadow-xl backdrop:bg-black/40"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[32rem] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-black/10 bg-white p-0 shadow-xl backdrop:bg-black/40"
     >
-      <div className="flex items-center gap-3 border-b border-black/8 px-5 py-3.5">
+      <div className="flex items-center gap-3 border-b border-black/8 px-4 py-3.5 sm:px-5">
         <h2 id="category-manager-title" className="flex-1 text-sm font-semibold text-neutral-900">
           Manage categories
         </h2>
@@ -89,7 +89,7 @@ export function CategoryManager({
       ) : null}
 
       {/* Add */}
-      <div className="flex items-end gap-2 border-b border-black/8 px-5 py-4">
+      <div className="flex flex-col gap-2 border-b border-black/8 px-4 py-4 sm:flex-row sm:items-end sm:px-5">
         <div className="flex-1">
           <label htmlFor="new-category" className="mb-1.5 block text-xs text-neutral-600">
             New category
@@ -105,10 +105,10 @@ export function CategoryManager({
               }
             }}
             placeholder="e.g. Marketing"
-            className="h-9 w-full rounded-md bg-neutral-100 px-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-2 focus:outline-neutral-800"
+            className="h-10 w-full rounded-md bg-neutral-100 px-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:outline-2 focus:outline-neutral-800 sm:h-9 sm:text-sm"
           />
         </div>
-        <div className="w-40">
+        <div className="w-full sm:w-40">
           <label htmlFor="new-category-section" className="mb-1.5 block text-xs text-neutral-600">
             Section
           </label>
@@ -123,7 +123,7 @@ export function CategoryManager({
           type="button"
           onClick={submitNew}
           disabled={pending || !name.trim()}
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-neutral-900 px-3 text-sm font-medium text-white hover:opacity-85 disabled:pointer-events-none disabled:opacity-40"
+          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-neutral-900 px-3 text-sm font-medium text-white hover:opacity-85 disabled:pointer-events-none disabled:opacity-40 sm:h-9"
         >
           <Plus className="size-4" strokeWidth={2.5} />
           Add
@@ -131,7 +131,7 @@ export function CategoryManager({
       </div>
 
       {/* List */}
-      <div className={cn("max-h-80 overflow-y-auto px-5 py-3", pending && "opacity-60")}>
+      <div className={cn("max-h-80 overflow-y-auto px-4 py-3 sm:px-5", pending && "opacity-60")}>
         {categories.length === 0 ? (
           <div className="py-8 text-center">
             <p className="text-sm text-neutral-500">No categories yet.</p>
@@ -181,7 +181,7 @@ export function CategoryManager({
         )}
       </div>
 
-      <div className="border-t border-black/8 px-5 py-3">
+      <div className="border-t border-black/8 px-4 py-3 sm:px-5">
         <p className="text-xs text-neutral-500">
           Deleting a category never changes past transactions — they keep the name
           they were filed under.

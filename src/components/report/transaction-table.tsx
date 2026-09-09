@@ -7,11 +7,11 @@ import { formatCurrency, formatDate } from "@/lib/format"
 import type { TransactionDetail } from "./types"
 
 /** Sticky columns need an opaque background of their own or rows show through. */
-const stickyGutter = "sticky left-0 z-10 w-12 min-w-12"
-const stickyDate = "sticky left-12 z-10 min-w-[120px]"
+const stickyGutter = "sticky left-0 z-10 w-9 min-w-9 sm:w-12 sm:min-w-12"
+const stickyDate = "sticky left-9 z-10 min-w-[112px] sm:left-12 sm:min-w-[120px]"
 
-const headCell = "px-3 py-2.5 text-left font-medium text-neutral-700"
-const amountCell = "min-w-[160px] px-3 py-2.5 text-right"
+const headCell = "px-2 py-2.5 text-left font-medium text-neutral-700 sm:px-3"
+const amountCell = "min-w-[140px] px-2 py-2.5 text-right sm:min-w-[160px] sm:px-3"
 
 export function TransactionTable({
   transactions,

@@ -10,7 +10,7 @@ import { popoverContainer, usePopoverPosition } from "./use-popover"
 export type SelectOption = { value: string; label: string }
 
 const trigger =
-  "flex h-10 w-full items-center gap-2 rounded-md bg-neutral-100 px-3 text-left text-sm text-neutral-900 " +
+  "flex h-10 w-full items-center gap-2 rounded-md bg-neutral-100 px-3 text-left text-base text-neutral-900 sm:text-sm " +
   "focus:outline-2 focus:outline-offset-0 focus:outline-neutral-800 disabled:opacity-50"
 
 /**

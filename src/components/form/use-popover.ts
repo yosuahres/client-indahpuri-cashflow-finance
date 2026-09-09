@@ -9,6 +9,9 @@ import {
   type RefObject,
 } from "react"
 
+/** Breathing room kept between the popup and the edge of the viewport. */
+const EDGE = 8
+
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect
 
@@ -23,6 +26,8 @@ export function usePopoverPosition(
   triggerRef: RefObject<HTMLElement | null>,
   open: boolean,
   preferredHeight = 280,
+  /** Width the popup wants. Defaults to matching the trigger. */
+  preferredWidth?: number,
 ) {
   const [style, setStyle] = useState<CSSProperties>({ visibility: "hidden" })
 
@@ -36,10 +41,18 @@ export function usePopoverPosition(
     // Flip above the trigger only when there is genuinely more room there.
     const flip = spaceBelow < preferredHeight && spaceAbove > spaceBelow
 
+    // A popup wider than its trigger — the calendar in a narrow grid cell —
+    // would otherwise hang off the side of a phone screen.
+    const width = Math.min(preferredWidth ?? rect.width, window.innerWidth - EDGE * 2)
+    const left = Math.min(
+      Math.max(rect.left, EDGE),
+      window.innerWidth - width - EDGE,
+    )
+
     setStyle({
       position: "fixed",
-      left: rect.left,
-      width: rect.width,
+      left,
+      width,
       ...(flip
         ? {
             bottom: window.innerHeight - rect.top + 4,
@@ -50,7 +63,7 @@ export function usePopoverPosition(
             maxHeight: Math.max(spaceBelow - 12, 120),
           }),
     })
-  }, [triggerRef, preferredHeight])
+  }, [triggerRef, preferredHeight, preferredWidth])
 
   useIsomorphicLayoutEffect(() => {
     if (!open) {

@@ -80,7 +80,7 @@ export function DatePicker({
   const gridRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popupRef = useRef<HTMLDivElement>(null)
-  const popoverStyle = usePopoverPosition(triggerRef, open, 360)
+  const popoverStyle = usePopoverPosition(triggerRef, open, 360, 288)
   // Resolved when opening: reading a ref during render is not safe.
   const [container, setContainer] = useState<HTMLElement | null>(null)
 
@@ -161,7 +161,7 @@ export function DatePicker({
         aria-describedby={invalid ? `${id}-error` : undefined}
         onClick={() => (open ? setOpen(false) : openCalendar())}
         className={cn(
-          "flex h-10 w-full items-center gap-2 rounded-md bg-neutral-100 px-3 text-left text-sm",
+          "flex h-10 w-full items-center gap-2 rounded-md bg-neutral-100 px-3 text-left text-base sm:text-sm",
           "focus:outline-2 focus:outline-offset-0 focus:outline-neutral-800",
           invalid && "outline-2 outline-rose-500",
           value ? "font-medium text-neutral-900" : "text-neutral-400",
@@ -177,7 +177,7 @@ export function DatePicker({
           ref={popupRef}
           role="dialog"
           aria-label="Choose a date"
-          style={{ ...popoverStyle, width: 288 }}
+          style={popoverStyle}
           className="z-[100] overflow-y-auto rounded-lg border border-black/10 bg-white p-3 shadow-lg"
         >
           <div className="mb-2 flex items-center gap-1">

@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn"
 import { PERIODICITIES } from "@/features/reports/periods"
 
 const control =
-  "h-10 w-full rounded-md bg-neutral-100 px-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-2 focus:outline-offset-0 focus:outline-neutral-800"
+  "h-10 w-full rounded-md bg-neutral-100 px-3 text-base text-neutral-900 sm:text-sm placeholder:text-neutral-400 focus:outline-2 focus:outline-offset-0 focus:outline-neutral-800"
 
 const YEAR_SPAN = 5
 
@@ -54,7 +54,7 @@ export function ReportFilters({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-3 px-6 py-4 md:grid-cols-3 lg:grid-cols-6",
+        "grid grid-cols-2 gap-2 px-4 py-3 sm:gap-3 sm:px-6 sm:py-4 md:grid-cols-3 lg:grid-cols-6",
         pending && "opacity-60",
       )}
     >

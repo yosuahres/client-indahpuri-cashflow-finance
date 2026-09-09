@@ -47,7 +47,7 @@ export function CategoryPie({
   if (slices.length === 0 || total === 0) {
     return (
       <div>
-        <h3 className="text-sm font-medium text-neutral-900">{title}</h3>
+        <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
         <p className="mt-3 text-sm text-neutral-500">{emptyLabel}</p>
       </div>
     )
@@ -66,16 +66,16 @@ export function CategoryPie({
 
   return (
     <div>
-      <h3 className="text-sm font-medium text-neutral-900">{title}</h3>
+      <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-6">
+      <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-5">
         <svg
           width={SIZE}
           height={SIZE}
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           role="img"
           aria-label={`${title}, by category`}
-          className="shrink-0"
+          className="max-w-full shrink-0"
           onPointerLeave={() => setHovered(null)}
         >
           {wedges.map(({ slice, start, sweep }) => {
@@ -104,7 +104,7 @@ export function CategoryPie({
           })}
         </svg>
 
-        <dl className="min-w-64 flex-1">
+        <dl className="min-w-0 shrink grow basis-64">
           {slices.map((slice) => (
             <div
               key={slice.label}

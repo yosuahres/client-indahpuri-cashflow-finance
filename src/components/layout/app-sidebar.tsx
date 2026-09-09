@@ -9,10 +9,12 @@ import {
   ChevronRight,
   ChevronsUpDown,
   Search,
+  X,
 } from "lucide-react"
 
 import { cn } from "@/lib/cn"
 import { NAV_GROUPS, NAV_LINKS, type NavGroup } from "./nav-config"
+import { useSidebar } from "./sidebar-state"
 
 function initials(name: string) {
   return name
@@ -39,7 +41,7 @@ function NavLinks() {
               href={link.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm",
+                "flex items-center gap-2.5 rounded-md px-2 py-2 text-sm sm:py-1.5",
                 active
                   ? "bg-white font-medium text-neutral-900 shadow-sm ring-1 ring-black/5"
                   : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900",
@@ -67,7 +69,7 @@ function NavGroupBlock({ group }: { group: NavGroup }) {
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+        className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 sm:py-1.5"
       >
         <Icon className="size-4 shrink-0 text-neutral-500" strokeWidth={1.75} />
         <span className="flex-1 text-left">{group.label}</span>
@@ -86,7 +88,7 @@ function NavGroupBlock({ group }: { group: NavGroup }) {
                     href={item.href}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "block truncate rounded-md py-1.5 pr-2 pl-8 text-sm",
+                      "block truncate rounded-md py-2 pr-2 pl-8 text-sm sm:py-1.5",
                       active
                         ? "bg-white font-medium text-neutral-900 shadow-sm ring-1 ring-black/5"
                         : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900",
@@ -97,7 +99,7 @@ function NavGroupBlock({ group }: { group: NavGroup }) {
                 ) : (
                   <span
                     title="Not built yet"
-                    className="block cursor-default truncate rounded-md py-1.5 pr-2 pl-8 text-sm text-neutral-400"
+                    className="block cursor-default truncate rounded-md py-2 pr-2 pl-8 text-sm text-neutral-400 sm:py-1.5"
                   >
                     {item.label}
                   </span>
@@ -111,20 +113,26 @@ function NavGroupBlock({ group }: { group: NavGroup }) {
   )
 }
 
-export function AppSidebar({
+type SidebarUser = { name: string; email: string }
+
+/** Everything inside the panel — shared by the fixed desktop rail and the drawer. */
+function SidebarBody({
   user,
   onSignOut,
+  onClose,
 }: {
-  user: { name: string; email: string }
+  user: SidebarUser
   onSignOut: React.ReactNode
+  /** Rendered as a close button in the drawer; absent on desktop. */
+  onClose?: () => void
 }) {
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-black/8 bg-neutral-50">
+    <>
       {/* Workspace switcher */}
-      <div className="p-3">
+      <div className="flex items-center gap-1 p-3">
         <button
           type="button"
-          className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100"
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100"
         >
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-600 text-sm font-bold text-white">
             IP
@@ -139,21 +147,32 @@ export function AppSidebar({
           </span>
           <ChevronsUpDown className="size-4 shrink-0 text-neutral-400" strokeWidth={2} />
         </button>
+
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close menu"
+            className="grid size-9 shrink-0 place-items-center rounded-md text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900"
+          >
+            <X className="size-5" strokeWidth={1.75} />
+          </button>
+        ) : null}
       </div>
 
       {/* Global actions */}
       <div className="px-3 pb-2">
         <button
           type="button"
-          className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+          className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm text-neutral-700 hover:bg-neutral-100 sm:py-1.5"
         >
           <Search className="size-4 text-neutral-500" strokeWidth={1.75} />
           <span className="flex-1 text-left">Search</span>
-          <kbd className="font-sans text-xs text-neutral-400">⌘+K</kbd>
+          <kbd className="hidden font-sans text-xs text-neutral-400 lg:inline">⌘+K</kbd>
         </button>
         <button
           type="button"
-          className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+          className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm text-neutral-700 hover:bg-neutral-100 sm:py-1.5"
         >
           <Bell className="size-4 text-neutral-500" strokeWidth={1.75} />
           <span className="flex-1 text-left">Notification</span>
@@ -185,6 +204,56 @@ export function AppSidebar({
           {onSignOut}
         </div>
       </div>
-    </aside>
+    </>
+  )
+}
+
+export function AppSidebar({
+  user,
+  onSignOut,
+}: {
+  user: SidebarUser
+  onSignOut: React.ReactNode
+}) {
+  const { open, setOpen } = useSidebar()
+
+  return (
+    <>
+      {/* Desktop rail */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-black/8 bg-neutral-50 lg:flex">
+        <SidebarBody user={user} onSignOut={onSignOut} />
+      </aside>
+
+      {/* Off-canvas drawer, below lg. Kept mounted so it can slide, and inert
+          while closed so nothing inside it takes focus. */}
+      <div
+        className={cn("fixed inset-0 z-40 lg:hidden", !open && "pointer-events-none")}
+        inert={!open}
+      >
+        <div
+          aria-hidden
+          onClick={() => setOpen(false)}
+          className={cn(
+            "absolute inset-0 bg-black/40 transition-opacity duration-200",
+            open ? "opacity-100" : "opacity-0",
+          )}
+        />
+        <div
+          role="dialog"
+          aria-modal={open}
+          aria-label="Navigation"
+          className={cn(
+            "absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-black/8 bg-neutral-50 shadow-xl transition-transform duration-200",
+            open ? "translate-x-0" : "-translate-x-full",
+          )}
+        >
+          <SidebarBody
+            user={user}
+            onSignOut={onSignOut}
+            onClose={() => setOpen(false)}
+          />
+        </div>
+      </div>
+    </>
   )
 }
