@@ -8,13 +8,17 @@ export type ChartSeries = {
   values: number[]
 }
 
-/** One slice of a category breakdown, already resolved to a share and a color. */
+/** How a slice is filled once the eight categorical hues are spent. */
+export type SliceTexture = "solid" | "diagonal" | "mirror"
+
+/** One slice of a category breakdown, already resolved to a share and a fill. */
 export type CategorySlice = {
   label: string
   value: number
   /** Fraction of the pie, 0-1. */
   share: number
   color: string
+  texture: SliceTexture
 }
 
 /** One recorded transaction, as the statement's detail table shows it. */
@@ -23,7 +27,14 @@ export type TransactionDetail = {
   /** `YYYY-MM-DD`. */
   occurredOn: string
   kind: "income" | "expense"
+  section: string
   category: string
   account: string
+  /** Bank / issuer / holder behind the account, when it has one. */
+  accountIssuer: string | null
   amount: number
+  // Only the detail panel shows these; the table has no column for them.
+  party: string
+  reference: string
+  notes: string
 }

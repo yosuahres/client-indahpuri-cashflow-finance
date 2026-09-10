@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrencyWhole } from "@/lib/format"
 import { cn } from "@/lib/cn"
 
 /** Tailwind needs whole class names, so the column count maps to a literal. */
@@ -36,7 +36,7 @@ export function SummaryTiles({ tiles }: { tiles: SummaryTile[] }) {
               tile.tone === "red" || tile.value < 0 ? "text-rose-600" : "text-neutral-900",
             )}
           >
-            {formatCurrency(tile.value)}
+            {formatCurrencyWhole(tile.value)}
           </dd>
         </Card>
       ))}

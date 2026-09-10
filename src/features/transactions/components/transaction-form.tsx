@@ -22,7 +22,12 @@ import { AccountField } from "@/features/accounts/components/account-field"
 import type { Account } from "@/features/accounts/actions"
 import { CategoryField } from "@/features/categories/components/category-field"
 import type { Category } from "@/features/categories/actions"
-import { SECTIONS, TRANSACTION_KINDS, type SectionValue } from "@/lib/finance"
+import {
+  SECTIONS,
+  TRANSACTION_KINDS,
+  type SectionValue,
+  type TransactionKind,
+} from "@/lib/finance"
 import type { FormState } from "@/lib/form-state"
 
 import { createTransaction } from "../actions"
@@ -48,7 +53,7 @@ export function TransactionForm({
 
   const [categories, setCategories] = useState(initialCategories)
   const [date, setDate] = useState(today)
-  const [kind, setKind] = useState("income")
+  const [kind, setKind] = useState<TransactionKind>("income")
   const [section, setSection] = useState<SectionValue>("operations")
   const [category, setCategory] = useState("")
   const [account, setAccount] = useState(defaultAccount ?? "")
@@ -115,7 +120,11 @@ export function TransactionForm({
               id="kind"
               name="kind"
               value={kind}
-              onValueChange={setKind}
+              onValueChange={(value) => {
+                setKind(value as TransactionKind)
+                // Categories belong to one direction, so the old pick is gone.
+                setCategory("")
+              }}
               options={TRANSACTION_KINDS.map((entry) => ({ value: entry.value, label: entry.label }))}
               invalid={Boolean(errors.kind)}
             />
@@ -146,6 +155,7 @@ export function TransactionForm({
             <CategoryField
               id="category"
               name="category"
+              kind={kind}
               section={section}
               value={category}
               onValueChange={setCategory}

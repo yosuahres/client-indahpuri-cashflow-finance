@@ -57,3 +57,80 @@ export async function createTransaction(
 
   redirect("/dashboard")
 }
+
+/**
+ * Saves an edit made in the detail panel. Row level security scopes the update
+ * to the signed-in user, so an id that is not theirs matches nothing and comes
+ * back as "no longer exists" rather than silently succeeding.
+ */
+export async function updateTransaction(
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const id = String(formData.get("id") ?? "").trim()
+  if (!id) return { error: "That transaction is no longer open." }
+
+  const input = readTransaction(formData)
+  const fieldErrors = validateTransaction(input)
+  if (hasFieldErrors(fieldErrors)) return { fieldErrors }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("transactions")
+    .update({
+      occurred_on: input.occurredOn,
+      kind: input.kind,
+      section: input.section,
+      category: input.category,
+      account: input.account,
+      party: input.party || null,
+      reference: input.reference || null,
+      amount: Number(input.amount),
+      notes: input.notes || null,
+    })
+    .eq("id", id)
+    .select("id")
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return { error: "The transactions table is missing." }
+    return { error: error.message }
+  }
+  if (!data || data.length === 0) {
+    return { error: "That transaction no longer exists — it may have been deleted." }
+  }
+
+  refresh()
+  return { message: "Changes saved.", savedAt: Date.now() }
+}
+
+export type DeleteResult = { ok: boolean; error?: string; deleted: number }
+
+/**
+ * Removes recorded transactions outright — the ledger keeps no tombstone, so
+ * the caller is expected to have confirmed first. Row level security scopes the
+ * delete to the signed-in user, so an id belonging to someone else is a no-op
+ * rather than an error.
+ */
+export async function deleteTransactions(ids: string[]): Promise<DeleteResult> {
+  const unique = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))]
+  if (unique.length === 0) return { ok: false, error: "Nothing selected.", deleted: 0 }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("transactions")
+    .delete()
+    .in("id", unique)
+    // Returning the rows is what makes the count real rather than assumed.
+    .select("id")
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.code === UNDEFINED_TABLE ? "The transactions table is missing." : error.message,
+      deleted: 0,
+    }
+  }
+
+  refresh()
+  return { ok: true, deleted: data?.length ?? 0 }
+}

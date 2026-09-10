@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Settings2 } from "lucide-react"
 
 import { Select } from "@/components/form/select"
-import type { SectionValue } from "@/lib/finance"
+import type { SectionValue, TransactionKind } from "@/lib/finance"
 
 import type { Category } from "../actions"
 import { CategoryManager } from "./category-manager"
@@ -16,6 +16,7 @@ import { CategoryManager } from "./category-manager"
 export function CategoryField({
   id,
   name,
+  kind,
   section,
   value,
   onValueChange,
@@ -25,6 +26,8 @@ export function CategoryField({
 }: {
   id: string
   name: string
+  /** Money in or money out — an income entry is never offered an expense category. */
+  kind: TransactionKind
   /** Only categories filed under this section are offered. */
   section: SectionValue
   value: string
@@ -36,7 +39,7 @@ export function CategoryField({
   const [managing, setManaging] = useState(false)
 
   const options = categories
-    .filter((category) => category.section === section)
+    .filter((category) => category.kind === kind && category.section === section)
     .map((category) => ({ value: category.name, label: category.name }))
 
   return (
@@ -48,7 +51,11 @@ export function CategoryField({
         onValueChange={onValueChange}
         options={options}
         invalid={invalid}
-        placeholder={options.length === 0 ? "No categories yet — add one" : "Select a category…"}
+        placeholder={
+          options.length === 0
+            ? `No ${kind} categories here — add one`
+            : "Select a category…"
+        }
         footer={(close) => (
           <button
             type="button"
@@ -70,9 +77,14 @@ export function CategoryField({
         categories={categories}
         onCategoriesChange={(next) => {
           onCategoriesChange(next)
-          // The selected category may have just been deleted.
-          if (value && !next.some((entry) => entry.name === value)) onValueChange("")
+          // The selected category may have just been deleted, or moved to the
+          // other direction, where this entry can no longer use it.
+          const stillOffered = next.some(
+            (entry) => entry.kind === kind && entry.section === section && entry.name === value,
+          )
+          if (value && !stillOffered) onValueChange("")
         }}
+        defaultKind={kind}
         defaultSection={section}
       />
     </>

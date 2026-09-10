@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/server"
 import type {
   CategorySlice,
   ChartSeries,
+  SliceTexture,
   TransactionDetail,
 } from "@/components/report/types"
+import { accountIssuer } from "@/features/accounts/constants"
 import { buildPeriods, type Periodicity } from "@/features/reports/periods"
 
 const UNDEFINED_TABLE = "42P01"
@@ -15,52 +17,51 @@ const MIGRATION_HINT =
 const PAGE_SIZE = 1000
 
 /**
- * Ordinal ramps for the category pies — biggest slice darkest. Both validated
- * on the light surface: monotone lightness, gaps >= 0.06, light end over 2:1.
- * Five steps is the most either hue can carry above the contrast floor, which
- * is what caps the pie at five slices.
+ * The documented categorical order, validated as a set against the light chart
+ * surface: worst adjacent CVD ΔE 9.1, worst adjacent normal-vision ΔE 19.6.
+ * Neighbouring slices differ in hue rather than in lightness, which is what
+ * makes them tellable apart at a glance.
  */
-const INCOME_RAMP = ["#0d366b", "#1c5cab", "#2a78d6", "#5598e7", "#86b6ef"] as const
-const EXPENSE_RAMP = ["#611f02", "#9c390c", "#c54e1c", "#da7550", "#e89d83"] as const
+const CATEGORICAL = [
+  "#2a78d6", // blue
+  "#eb6834", // orange
+  "#1baf7a", // aqua
+  "#eda100", // yellow
+  "#e87ba4", // magenta
+  "#008300", // green
+  "#4a3aa7", // violet
+  "#e34948", // red
+] as const
 
 /**
- * "Other" is a remainder, not a category, so it sits outside the ramp in the
- * muted furniture gray (3.59:1 on white) — otherwise it would claim the
- * lightest step while often outweighing the named slices above it.
+ * Hue runs out at eight. Rather than fold the tail into an "Other" slice, a
+ * ninth category repeats the first hue behind a 45° fill and a seventeenth its
+ * 135° mirror — the documented backup channel, so no slice ever wears a hue
+ * invented on the spot. Past twenty-four the texture stops changing; a pie that
+ * wide has other problems.
  */
-const OTHER_COLOR = "#898781"
+const TEXTURES: SliceTexture[] = ["solid", "diagonal", "mirror"]
 
 /**
- * Category totals over the whole range, largest first, so the ramp reads
- * darkest-is-biggest. A pie stops being readable past ~6 segments: once the
- * categories outrun the ramp, the tail folds into a single "Other" slice.
+ * Every category with a total, largest first. Slices take the palette slots in
+ * that same order, so two wedges that touch are always two slots that were
+ * validated against each other.
  */
-function buildBreakdown(
-  categories: Map<string, number[]>,
-  ramp: readonly string[],
-): CategorySlice[] {
+function buildBreakdown(categories: Map<string, number[]>): CategorySlice[] {
   const totals = [...categories.entries()]
     .map(([label, values]) => [label, values.reduce((sum, value) => sum + value, 0)] as const)
     .filter(([, value]) => value > 0)
     .sort(([, a], [, b]) => b - a)
 
-  // Everything fits, or the last ramp step is given up to hold "Other".
-  const named = totals.length <= ramp.length ? totals : totals.slice(0, ramp.length - 1)
-  const remainder = totals
-    .slice(named.length)
-    .reduce((sum, [, value]) => sum + value, 0)
+  const total = totals.reduce((sum, [, value]) => sum + value, 0)
 
-  const entries = named.map(
-    ([label, value], index) => [label, value, ramp[index]] as const,
-  )
-  if (remainder > 0) entries.push(["Other", remainder, OTHER_COLOR] as const)
-
-  const total = entries.reduce((sum, [, value]) => sum + value, 0)
-  return entries.map(([label, value, color]) => ({
+  return totals.map(([label, value], index) => ({
     label,
     value,
     share: total > 0 ? value / total : 0,
-    color,
+    color: CATEGORICAL[index % CATEGORICAL.length],
+    texture:
+      TEXTURES[Math.min(Math.floor(index / CATEGORICAL.length), TEXTURES.length - 1)],
   }))
 }
 
@@ -75,9 +76,38 @@ type TransactionRow = {
   id: string
   occurred_on: string
   kind: "income" | "expense"
+  section: string
   category: string
   account: string
   amount: number | string
+  party: string | null
+  reference: string | null
+  notes: string | null
+}
+
+type AccountRow = {
+  name: string
+  type: string
+  provider: string | null
+  holder: string | null
+}
+
+/**
+ * Account name -> the bank behind it. Transactions store the account as text
+ * so history survives a rename, which means the detail has to be looked up
+ * instead of joined. A missing accounts table only costs the extra detail.
+ */
+async function loadAccountIssuers(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<Map<string, string>> {
+  const { data } = await supabase.from("accounts").select("name, type, provider, holder")
+
+  const issuers = new Map<string, string>()
+  for (const row of (data ?? []) as AccountRow[]) {
+    const issuer = accountIssuer(row)
+    if (issuer) issuers.set(row.name, issuer)
+  }
+  return issuers
 }
 
 export type ProfitAndLossReport = {
@@ -134,7 +164,9 @@ export async function loadProfitAndLossReport({
   for (let page = 0; ; page += 1) {
     const { data, error } = await supabase
       .from("transactions")
-      .select("id, occurred_on, kind, category, account, amount")
+      .select(
+        "id, occurred_on, kind, section, category, account, amount, party, reference, notes",
+      )
       .gte("occurred_on", from)
       .lte("occurred_on", to)
       .order("occurred_on")
@@ -187,15 +219,25 @@ export async function loadProfitAndLossReport({
 
   const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
 
+  // Fetched after the transactions rather than alongside them: two Supabase
+  // calls in flight at once can both try to refresh the same access token, and
+  // a Server Component cannot write the rotated cookie back.
+  const accountIssuers = await loadAccountIssuers(supabase)
+
   // The ledger reads newest first; the query is ascending for stable paging.
   const transactions: TransactionDetail[] = rows
     .map((row) => ({
       id: row.id,
       occurredOn: row.occurred_on,
       kind: row.kind,
+      section: row.section,
       category: row.category,
       account: row.account,
+      accountIssuer: accountIssuers.get(row.account) ?? null,
       amount: Number(row.amount) || 0,
+      party: row.party ?? "",
+      reference: row.reference ?? "",
+      notes: row.notes ?? "",
     }))
     .reverse()
 
@@ -206,8 +248,8 @@ export async function loadProfitAndLossReport({
       transactions,
       series: buildSeries(income, expense, netProfit),
       breakdown: {
-        income: buildBreakdown(byKind.income, INCOME_RAMP),
-        expense: buildBreakdown(byKind.expense, EXPENSE_RAMP),
+        income: buildBreakdown(byKind.income),
+        expense: buildBreakdown(byKind.expense),
       },
       totals: {
         income: sum(income),

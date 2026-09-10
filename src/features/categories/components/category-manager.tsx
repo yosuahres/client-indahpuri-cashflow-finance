@@ -4,17 +4,21 @@ import { useEffect, useRef, useState, useTransition } from "react"
 import { Plus, Trash2, X } from "lucide-react"
 
 import { Select } from "@/components/form/select"
-import { SECTIONS, CATEGORY_SUGGESTIONS, type SectionValue } from "@/lib/finance"
+import {
+  CATEGORY_SUGGESTIONS,
+  SECTIONS,
+  TRANSACTION_KINDS,
+  type SectionValue,
+  type TransactionKind,
+} from "@/lib/finance"
 import { cn } from "@/lib/cn"
 
 import { addCategory, deleteCategory, seedCategories, type Category } from "../actions"
 
-const ALL_SUGGESTIONS = SECTIONS.flatMap((section) =>
-  CATEGORY_SUGGESTIONS[section.value].map((name) => ({
-    name,
-    section: section.value as SectionValue,
-  })),
-)
+/** Section labels are shown per row, so the lookup is worth doing once. */
+const SECTION_LABEL: Record<SectionValue, string> = Object.fromEntries(
+  SECTIONS.map((entry) => [entry.value, entry.label]),
+) as Record<SectionValue, string>
 
 /**
  * Add/remove panel behind the category dropdown. Uses a native `<dialog>` so
@@ -25,18 +29,22 @@ export function CategoryManager({
   onClose,
   categories,
   onCategoriesChange,
+  defaultKind,
   defaultSection,
 }: {
   open: boolean
   onClose: () => void
   categories: Category[]
   onCategoriesChange: (categories: Category[]) => void
+  /** The panel opens on whatever the form is currently filing under. */
+  defaultKind: TransactionKind
   defaultSection: SectionValue
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState("")
+  const [kind, setKind] = useState<TransactionKind>(defaultKind)
   const [section, setSection] = useState<SectionValue>(defaultSection)
 
   useEffect(() => {
@@ -58,7 +66,7 @@ export function CategoryManager({
     if (!name.trim()) return
     const pendingName = name
     setName("")
-    run(async () => addCategory(pendingName, section))
+    run(async () => addCategory(pendingName, section, kind))
   }
 
   return (
@@ -108,7 +116,18 @@ export function CategoryManager({
             className="h-10 w-full rounded-md bg-neutral-100 px-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:outline-2 focus:outline-neutral-800 sm:h-9 sm:text-sm"
           />
         </div>
-        <div className="w-full sm:w-40">
+        <div className="w-full sm:w-32">
+          <label htmlFor="new-category-kind" className="mb-1.5 block text-xs text-neutral-600">
+            Direction
+          </label>
+          <Select
+            id="new-category-kind"
+            value={kind}
+            onValueChange={(value) => setKind(value as TransactionKind)}
+            options={TRANSACTION_KINDS.map((entry) => ({ value: entry.value, label: entry.short }))}
+          />
+        </div>
+        <div className="w-full sm:w-36">
           <label htmlFor="new-category-section" className="mb-1.5 block text-xs text-neutral-600">
             Section
           </label>
@@ -137,31 +156,37 @@ export function CategoryManager({
             <p className="text-sm text-neutral-500">No categories yet.</p>
             <button
               type="button"
-              onClick={() => run(async () => seedCategories(ALL_SUGGESTIONS))}
+              onClick={() => run(async () => seedCategories(CATEGORY_SUGGESTIONS))}
               disabled={pending}
               className="mt-3 rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-40"
             >
-              Add {ALL_SUGGESTIONS.length} suggested categories
+              Add {CATEGORY_SUGGESTIONS.length} suggested categories
             </button>
           </div>
         ) : (
-          SECTIONS.map((entry) => {
-            const inSection = categories.filter((category) => category.section === entry.value)
-            if (inSection.length === 0) return null
+          // Grouped by direction, which is what the dropdown filters on.
+          // Section rides along on each row rather than nesting a second level
+          // of headings inside a panel this small.
+          TRANSACTION_KINDS.map((entry) => {
+            const inKind = categories.filter((category) => category.kind === entry.value)
+            if (inKind.length === 0) return null
 
             return (
               <div key={entry.value} className="mb-4 last:mb-0">
                 <h3 className="mb-1 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
-                  {entry.label}
+                  {entry.short}
                 </h3>
                 <ul>
-                  {inSection.map((category) => (
+                  {inKind.map((category) => (
                     <li
                       key={category.id}
                       className="flex items-center gap-2 border-b border-black/5 py-1.5 last:border-b-0"
                     >
                       <span className="flex-1 truncate text-sm text-neutral-800">
                         {category.name}
+                      </span>
+                      <span className="shrink-0 text-xs text-neutral-500">
+                        {SECTION_LABEL[category.section]}
                       </span>
                       <button
                         type="button"

@@ -1,15 +1,34 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 
 import { cn } from "@/lib/cn"
 import { formatCurrency, formatPercent } from "@/lib/format"
-import type { CategorySlice } from "./types"
+import type { CategorySlice, SliceTexture } from "./types"
 
 const SIZE = 200
 const CENTER = SIZE / 2
 /** Leaves room for the 2px surface gap the mark spec puts between fills. */
 const RADIUS = CENTER - 4
+
+/** Hatch geometry, shared by the wedge pattern and the legend swatch. */
+const TEXTURE_PERIOD = 6
+const TEXTURE_INK = 2
+
+/** 45° and its mirror only — horizontal or vertical would read as chrome. */
+function textureAngle(texture: SliceTexture) {
+  return texture === "diagonal" ? 45 : 135
+}
+
+/** Tone-on-tone ink for the hatch: the slice's own hue, stepped darker. */
+function inked(color: string) {
+  const value = Number.parseInt(color.slice(1), 16)
+  const hex = [(value >> 16) & 255, (value >> 8) & 255, value & 255]
+    .map((channel) => Math.round(channel * 0.62))
+    .map((channel) => channel.toString(16).padStart(2, "0"))
+    .join("")
+  return `#${hex}`
+}
 
 /** Polar to cartesian, with 0° at twelve o'clock so the pie opens at the top. */
 function point(angle: number, radius: number) {
@@ -41,6 +60,9 @@ export function CategoryPie({
   emptyLabel: string
 }) {
   const [hovered, setHovered] = useState<string | null>(null)
+  // Two pies share the page, so the pattern ids have to be per instance. React
+  // hands back «r0»-style ids, whose brackets have no business in a url(#…).
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, "")
 
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
 
@@ -78,15 +100,36 @@ export function CategoryPie({
           className="max-w-full shrink-0"
           onPointerLeave={() => setHovered(null)}
         >
-          {wedges.map(({ slice, start, sweep }) => {
+          <defs>
+            {slices.map((slice, index) =>
+              slice.texture === "solid" ? null : (
+                <pattern
+                  key={slice.label}
+                  id={`${uid}-${index}`}
+                  width={TEXTURE_PERIOD}
+                  height={TEXTURE_PERIOD}
+                  patternUnits="userSpaceOnUse"
+                  patternTransform={`rotate(${textureAngle(slice.texture)})`}
+                >
+                  <rect width={TEXTURE_PERIOD} height={TEXTURE_PERIOD} fill={slice.color} />
+                  <rect width={TEXTURE_INK} height={TEXTURE_PERIOD} fill={inked(slice.color)} />
+                </pattern>
+              ),
+            )}
+          </defs>
+
+          {wedges.map(({ slice, start, sweep }, index) => {
             const dimmed = hovered !== null && hovered !== slice.label
+
+            const fill =
+              slice.texture === "solid" ? slice.color : `url(#${uid}-${index})`
 
             // A lone category fills the circle, which no single arc can express.
             const shape =
               wedges.length === 1 ? (
-                <circle cx={CENTER} cy={CENTER} r={RADIUS} fill={slice.color} />
+                <circle cx={CENTER} cy={CENTER} r={RADIUS} fill={fill} />
               ) : (
-                <path d={slicePath(start, sweep)} fill={slice.color} />
+                <path d={slicePath(start, sweep)} fill={fill} />
               )
 
             return (
@@ -118,7 +161,15 @@ export function CategoryPie({
               <span
                 aria-hidden
                 className="size-2.5 shrink-0 rounded-[3px]"
-                style={{ backgroundColor: slice.color }}
+                style={
+                  slice.texture === "solid"
+                    ? { backgroundColor: slice.color }
+                    : {
+                        backgroundImage: `repeating-linear-gradient(${textureAngle(
+                          slice.texture,
+                        )}deg, ${inked(slice.color)} 0 ${TEXTURE_INK}px, ${slice.color} ${TEXTURE_INK}px ${TEXTURE_PERIOD}px)`,
+                      }
+                }
               />
               <dt className="min-w-0 flex-1 truncate text-sm text-neutral-600">
                 {slice.label}

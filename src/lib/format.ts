@@ -5,6 +5,12 @@ const idr = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 2,
 })
 
+const idrWhole = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  maximumFractionDigits: 0,
+})
+
 const idrCompact = new Intl.NumberFormat("id-ID", {
   notation: "compact",
   maximumFractionDigits: 1,
@@ -13,6 +19,11 @@ const idrCompact = new Intl.NumberFormat("id-ID", {
 /** "Rp 1.234.567,00" — the format the finance team reads in ERPNext. */
 export function formatCurrency(value: number) {
   return idr.format(value)
+}
+
+/** "Rp 1.234.567" — no sen, for headline figures that never carry them. */
+export function formatCurrencyWhole(value: number) {
+  return idrWhole.format(value)
 }
 
 /** Short form for axis ticks: "1,2 jt", "-450 rb". */

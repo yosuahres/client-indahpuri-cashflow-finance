@@ -65,3 +65,19 @@ export function accountTypeSpec(value: string): AccountTypeSpec {
 export function isAccountType(value: unknown): value is AccountTypeValue {
   return ACCOUNT_TYPES.some((type) => type.value === value)
 }
+
+/**
+ * The bank, card issuer, wallet provider or cash holder — whichever the type
+ * actually carries. An account name alone ("Operasional") does not say where
+ * the money sits, so lists show this beside it.
+ */
+export function accountIssuer(account: {
+  type: string
+  provider?: string | null
+  holder?: string | null
+}): string | null {
+  const spec = accountTypeSpec(account.type)
+  if (spec.provider) return account.provider?.trim() || null
+  if (spec.holder) return account.holder?.trim() || null
+  return null
+}

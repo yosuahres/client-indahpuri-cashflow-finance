@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 
 import { Topbar } from "@/components/layout/topbar"
+import { listAccounts } from "@/features/accounts/actions"
+import { listCategories } from "@/features/categories/actions"
 import { ReportFilters } from "@/components/report/report-filters"
 import { TransactionTable } from "@/components/report/transaction-table"
 import { readReportRange } from "@/features/reports/range"
@@ -22,6 +24,13 @@ export default async function ProfitAndLossPage({
     to: range.to,
     periodicity: range.periodicity,
   })
+
+  // The detail panel edits a row in place, so it needs the same pickers the
+  // New Transaction form uses. Fetched one after another rather than together:
+  // each call builds its own Supabase client, and two of those refreshing the
+  // access token at once is a race a Server Component cannot clean up after.
+  const categories = await listCategories()
+  const accounts = await listAccounts()
 
   return (
     <>
@@ -48,6 +57,9 @@ export default async function ProfitAndLossPage({
         <TransactionTable
           transactions={report.transactions}
           caption="Every transaction recorded in the range, newest first."
+          categories={categories.categories}
+          accounts={accounts.accounts}
+          today={range.today}
         />
       </main>
     </>
