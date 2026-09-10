@@ -1,8 +1,10 @@
+import { Suspense } from "react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react"
 
 import { Topbar } from "@/components/layout/topbar"
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
 import { FinancialReportTable } from "@/features/reporting/components/financial-report-table"
 import { FitToFrame } from "@/features/reporting/components/fit-to-frame"
 import { longMonthName, readReportMonth, stepMonth } from "@/features/reporting/months"
@@ -15,6 +17,39 @@ export const metadata: Metadata = {
 const stepper =
   "grid size-8 place-items-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 sm:size-7"
 
+/** Holds the sheet's shape while the figures are on their way. */
+function SheetFallback() {
+  return (
+    <LoadingRegion label="Loading the report">
+      <div className="space-y-1.5 p-3 sm:p-4">
+        {Array.from({ length: 16 }, (_, row) => (
+          <Skeleton key={row} className="h-6" />
+        ))}
+      </div>
+    </LoadingRegion>
+  )
+}
+
+/**
+ * The sheet itself. Everything around it — the title, the month stepper, the
+ * export link — is sent as soon as the request arrives, and this replaces the
+ * skeleton when the database answers.
+ */
+async function Sheet({ year, month }: { year: number; month: number }) {
+  const { ok, error, report } = await loadFinancialReport({ year, month })
+
+  return (
+    <>
+      {!ok ? (
+        <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
+          {error}
+        </p>
+      ) : null}
+      <FinancialReportTable report={report} />
+    </>
+  )
+}
+
 export default async function ReportingPage({
   searchParams,
 }: {
@@ -22,8 +57,6 @@ export default async function ReportingPage({
 }) {
   const params = await searchParams
   const { year, month } = readReportMonth(params)
-
-  const { ok, error, report } = await loadFinancialReport({ year, month })
 
   const rawCompany = typeof params.company === "string" ? params.company.trim() : ""
   const company = rawCompany || "Indah Puri"
@@ -56,12 +89,6 @@ export default async function ReportingPage({
           rather than running past the fold. */}
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden">
         <FitToFrame className="flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-          {!ok ? (
-            <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
-              {error}
-            </p>
-          ) : null}
-
           <div className="flex flex-wrap items-start justify-between gap-3 px-3 py-3 sm:gap-4 sm:px-4">
             <div>
               <h1 className="text-sm font-bold tracking-tight text-neutral-900">
@@ -90,7 +117,9 @@ export default async function ReportingPage({
           </div>
 
           <div className="border-y border-black/10 lg:min-h-0 lg:flex-1">
-            <FinancialReportTable report={report} />
+            <Suspense key={`${year}-${month}`} fallback={<SheetFallback />}>
+              <Sheet year={year} month={month} />
+            </Suspense>
           </div>
         </FitToFrame>
       </main>

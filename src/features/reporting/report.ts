@@ -2,17 +2,17 @@ import "server-only"
 
 import { createClient } from "@/lib/supabase/server"
 import type { TransactionKind } from "@/lib/finance"
+import {
+  loadMonthlyTotals,
+  MIGRATION_HINT,
+  UNDEFINED_TABLE,
+} from "@/features/reports/aggregate"
 
 import { lastDayOfMonth, monthKey } from "./months"
 
-const UNDEFINED_TABLE = "42P01"
 const UNDEFINED_COLUMN = "42703"
-const MIGRATION_HINT =
-  "The transactions table does not exist yet. Run the files in supabase/migrations against the project."
 const KIND_HINT =
   "Budgets do not have a `kind` column yet. Run supabase/migrations/0004_budget_kind.sql against the project."
-
-const PAGE_SIZE = 1000
 
 export type ReportLine = {
   label: string
@@ -42,13 +42,6 @@ export type FinancialReportResult = {
   ok: boolean
   error?: string
   report: FinancialReport
-}
-
-type TransactionRow = {
-  occurred_on: string
-  kind: TransactionKind
-  category: string
-  amount: number | string
 }
 
 type DistributionRow = { starts_on: string; ends_on: string; amount: number | string }
@@ -121,36 +114,25 @@ export async function loadFinancialReport({
   const from = `${year - 1}-01-01`
   const to = lastDayOfMonth(year, month)
 
-  const transactions: TransactionRow[] = []
-  for (let page = 0; ; page += 1) {
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("occurred_on, kind, category, amount")
-      .gte("occurred_on", from)
-      .lte("occurred_on", to)
-      .order("occurred_on")
-      .order("id")
-      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+  // The plan and the actuals go out together rather than one after the other.
+  // Both read through the one request-scoped client, which serializes its own
+  // token refresh, so this waits for the slower of the two rather than for the
+  // sum of them. A query builder does not issue its request until it is
+  // awaited, which is what `Promise.all` does to both at once.
+  const [actuals, budgets] = await Promise.all([
+    loadMonthlyTotals(supabase, from, to),
+    supabase
+      .from("budgets")
+      .select(
+        "name, kind, category, amount, fiscal_year_from, fiscal_year_to, budget_distributions(starts_on, ends_on, amount)",
+      )
+      .lte("fiscal_year_from", year)
+      .gte("fiscal_year_to", year - 1),
+  ])
 
-    if (error) {
-      return {
-        ok: false,
-        error: error.code === UNDEFINED_TABLE ? MIGRATION_HINT : error.message,
-        report: empty,
-      }
-    }
-
-    transactions.push(...((data ?? []) as TransactionRow[]))
-    if (!data || data.length < PAGE_SIZE) break
+  if (!actuals.ok) {
+    return { ok: false, error: actuals.error, report: empty }
   }
-
-  const budgets = await supabase
-    .from("budgets")
-    .select(
-      "name, kind, category, amount, fiscal_year_from, fiscal_year_to, budget_distributions(starts_on, ends_on, amount)",
-    )
-    .lte("fiscal_year_from", year)
-    .gte("fiscal_year_to", year - 1)
 
   if (budgets.error) {
     return {
@@ -182,8 +164,8 @@ export async function loadFinancialReport({
     store.set(rowKey, months)
   }
 
-  for (const row of transactions) {
-    add(actual, row.kind, row.category, row.occurred_on.slice(0, 7), Number(row.amount) || 0)
+  for (const row of actuals.rows) {
+    add(actual, row.kind, row.category, row.month, row.total)
   }
 
   for (const budget of (budgets.data ?? []) as BudgetRow[]) {

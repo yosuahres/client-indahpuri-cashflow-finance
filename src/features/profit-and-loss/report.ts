@@ -9,6 +9,7 @@ import type {
 } from "@/components/report/types"
 import { accountIssuer } from "@/features/accounts/constants"
 import { buildPeriods, type Periodicity } from "@/features/reports/periods"
+import { loadMonthlyTotals, type MonthlyTotal } from "@/features/reports/aggregate"
 
 const UNDEFINED_TABLE = "42P01"
 const MIGRATION_HINT =
@@ -141,10 +142,106 @@ export type ProfitAndLossResult = {
   report: ProfitAndLossReport
 }
 
+/** Everything the statement carries except the ledger behind it. */
+export type ProfitAndLossSummary = Omit<ProfitAndLossReport, "transactions">
+
+export type ProfitAndLossSummaryResult = {
+  ok: boolean
+  error?: string
+  report: ProfitAndLossSummary
+}
+
+/**
+ * The plotted half of the statement: three series, two pies, three totals.
+ *
+ * Reads pre-grouped monthly totals rather than the ledger, so what crosses the
+ * network is a few dozen rows however many transactions stand behind them. The
+ * dashboard shows only these figures, and this is all it asks for.
+ */
+export async function loadProfitAndLossSummary({
+  from,
+  to,
+  periodicity = "Quarterly" as Periodicity,
+}: {
+  from: string
+  to: string
+  periodicity?: Periodicity
+}): Promise<ProfitAndLossSummaryResult> {
+  const { labels: periods, monthToIndex } = buildPeriods(from, to, periodicity)
+
+  const supabase = await createClient()
+  const totals = await loadMonthlyTotals(supabase, from, to)
+
+  if (!totals.ok) {
+    return { ok: false, error: totals.error, report: summarize([], periods, monthToIndex) }
+  }
+
+  return { ok: true, report: summarize(totals.rows, periods, monthToIndex) }
+}
+
+/** Folds monthly category totals into the periods the filters asked for. */
+function summarize(
+  rows: MonthlyTotal[],
+  periods: string[],
+  monthToIndex: Map<string, number>,
+): ProfitAndLossSummary {
+  const empty = () => periods.map(() => 0)
+
+  // kind -> category -> per-period totals, both held as positive amounts.
+  const byKind = {
+    income: new Map<string, number[]>(),
+    expense: new Map<string, number[]>(),
+  }
+
+  for (const row of rows) {
+    const column = monthToIndex.get(row.month)
+    if (column === undefined) continue
+
+    const categories = byKind[row.kind]
+    if (!categories) continue
+
+    const values = categories.get(row.category) ?? empty()
+    values[column] += row.total
+    categories.set(row.category, values)
+  }
+
+  const kindTotals = (kind: "income" | "expense") => {
+    const values = empty()
+    for (const perCategory of byKind[kind].values()) {
+      perCategory.forEach((value, index) => {
+        values[index] += value
+      })
+    }
+    return values
+  }
+
+  const income = kindTotals("income")
+  const expense = kindTotals("expense")
+  const netProfit = periods.map((_, index) => income[index] - expense[index])
+  const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
+
+  return {
+    periods,
+    series: buildSeries(income, expense, netProfit),
+    breakdown: {
+      income: buildBreakdown(byKind.income),
+      expense: buildBreakdown(byKind.expense),
+    },
+    totals: {
+      income: sum(income),
+      expense: sum(expense),
+      netProfit: sum(netProfit),
+    },
+  }
+}
+
 /**
  * Cash-basis profit and loss: income and expense as they were actually paid,
  * since that is what the transaction log records. Accruals would need invoice
  * dates, which this app does not track.
+ *
+ * The ledger comes back with it, so this is the heavier of the two loaders.
+ * Anything that only plots figures should call `loadProfitAndLossSummary`.
  */
 export async function loadProfitAndLossReport({
   from,
@@ -156,9 +253,14 @@ export async function loadProfitAndLossReport({
   periodicity?: Periodicity
 }): Promise<ProfitAndLossResult> {
   const { labels: periods, monthToIndex } = buildPeriods(from, to, periodicity)
-  const empty = () => periods.map(() => 0)
 
   const supabase = await createClient()
+
+  // Started before the transactions rather than after them. Both read through
+  // the one request-scoped client, which serializes its own token refresh, so
+  // the account lookup costs no round trip of its own — it overlaps the pages.
+  const issuers = loadAccountIssuers(supabase)
+
   const rows: TransactionRow[] = []
 
   for (let page = 0; ; page += 1) {
@@ -174,6 +276,9 @@ export async function loadProfitAndLossReport({
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
 
     if (error) {
+      // Nothing awaits `issuers` on this path; settle it so a rejection cannot
+      // surface later as an unhandled promise.
+      void issuers.catch(() => undefined)
       return {
         ok: false,
         error: error.code === UNDEFINED_TABLE ? MIGRATION_HINT : error.message,
@@ -185,44 +290,25 @@ export async function loadProfitAndLossReport({
     if (!data || data.length < PAGE_SIZE) break
   }
 
-  // kind -> category -> per-period totals, both held as positive amounts.
-  const byKind = {
-    income: new Map<string, number[]>(),
-    expense: new Map<string, number[]>(),
-  }
-
+  // The ledger is already here, so the figures are folded from it rather than
+  // asked for a second time.
+  const monthly = new Map<string, MonthlyTotal>()
   for (const row of rows) {
-    const column = monthToIndex.get(row.occurred_on.slice(0, 7))
-    if (column === undefined) continue
-
-    const categories = byKind[row.kind]
-    if (!categories) continue
-
-    const totals = categories.get(row.category) ?? empty()
-    totals[column] += Number(row.amount) || 0
-    categories.set(row.category, totals)
-  }
-
-  const kindTotals = (kind: "income" | "expense") => {
-    const totals = empty()
-    for (const values of byKind[kind].values()) {
-      values.forEach((value, index) => {
-        totals[index] += value
+    const month = row.occurred_on.slice(0, 7)
+    const key = `${row.kind} ${row.category} ${month}`
+    const entry = monthly.get(key)
+    if (entry) entry.total += Number(row.amount) || 0
+    else
+      monthly.set(key, {
+        kind: row.kind,
+        category: row.category,
+        month,
+        total: Number(row.amount) || 0,
       })
-    }
-    return totals
   }
 
-  const income = kindTotals("income")
-  const expense = kindTotals("expense")
-  const netProfit = periods.map((_, index) => income[index] - expense[index])
-
-  const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
-
-  // Fetched after the transactions rather than alongside them: two Supabase
-  // calls in flight at once can both try to refresh the same access token, and
-  // a Server Component cannot write the rotated cookie back.
-  const accountIssuers = await loadAccountIssuers(supabase)
+  const summary = summarize([...monthly.values()], periods, monthToIndex)
+  const accountIssuers = await issuers
 
   // The ledger reads newest first; the query is ascending for stable paging.
   const transactions: TransactionDetail[] = rows
@@ -241,23 +327,7 @@ export async function loadProfitAndLossReport({
     }))
     .reverse()
 
-  return {
-    ok: true,
-    report: {
-      periods,
-      transactions,
-      series: buildSeries(income, expense, netProfit),
-      breakdown: {
-        income: buildBreakdown(byKind.income),
-        expense: buildBreakdown(byKind.expense),
-      },
-      totals: {
-        income: sum(income),
-        expense: sum(expense),
-        netProfit: sum(netProfit),
-      },
-    },
-  }
+  return { ok: true, report: { ...summary, transactions } }
 }
 
 function emptyReport(periods: string[]): ProfitAndLossReport {

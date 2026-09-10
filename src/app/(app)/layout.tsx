@@ -7,10 +7,7 @@ import { SignOutIcon } from "@/features/auth/components/sign-out-icon"
 import { requireUser } from "@/features/auth/session"
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const user = await requireUser()
-  const email = user.email ?? ""
-  const name =
-    (user.user_metadata?.full_name as string | undefined) ?? email.split("@")[0]
+  const { name, email } = await requireUser()
 
   return (
     <SidebarProvider>

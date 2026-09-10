@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireUser } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { readTransaction, validateTransaction } from "./validation"
 
@@ -20,10 +21,7 @@ export async function createTransaction(
   if (hasFieldErrors(fieldErrors)) return { fieldErrors }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect("/login")
+  const user = await requireUser()
 
   const { error } = await supabase.from("transactions").insert({
     user_id: user.id,

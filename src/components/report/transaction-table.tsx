@@ -1,12 +1,13 @@
 "use client"
 
-import { useCallback, useMemo, useState, useTransition } from "react"
+import { useCallback, useMemo, useRef, useState, useTransition } from "react"
 import { Trash2, X } from "lucide-react"
 
 import type { Account } from "@/features/accounts/actions"
 import type { Category } from "@/features/categories/actions"
 import { deleteTransactions } from "@/features/transactions/actions"
 import { TransactionPanel } from "@/features/transactions/components/transaction-panel"
+import { useWindowedRows } from "@/hooks/use-windowed-rows"
 import { cn } from "@/lib/cn"
 import { formatCurrency, formatDate } from "@/lib/format"
 import type { TransactionDetail } from "./types"
@@ -20,6 +21,21 @@ const amountCell = "min-w-[140px] px-2 py-2.5 text-right sm:min-w-[160px] sm:px-
 
 const checkbox =
   "size-4 shrink-0 cursor-pointer accent-neutral-900 disabled:cursor-not-allowed"
+
+/**
+ * Height of one ledger row, in pixels: `py-2.5` either side of a `text-sm`
+ * line, plus its top border. The windowed path pins rows to it so the spacers
+ * can stand in for what is not rendered, which is also why those rows hold
+ * their cells to a single line.
+ */
+const ROW_HEIGHT = 41
+
+/**
+ * Below this many rows the table renders in full and every row keeps its
+ * natural height. A ledger this short costs nothing to lay out, and long text
+ * is free to wrap.
+ */
+const WINDOW_THRESHOLD = 200
 
 const pillButton =
   "rounded-full px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15 disabled:pointer-events-none disabled:opacity-50"
@@ -68,6 +84,22 @@ export function TransactionTable({
   // Looked up rather than held: a refresh replaces every row object, and a
   // deleted row must take its own panel down with it.
   const open = transactions.find((entry) => entry.id === openId) ?? null
+
+  // Only a long ledger is windowed; below the threshold this stays null and
+  // every row is rendered. Note what is *not* windowed: the net total, the
+  // count and the selection all read `transactions`, which still holds every
+  // entry, so nothing that counts rows can disagree with what is on screen.
+  const body = useRef<HTMLTableSectionElement>(null)
+  const windowed = useWindowedRows({
+    ref: body,
+    count: transactions.length,
+    rowHeight: ROW_HEIGHT,
+    threshold: WINDOW_THRESHOLD,
+  })
+
+  const rows = windowed
+    ? transactions.slice(windowed.start, windowed.end)
+    : transactions
 
   function toggle(id: string) {
     setError(null)
@@ -125,13 +157,25 @@ export function TransactionTable({
             </tr>
           </thead>
 
-          <tbody>
-            {transactions.map((entry) => (
+          <tbody ref={body}>
+            {/* Stands in for the rows above the window. A row with no cell in
+                it collapses, so each spacer carries one. */}
+            {windowed && windowed.padTop > 0 ? (
+              <tr aria-hidden>
+                <td colSpan={6} className="p-0" style={{ height: windowed.padTop }} />
+              </tr>
+            ) : null}
+
+            {rows.map((entry) => (
               <tr
                 key={entry.id}
                 onClick={() => setOpenId(entry.id)}
+                style={windowed ? { height: ROW_HEIGHT } : undefined}
                 className={cn(
                   "cursor-pointer border-t border-black/5",
+                  // A windowed row must be exactly the height the spacers
+                  // assume, so its cells may not wrap onto a second line.
+                  windowed && "[&>td]:truncate [&>td]:whitespace-nowrap",
                   selected.has(entry.id) ? "bg-neutral-100" : "hover:bg-neutral-50/70",
                 )}
               >
@@ -197,6 +241,12 @@ export function TransactionTable({
                 </td>
               </tr>
             ))}
+
+            {windowed && windowed.padBottom > 0 ? (
+              <tr aria-hidden>
+                <td colSpan={6} className="p-0" style={{ height: windowed.padBottom }} />
+              </tr>
+            ) : null}
 
             {transactions.length === 0 ? (
               <tr className="border-t border-black/5">

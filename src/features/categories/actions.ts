@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { getUser } from "@/features/auth/session"
 import { isKind, isSection, type SectionValue, type TransactionKind } from "@/lib/finance"
 
 export type Category = {
@@ -61,9 +62,7 @@ export async function addCategory(
   }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getUser()
   if (!user) return { ok: false, error: "Your session expired.", categories: [] }
 
   const { error } = await supabase
@@ -100,9 +99,7 @@ export async function seedCategories(
   suggestions: { name: string; section: SectionValue; kind: TransactionKind }[],
 ): Promise<CategoryResult> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getUser()
   if (!user) return { ok: false, error: "Your session expired.", categories: [] }
 
   const rows = suggestions
