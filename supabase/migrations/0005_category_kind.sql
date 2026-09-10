@@ -6,11 +6,11 @@ alter table public.categories
   add column if not exists kind public.transaction_kind not null default 'expense';
 
 -- The list predates the split, so it has to be sorted out once by name. These
--- four are how money comes in; everything already recorded is money going out
--- and keeps the column default.
+-- are how money comes in; everything already recorded is money going out and
+-- keeps the column default.
 update public.categories
    set kind = 'income'
- where lower(name) in ('cash', 'credit card', 'qris', 'transfer in');
+ where lower(name) in ('agent deposit', 'cash', 'credit card', 'qris', 'transfer in');
 
 -- The same name may now exist once per direction — "Cash" is both a way money
 -- arrives and a way it leaves — so the direction joins the unique key.

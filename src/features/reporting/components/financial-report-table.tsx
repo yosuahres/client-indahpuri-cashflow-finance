@@ -159,7 +159,9 @@ export function FinancialReportTable({ report }: { report: FinancialReport }) {
   const period = longMonthName(month).toUpperCase()
 
   return (
-    <div className="overflow-x-auto">
+    // `data-fit-wide` lets FitToFrame count the table's natural width, so it
+    // shrinks the sheet rather than leaving a sideways scrollbar.
+    <div data-fit-wide className="overflow-x-auto">
       <table className="w-full border-collapse text-xs sm:text-sm">
         <caption className="sr-only">
           Rencana dan realisasi pemasukan dan pengeluaran untuk {longMonthName(month)}{" "}

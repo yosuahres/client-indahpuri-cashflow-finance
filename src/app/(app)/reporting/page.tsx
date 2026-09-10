@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react"
 
 import { Topbar } from "@/components/layout/topbar"
 import { FinancialReportTable } from "@/features/reporting/components/financial-report-table"
+import { FitToFrame } from "@/features/reporting/components/fit-to-frame"
 import { longMonthName, readReportMonth, stepMonth } from "@/features/reporting/months"
 import { loadFinancialReport } from "@/features/reporting/report"
 
@@ -51,49 +52,53 @@ export default async function ReportingPage({
         }
       />
 
-      <main className="min-h-0 flex-1 overflow-y-auto">
-        {!ok ? (
-          <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:gap-4 sm:px-6">
-          <div>
-            <h1 className="text-sm font-bold tracking-tight text-neutral-900">
-              LAPORAN KEUANGAN {company.toUpperCase()}
-            </h1>
-            <p className="mt-0.5 text-sm text-neutral-500">
-              Periode Tahun {year} &mdash; Bulan {longMonthName(month).toUpperCase()}
+      {/* The sheet is meant to be read whole, so it shrinks to the window
+          rather than running past the fold. */}
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <FitToFrame className="min-h-0 flex-1 overflow-auto">
+          {!ok ? (
+            <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
+              {error}
             </p>
+          ) : null}
+
+          <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:gap-4 sm:px-6">
+            <div>
+              <h1 className="text-sm font-bold tracking-tight text-neutral-900">
+                LAPORAN KEUANGAN {company.toUpperCase()}
+              </h1>
+              <p className="mt-0.5 text-sm text-neutral-500">
+                Periode Tahun {year} &mdash; Bulan {longMonthName(month).toUpperCase()}
+              </p>
+            </div>
+
+            <nav
+              aria-label="Pilih bulan"
+              className="flex items-center gap-1 rounded-lg border border-black/10 px-1.5 py-1"
+            >
+              <Link href={at(previous)} aria-label="Bulan sebelumnya" className={stepper}>
+                <ChevronLeft className="size-4" strokeWidth={2} />
+              </Link>
+              <span className="flex items-center gap-1.5 px-1.5 text-sm text-neutral-900">
+                <CalendarDays className="size-4 text-neutral-400" strokeWidth={1.75} />
+                {longMonthName(month)} {year}
+              </span>
+              <Link href={at(next)} aria-label="Bulan berikutnya" className={stepper}>
+                <ChevronRight className="size-4" strokeWidth={2} />
+              </Link>
+            </nav>
           </div>
 
-          <nav
-            aria-label="Pilih bulan"
-            className="flex items-center gap-1 rounded-lg border border-black/10 px-1.5 py-1"
-          >
-            <Link href={at(previous)} aria-label="Bulan sebelumnya" className={stepper}>
-              <ChevronLeft className="size-4" strokeWidth={2} />
-            </Link>
-            <span className="flex items-center gap-1.5 px-1.5 text-sm text-neutral-900">
-              <CalendarDays className="size-4 text-neutral-400" strokeWidth={1.75} />
-              {longMonthName(month)} {year}
-            </span>
-            <Link href={at(next)} aria-label="Bulan berikutnya" className={stepper}>
-              <ChevronRight className="size-4" strokeWidth={2} />
-            </Link>
-          </nav>
-        </div>
+          <div className="border-y border-black/10">
+            <FinancialReportTable report={report} />
+          </div>
 
-        <div className="border-y border-black/10">
-          <FinancialReportTable report={report} />
-        </div>
-
-        <p className="px-4 py-4 text-xs text-neutral-500 sm:px-6">
-          Kolom ANGGARAN diambil dari halaman Anggaran (rencana bulanan). Kolom AKTUAL
-          dihitung otomatis dari transaksi cashflow. Angka dalam{" "}
-          <span className="text-rose-600">(kurung merah)</span> berarti negatif.
-        </p>
+          <p className="px-4 py-4 text-xs text-neutral-500 sm:px-6">
+            Kolom ANGGARAN diambil dari halaman Anggaran (rencana bulanan). Kolom AKTUAL
+            dihitung otomatis dari transaksi cashflow. Angka dalam{" "}
+            <span className="text-rose-600">(kurung merah)</span> berarti negatif.
+          </p>
+        </FitToFrame>
       </main>
     </>
   )
