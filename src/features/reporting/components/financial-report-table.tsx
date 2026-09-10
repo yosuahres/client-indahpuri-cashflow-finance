@@ -15,7 +15,21 @@ const MONTH_TINT = "bg-amber-50"
  */
 const RULE = { borderLeft: "1px solid rgba(0, 0, 0, 0.10)" }
 
-const cell = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap sm:px-3"
+/**
+ * Every measurement in the sheet is in `em`, so the one font size FitToFrame
+ * puts on the table drives the whole grid: set the type smaller and the rows,
+ * the gutters and the column minimums all come in with it, in proportion. The
+ * numbers here are the shape of the sheet, not its size.
+ */
+const PAD = "px-[0.85em] py-[var(--row-pad)]"
+const HEAD_PAD = "px-[0.85em] py-[calc(var(--row-pad)*1.5)]"
+
+/** Widths the columns will not go under, so figures never collide. */
+const FIGURE_COL = "min-w-[7.4em]"
+const LABEL_COL = "min-w-[15em]"
+const INDEX_COL = "w-[3em]"
+
+const cell = cn(PAD, "text-right tabular-nums whitespace-nowrap")
 
 /** The six figures, always in this order. Index 0 and 3 open a column block. */
 const ORDER = [
@@ -76,8 +90,8 @@ function BlankCells() {
 function SectionHeading({ letter, label }: { letter: string; label: string }) {
   return (
     <tr className="bg-blue-50 font-semibold text-blue-700">
-      <td className="px-3 py-1.5 text-center">{letter}</td>
-      <td className="px-3 py-1.5">{label}</td>
+      <td className={cn(PAD, "text-center")}>{letter}</td>
+      <td className={PAD}>{label}</td>
       <BlankCells />
     </tr>
   )
@@ -86,8 +100,8 @@ function SectionHeading({ letter, label }: { letter: string; label: string }) {
 function TotalRow({ label, columns }: { label: string; columns: ReportColumns }) {
   return (
     <tr className="bg-neutral-100 font-semibold text-neutral-900">
-      <td className="px-3 py-1.5" />
-      <td className="px-3 py-1.5">{label}</td>
+      <td className={PAD} />
+      <td className={PAD}>{label}</td>
       <Figures columns={columns} />
     </tr>
   )
@@ -96,8 +110,8 @@ function TotalRow({ label, columns }: { label: string; columns: ReportColumns })
 function EmptyRow({ label }: { label: string }) {
   return (
     <tr>
-      <td className="px-3 py-4" />
-      <td className="px-3 py-4 text-neutral-500">{label}</td>
+      <td className="px-[0.85em] py-[1.6em]" />
+      <td className="px-[0.85em] py-[1.6em] text-neutral-500">{label}</td>
       <BlankCells />
     </tr>
   )
@@ -108,10 +122,10 @@ function LineRows({ lines }: { lines: ReportLine[] }) {
     <>
       {lines.map((line, index) => (
         <tr key={line.label}>
-          <td className="px-3 py-1.5 text-center text-xs text-neutral-400 tabular-nums">
+          <td className={cn(PAD, "text-center text-neutral-400 tabular-nums")}>
             {index + 1}
           </td>
-          <td className="px-3 py-1.5 text-neutral-800">{line.label}</td>
+          <td className={cn(PAD, "text-neutral-800")}>{line.label}</td>
           <Figures columns={line} className="text-neutral-800" />
         </tr>
       ))}
@@ -134,7 +148,8 @@ function ColumnHead({
       scope="col"
       style={RULE}
       className={cn(
-        "min-w-[104px] px-2 pt-1.5 pb-2 text-right font-medium sm:min-w-[130px] sm:px-3",
+        FIGURE_COL,
+        "px-[0.85em] pt-[var(--row-pad)] pb-[calc(var(--row-pad)*1.5)] text-right font-medium",
         columnClass(index),
         !isMonthly(index) && "bg-neutral-50",
       )}
@@ -142,7 +157,7 @@ function ColumnHead({
       <span className="block text-neutral-800">{period}</span>
       <span
         className={cn(
-          "block text-xs font-semibold",
+          "block text-[0.85em] font-semibold",
           measure === "AKTUAL" ? "text-blue-600" : "text-neutral-500",
         )}
       >
@@ -159,10 +174,19 @@ export function FinancialReportTable({ report }: { report: FinancialReport }) {
   const period = longMonthName(month).toUpperCase()
 
   return (
-    // `data-fit-wide` lets FitToFrame count the table's natural width, so it
-    // shrinks the sheet rather than leaving a sideways scrollbar.
-    <div data-fit-wide className="overflow-x-auto">
-      <table className="w-full border-collapse text-xs sm:text-sm">
+    // Narrow screens scroll the table sideways. Desktop must not: FitToFrame
+    // sizes the type by watching the frame overflow, and a scroll container here
+    // would absorb that overflow before it ever showed up.
+    <div className="overflow-x-auto lg:overflow-x-visible">
+      {/* The size here is what narrow screens keep; on desktop FitToFrame
+          overrides it inline with whatever actually fits the page. */}
+      {/* The type size and the row spacing are the two things FitToFrame moves,
+          and it overrides both inline on desktop. These are what narrow screens
+          keep, and what the sheet falls back to if the script never runs. */}
+      <table
+        data-fit-text
+        className="w-full border-collapse text-[13px] [--row-pad:0.4em]"
+      >
         <caption className="sr-only">
           Rencana dan realisasi pemasukan dan pengeluaran untuk {longMonthName(month)}{" "}
           {year}, dibandingkan tahun sebelumnya.
@@ -173,14 +197,22 @@ export function FinancialReportTable({ report }: { report: FinancialReport }) {
             <th
               scope="col"
               rowSpan={2}
-              className="w-12 border-b border-black/10 px-3 py-2 text-center align-bottom font-semibold text-neutral-700"
+              className={cn(
+                HEAD_PAD,
+                INDEX_COL,
+                "border-b border-black/10 text-center align-bottom font-semibold text-neutral-700",
+              )}
             >
               NO
             </th>
             <th
               scope="col"
               rowSpan={2}
-              className="min-w-[180px] border-b border-black/10 px-3 py-2 text-left align-bottom font-semibold text-neutral-700 sm:min-w-[280px]"
+              className={cn(
+                HEAD_PAD,
+                LABEL_COL,
+                "border-b border-black/10 text-left align-bottom font-semibold text-neutral-700",
+              )}
             >
               KETERANGAN
             </th>
@@ -188,7 +220,10 @@ export function FinancialReportTable({ report }: { report: FinancialReport }) {
               scope="colgroup"
               colSpan={3}
               style={RULE}
-              className="border-y border-black/10 bg-amber-100 px-3 py-2 text-center font-bold tracking-wide text-amber-800"
+              className={cn(
+                HEAD_PAD,
+                "border-y border-black/10 bg-amber-100 text-center font-bold tracking-wide text-amber-800",
+              )}
             >
               BULANAN
             </th>
@@ -196,7 +231,10 @@ export function FinancialReportTable({ report }: { report: FinancialReport }) {
               scope="colgroup"
               colSpan={3}
               style={RULE}
-              className="border-y border-black/10 bg-neutral-100 px-3 py-2 text-center font-bold tracking-wide text-neutral-700"
+              className={cn(
+                HEAD_PAD,
+                "border-y border-black/10 bg-neutral-100 text-center font-bold tracking-wide text-neutral-700",
+              )}
             >
               PERIODE (JAN &ndash; {period})
             </th>
@@ -225,8 +263,8 @@ export function FinancialReportTable({ report }: { report: FinancialReport }) {
 
         <tfoot>
           <tr className="bg-amber-100 font-bold text-neutral-900">
-            <td className="px-3 py-2" />
-            <td className="px-3 py-2">DEVIASI PEMASUKAN / PENGELUARAN</td>
+            <td className={HEAD_PAD} />
+            <td className={HEAD_PAD}>DEVIASI PEMASUKAN / PENGELUARAN</td>
             <Figures columns={report.deviation} tint={false} />
           </tr>
         </tfoot>

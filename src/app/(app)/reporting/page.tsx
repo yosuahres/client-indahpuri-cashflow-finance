@@ -54,15 +54,15 @@ export default async function ReportingPage({
 
       {/* The sheet is meant to be read whole, so it shrinks to the window
           rather than running past the fold. */}
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <FitToFrame className="min-h-0 flex-1 overflow-auto">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden">
+        <FitToFrame className="flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
           {!ok ? (
             <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
               {error}
             </p>
           ) : null}
 
-          <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:gap-4 sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-3 px-3 py-3 sm:gap-4 sm:px-4">
             <div>
               <h1 className="text-sm font-bold tracking-tight text-neutral-900">
                 LAPORAN KEUANGAN {company.toUpperCase()}
@@ -89,15 +89,9 @@ export default async function ReportingPage({
             </nav>
           </div>
 
-          <div className="border-y border-black/10">
+          <div className="border-y border-black/10 lg:min-h-0 lg:flex-1">
             <FinancialReportTable report={report} />
           </div>
-
-          <p className="px-4 py-4 text-xs text-neutral-500 sm:px-6">
-            Kolom ANGGARAN diambil dari halaman Anggaran (rencana bulanan). Kolom AKTUAL
-            dihitung otomatis dari transaksi cashflow. Angka dalam{" "}
-            <span className="text-rose-600">(kurung merah)</span> berarti negatif.
-          </p>
         </FitToFrame>
       </main>
     </>
