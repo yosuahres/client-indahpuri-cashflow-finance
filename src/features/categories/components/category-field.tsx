@@ -23,6 +23,7 @@ export function CategoryField({
   categories,
   onCategoriesChange,
   invalid,
+  emptyOptionLabel,
 }: {
   id: string
   name: string
@@ -35,12 +36,22 @@ export function CategoryField({
   categories: Category[]
   onCategoriesChange: (categories: Category[]) => void
   invalid?: boolean
+  /**
+   * Label for a blank first option. Budgets use it to cover a whole section;
+   * transactions leave it off, since an entry always names a category.
+   */
+  emptyOptionLabel?: string
 }) {
   const [managing, setManaging] = useState(false)
 
-  const options = categories
-    .filter((category) => category.kind === kind && category.section === section)
-    .map((category) => ({ value: category.name, label: category.name }))
+  const matches = categories.filter(
+    (category) => category.kind === kind && category.section === section,
+  )
+  const options = matches.map((category) => ({
+    value: category.name,
+    label: category.name,
+  }))
+  if (emptyOptionLabel) options.unshift({ value: "", label: emptyOptionLabel })
 
   return (
     <>
@@ -52,7 +63,7 @@ export function CategoryField({
         options={options}
         invalid={invalid}
         placeholder={
-          options.length === 0
+          matches.length === 0
             ? `No ${kind} categories here — add one`
             : "Select a category…"
         }

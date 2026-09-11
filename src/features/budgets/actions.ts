@@ -6,8 +6,6 @@ import { refresh } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { requireUser } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
-import type { Frequency } from "@/lib/finance"
-import { buildDistribution } from "./distribution"
 import { readBudget, validateBudget } from "./validation"
 
 const UNDEFINED_TABLE = "42P01"
@@ -20,12 +18,10 @@ export async function createBudget(
   const fieldErrors = validateBudget(input)
   if (hasFieldErrors(fieldErrors)) return { fieldErrors }
 
-  const distributeEqually = formData.get("distributeEqually") === "on"
-
   const supabase = await createClient()
   const user = await requireUser()
 
-  const { data: budget, error } = await supabase
+  const { error } = await supabase
     .from("budgets")
     .insert({
       user_id: user.id,
@@ -38,11 +34,8 @@ export async function createBudget(
       fiscal_year_to: Number(input.toYear),
       frequency: input.frequency,
       amount: Number(input.amount),
-      distribute_equally: distributeEqually,
       warn_on_overrun: formData.get("warnOnOverrun") === "on",
     })
-    .select("id")
-    .single()
 
   if (error) {
     if (error.code === UNDEFINED_TABLE) {
@@ -52,31 +45,6 @@ export async function createBudget(
       }
     }
     return { error: error.message }
-  }
-
-  // The period rows are derived, so the server recomputes them rather than
-  // trusting whatever the browser rendered.
-  if (distributeEqually) {
-    const rows = buildDistribution(
-      Number(input.fromYear),
-      Number(input.toYear),
-      input.frequency as Frequency,
-      Number(input.amount),
-    ).map((row, index) => ({
-      budget_id: budget.id,
-      starts_on: row.startDate,
-      ends_on: row.endDate,
-      amount: row.amount,
-      percent: row.percent,
-      position: index,
-    }))
-
-    if (rows.length > 0) {
-      const { error: rowsError } = await supabase
-        .from("budget_distributions")
-        .insert(rows)
-      if (rowsError) return { error: rowsError.message }
-    }
   }
 
   refresh()

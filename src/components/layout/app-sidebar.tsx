@@ -3,14 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import {
-  Bell,
-  ChevronDown,
-  ChevronRight,
-  ChevronsUpDown,
-  Search,
-  X,
-} from "lucide-react"
+import { ChevronDown, ChevronRight, ChevronsUpDown, X } from "lucide-react"
 
 import { cn } from "@/lib/cn"
 import { NAV_GROUPS, NAV_LINKS, type NavGroup } from "./nav-config"
@@ -158,25 +151,6 @@ function SidebarBody({
             <X className="size-5" strokeWidth={1.75} />
           </button>
         ) : null}
-      </div>
-
-      {/* Global actions */}
-      <div className="px-3 pb-2">
-        <button
-          type="button"
-          className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm text-neutral-700 hover:bg-neutral-100 sm:py-1.5"
-        >
-          <Search className="size-4 text-neutral-500" strokeWidth={1.75} />
-          <span className="flex-1 text-left">Search</span>
-          <kbd className="hidden font-sans text-xs text-neutral-400 lg:inline">⌘+K</kbd>
-        </button>
-        <button
-          type="button"
-          className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm text-neutral-700 hover:bg-neutral-100 sm:py-1.5"
-        >
-          <Bell className="size-4 text-neutral-500" strokeWidth={1.75} />
-          <span className="flex-1 text-left">Notification</span>
-        </button>
       </div>
 
       {/* Report navigation */}

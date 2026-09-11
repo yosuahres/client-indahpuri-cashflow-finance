@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useMemo, useState } from "react"
+import { useActionState, useState } from "react"
 
 import {
   CheckboxField,
@@ -16,16 +16,31 @@ import {
   SaveButton,
 } from "@/components/form/form-shell"
 import { Select } from "@/components/form/select"
-import { FREQUENCIES, SECTIONS, TRANSACTION_KINDS, type Frequency } from "@/lib/finance"
-import { formatCurrency } from "@/lib/format"
+import { CategoryField } from "@/features/categories/components/category-field"
+import type { Category } from "@/features/categories/actions"
+import {
+  FREQUENCIES,
+  SECTIONS,
+  TRANSACTION_KINDS,
+  type Frequency,
+  type SectionValue,
+  type TransactionKind,
+} from "@/lib/finance"
 import type { FormState } from "@/lib/form-state"
 
 import { createBudget } from "../actions"
-import { buildDistribution } from "../distribution"
 
 const initialState: FormState = {}
 
-export function BudgetForm({ defaultYear }: { defaultYear: number }) {
+export function BudgetForm({
+  defaultYear,
+  initialCategories,
+  setupError,
+}: {
+  defaultYear: number
+  initialCategories: Category[]
+  setupError?: string
+}) {
   const [state, formAction, pending] = useActionState(createBudget, initialState)
   const errors = state.fieldErrors ?? {}
 
@@ -33,23 +48,10 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
   const [toYear, setToYear] = useState(String(defaultYear))
   const [frequency, setFrequency] = useState<Frequency>("Monthly")
   const [amount, setAmount] = useState("")
-  const [distributeEqually, setDistributeEqually] = useState(true)
-  const [section, setSection] = useState("operations")
-  const [kind, setKind] = useState("expense")
-
-  // Preview of exactly what the server will store, recomputed as you type.
-  const rows = useMemo(
-    () =>
-      distributeEqually
-        ? buildDistribution(
-            Number(fromYear),
-            Number(toYear),
-            frequency,
-            Number(amount) || 0,
-          )
-        : [],
-    [distributeEqually, fromYear, toYear, frequency, amount],
-  )
+  const [section, setSection] = useState<SectionValue>("operations")
+  const [kind, setKind] = useState<TransactionKind>("expense")
+  const [categories, setCategories] = useState(initialCategories)
+  const [category, setCategory] = useState("")
 
   return (
     <form action={formAction} noValidate className="flex min-h-full flex-col">
@@ -69,6 +71,15 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
         </p>
       ) : null}
 
+      {setupError ? (
+        <p
+          role="alert"
+          className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6"
+        >
+          {setupError}
+        </p>
+      ) : null}
+
       <FormSection>
         <FormGrid>
           <Field label="Budget Name" htmlFor="name" required error={errors.name}>
@@ -77,17 +88,6 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
               name="name"
               placeholder="e.g. Operations 2026"
               aria-invalid={Boolean(errors.name)}
-            />
-          </Field>
-
-          <Field label="From Fiscal Year" htmlFor="fromYear" required error={errors.fromYear}>
-            <TextInput
-              id="fromYear"
-              name="fromYear"
-              type="number"
-              value={fromYear}
-              onChange={(event) => setFromYear(event.target.value)}
-              aria-invalid={Boolean(errors.fromYear)}
             />
           </Field>
 
@@ -102,7 +102,11 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
               id="kind"
               name="kind"
               value={kind}
-              onValueChange={setKind}
+              onValueChange={(value) => {
+                setKind(value as TransactionKind)
+                // Categories belong to one direction, so the old pick is gone.
+                setCategory("")
+              }}
               options={TRANSACTION_KINDS.map((option) => ({
                 value: option.value,
                 label: option.label,
@@ -112,7 +116,7 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
           </Field>
 
           <Field
-            label="Budget Against"
+            label="Cash Flow Section"
             htmlFor="section"
             required
             error={errors.section}
@@ -122,9 +126,44 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
               id="section"
               name="section"
               value={section}
-              onValueChange={setSection}
+              onValueChange={(value) => {
+                setSection(value as SectionValue)
+                // Categories are per section, so the old pick no longer applies.
+                setCategory("")
+              }}
               options={SECTIONS.map((option) => ({ value: option.value, label: option.label }))}
               invalid={Boolean(errors.section)}
+            />
+          </Field>
+
+          <Field
+            label="Category"
+            htmlFor="category"
+            error={errors.category}
+            hint="Leave on the whole section to budget every category in it."
+          >
+            <CategoryField
+              id="category"
+              name="category"
+              kind={kind}
+              section={section}
+              value={category}
+              onValueChange={setCategory}
+              categories={categories}
+              onCategoriesChange={setCategories}
+              emptyOptionLabel="Whole section"
+              invalid={Boolean(errors.category)}
+            />
+          </Field>
+
+          <Field label="From Fiscal Year" htmlFor="fromYear" required error={errors.fromYear}>
+            <TextInput
+              id="fromYear"
+              name="fromYear"
+              type="number"
+              value={fromYear}
+              onChange={(event) => setFromYear(event.target.value)}
+              aria-invalid={Boolean(errors.fromYear)}
             />
           </Field>
 
@@ -139,15 +178,12 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
             />
           </Field>
 
-          <Field label="Category" htmlFor="category" hint="Leave blank to budget the whole section.">
-            <TextInput id="category" name="category" placeholder="Optional" />
-          </Field>
-
           <Field
-            label="Distribution Frequency"
+            label="Frequency"
             htmlFor="frequency"
             required
             error={errors.frequency}
+            hint="The cadence this plan is reviewed on."
           >
             <Select
               id="frequency"
@@ -159,10 +195,6 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
             />
           </Field>
 
-          <Field label="Cost Center" htmlFor="costCenter">
-            <TextInput id="costCenter" name="costCenter" placeholder="Optional" />
-          </Field>
-
           <Field label="Budget Amount" htmlFor="amount" required error={errors.amount}>
             <MoneyInput
               id="amount"
@@ -172,57 +204,15 @@ export function BudgetForm({ defaultYear }: { defaultYear: number }) {
               invalid={Boolean(errors.amount)}
             />
           </Field>
+
+          <Field
+            label="Cost Center"
+            htmlFor="costCenter"
+            hint="Department or project this budget belongs to."
+          >
+            <TextInput id="costCenter" name="costCenter" placeholder="Optional" />
+          </Field>
         </FormGrid>
-      </FormSection>
-
-      <FormSection>
-        <CheckboxField
-          label="Distribute Equally"
-          name="distributeEqually"
-          checked={distributeEqually}
-          onChange={(event) => setDistributeEqually(event.target.checked)}
-          className="mb-5"
-        />
-
-        <p className="mb-2 text-sm text-neutral-600">Budget Distribution</p>
-        <div className="overflow-x-auto rounded-md border border-black/8">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-neutral-50 text-left text-neutral-600">
-                <th scope="col" className="w-14 px-3 py-2.5 font-medium">No.</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">Start Date</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">End Date</th>
-                <th scope="col" className="px-3 py-2.5 text-right font-medium">Amount</th>
-                <th scope="col" className="px-3 py-2.5 text-right font-medium">Percent</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-neutral-500">
-                    {distributeEqually
-                      ? "Set the fiscal years and a budget amount to generate the periods."
-                      : "No rows — untick Distribute Equally to enter periods by hand."}
-                  </td>
-                </tr>
-              ) : (
-                rows.map((row, index) => (
-                  <tr key={row.startDate} className="border-t border-black/5">
-                    <td className="px-3 py-2.5 text-neutral-400">{index + 1}</td>
-                    <td className="px-3 py-2.5 text-neutral-700">{row.startDate}</td>
-                    <td className="px-3 py-2.5 text-neutral-700">{row.endDate}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-neutral-900">
-                      {formatCurrency(row.amount)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-neutral-700">
-                      {row.percent}%
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
       </FormSection>
 
       <FormSection title="Alerts" className="border-b-0">

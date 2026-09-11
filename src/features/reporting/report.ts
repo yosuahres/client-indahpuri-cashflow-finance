@@ -44,8 +44,6 @@ export type FinancialReportResult = {
   report: FinancialReport
 }
 
-type DistributionRow = { starts_on: string; ends_on: string; amount: number | string }
-
 type BudgetRow = {
   name: string
   kind: TransactionKind
@@ -53,7 +51,6 @@ type BudgetRow = {
   amount: number | string
   fiscal_year_from: number
   fiscal_year_to: number
-  budget_distributions: DistributionRow[] | null
 }
 
 const zeroColumns = (): ReportColumns => ({
@@ -65,7 +62,7 @@ const zeroColumns = (): ReportColumns => ({
   prevYearActual: 0,
 })
 
-/** Months a distribution spans, so a quarterly or yearly plan can be levelled. */
+/** Months a budget's fiscal range spans, so the plan can be levelled over them. */
 function monthsBetween(from: string, to: string) {
   const keys: string[] = []
   const startYear = Number(from.slice(0, 4))
@@ -123,9 +120,7 @@ export async function loadFinancialReport({
     loadMonthlyTotals(supabase, from, to),
     supabase
       .from("budgets")
-      .select(
-        "name, kind, category, amount, fiscal_year_from, fiscal_year_to, budget_distributions(starts_on, ends_on, amount)",
-      )
+      .select("name, kind, category, amount, fiscal_year_from, fiscal_year_to")
       .lte("fiscal_year_from", year)
       .gte("fiscal_year_to", year - 1),
   ])
@@ -171,32 +166,18 @@ export async function loadFinancialReport({
   for (const budget of (budgets.data ?? []) as BudgetRow[]) {
     // A budget with no category plans the whole line under its own name.
     const label = budget.category?.trim() || budget.name
-    const rows = budget.budget_distributions ?? []
 
-    const spans =
-      rows.length > 0
-        ? rows.map((row) => ({
-            months: monthsBetween(row.starts_on, row.ends_on),
-            amount: Number(row.amount) || 0,
-          }))
-        : // Not distributed: level the whole plan across its fiscal years.
-          [
-            {
-              months: monthsBetween(
-                `${budget.fiscal_year_from}-01-01`,
-                `${budget.fiscal_year_to}-12-31`,
-              ),
-              amount: Number(budget.amount) || 0,
-            },
-          ]
+    // The amount is the total for the whole fiscal range, so it levels out
+    // over every month in it.
+    const months = monthsBetween(
+      `${budget.fiscal_year_from}-01-01`,
+      `${budget.fiscal_year_to}-12-31`,
+    )
+    if (months.length === 0) continue
 
-    for (const span of spans) {
-      if (span.months.length === 0) continue
-      // The plan is a monthly figure, so a multi-month span levels out.
-      const perMonth = span.amount / span.months.length
-      for (const key of span.months) {
-        add(planned, budget.kind, label, key, perMonth)
-      }
+    const perMonth = (Number(budget.amount) || 0) / months.length
+    for (const key of months) {
+      add(planned, budget.kind, label, key, perMonth)
     }
   }
 
