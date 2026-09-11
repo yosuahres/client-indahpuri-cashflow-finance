@@ -110,7 +110,7 @@ async function BudgetList({
             <Card className="overflow-hidden">
               <CardHeader
                 title={`Budgets for ${label}`}
-                caption="Entered against this month, and counted in it whole."
+                caption="Entered against this month, and counted in it whole. Click a figure to change it."
               />
               <div className="mt-4">
                 <BudgetSheet entries={monthPlans} label={label} showAccount={!account} />
@@ -140,7 +140,7 @@ async function BudgetList({
           <Card className="overflow-hidden">
             <CardHeader
               title={`Budgets for ${label}`}
-              caption="Every plan filed against this year, whole-year plans first."
+              caption="Every plan filed against this year, whole-year plans first. Click a figure to change it."
             />
             <div className="mt-4">
               <BudgetSheet entries={entries} label={label} showPeriod showAccount={!account} />

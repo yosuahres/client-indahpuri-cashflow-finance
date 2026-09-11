@@ -71,14 +71,33 @@ export function FormSection({
   title,
   children,
   className,
+  wide,
+  flush,
 }: {
   title?: string
   children: ReactNode
   className?: string
+  /**
+   * Drops the reading-width column. For blocks that are a grid rather than a
+   * form — twelve months of figures need the whole page, not a text measure.
+   */
+  wide?: boolean
+  /**
+   * Drops the side padding too, so the block runs to both edges. `cn` only
+   * joins, so this has to replace the padding classes rather than override
+   * them — two competing `px-` utilities are settled by stylesheet order.
+   */
+  flush?: boolean
 }) {
   return (
-    <section className={cn("border-b border-black/8 px-4 py-6 sm:px-6 sm:py-8", className)}>
-      <div className="mx-auto max-w-4xl">
+    <section
+      className={cn(
+        "border-b border-black/8 py-6 sm:py-8",
+        !flush && "px-4 sm:px-6",
+        className,
+      )}
+    >
+      <div className={cn("mx-auto", wide ? "max-w-none" : "max-w-4xl")}>
         {title ? (
           <h2 className="mb-4 text-sm font-semibold text-neutral-900 sm:mb-6">{title}</h2>
         ) : null}

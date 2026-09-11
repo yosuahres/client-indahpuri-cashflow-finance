@@ -101,3 +101,55 @@ export async function saveBudgetPlan(
 
   redirect(`/budgets?period=${input.period}&year=${year}&month=1&account=${encodeURIComponent(input.account)}`)
 }
+
+export type RowResult = { ok: boolean; error?: string }
+
+/**
+ * Changes one plan's figure where it stands, from the Anggaran table.
+ *
+ * The amount has a positive check constraint behind it, so zero is not how a
+ * plan is removed — `deleteBudget` is. Row level security scopes the update to
+ * the signed-in user, so an id belonging to someone else matches nothing
+ * rather than erroring.
+ */
+export async function setBudgetAmount(id: string, amount: number): Promise<RowResult> {
+  if (!id) return { ok: false, error: "That budget is no longer open." }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, error: "Enter a positive amount." }
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("budgets")
+    .update({ amount: Math.round(amount) })
+    .eq("id", id)
+    .select("id")
+
+  if (error) return { ok: false, error: hint(error.code) ?? error.message }
+  if (!data || data.length === 0) return { ok: false, error: "That budget no longer exists." }
+
+  refresh()
+  return { ok: true }
+}
+
+/**
+ * Removes one plan outright. Nothing keeps a tombstone, so the caller is
+ * expected to have confirmed first.
+ */
+export async function deleteBudget(id: string): Promise<RowResult> {
+  if (!id) return { ok: false, error: "That budget is no longer open." }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("budgets")
+    .delete()
+    .eq("id", id)
+    // Returning the row is what makes this real rather than assumed.
+    .select("id")
+
+  if (error) return { ok: false, error: hint(error.code) ?? error.message }
+  if (!data || data.length === 0) return { ok: false, error: "That budget no longer exists." }
+
+  refresh()
+  return { ok: true }
+}

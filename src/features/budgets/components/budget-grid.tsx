@@ -257,8 +257,8 @@ export function BudgetGrid({
         </p>
       ) : null}
 
-      <FormSection>
-        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+      <FormSection wide>
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4 xl:max-w-5xl">
           <Field
             label="Account"
             htmlFor="account-picker"
@@ -339,7 +339,7 @@ export function BudgetGrid({
         </p>
       </FormSection>
 
-      <FormSection className="px-0 sm:px-0">
+      <FormSection wide flush>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <caption className="sr-only">
@@ -474,8 +474,8 @@ export function BudgetGrid({
         </div>
       </FormSection>
 
-      <FormSection title="Applies to every row" className="border-b-0">
-        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+      <FormSection wide title="Applies to every row" className="border-b-0">
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 xl:max-w-3xl">
           <Field
             label="Cost Center"
             htmlFor="costCenter"
