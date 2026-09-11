@@ -16,6 +16,22 @@ export const TRANSACTION_KINDS = [
 
 export type TransactionKind = (typeof TRANSACTION_KINDS)[number]["value"]
 
+/**
+ * Whether an expense has actually left the account yet. Income has no
+ * equivalent — money that has not arrived is not recorded — so only expenses
+ * carry one of these.
+ */
+export const PAYMENT_STATUSES = [
+  { value: "paid", label: "Paid" },
+  { value: "unpaid", label: "Unpaid" },
+] as const
+
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number]["value"]
+
+export function isPaymentStatus(value: unknown): value is PaymentStatus {
+  return PAYMENT_STATUSES.some((status) => status.value === value)
+}
+
 export const FREQUENCIES = ["Monthly", "Quarterly", "Yearly"] as const
 export type Frequency = (typeof FREQUENCIES)[number]
 

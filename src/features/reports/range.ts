@@ -16,6 +16,11 @@ export function readReportRange(params: Record<string, string | string[] | undef
 
   const mode = read(params, "mode") === "range" ? "range" : "fiscal"
 
+  // Which direction the ledger shows. "all" is the absence of a filter.
+  const rawKind = read(params, "kind")
+  const kind: "all" | "income" | "expense" =
+    rawKind === "income" || rawKind === "expense" ? rawKind : "all"
+
   const fromYear = Number(read(params, "fromYear")) || thisYear
   const toYear = Math.max(Number(read(params, "toYear")) || thisYear, fromYear)
 
@@ -28,6 +33,7 @@ export function readReportRange(params: Record<string, string | string[] | undef
 
   return {
     periodicity,
+    kind,
     mode: mode as "fiscal" | "range",
     fromYear,
     toYear,

@@ -21,6 +21,7 @@ export function ReportFilters({
   from,
   to,
   periodicity,
+  kind,
   today,
 }: {
   company: string
@@ -30,6 +31,12 @@ export function ReportFilters({
   from: string
   to: string
   periodicity: string
+  /**
+   * Direction the ledger is narrowed to. Omitted on views that have no rows to
+   * narrow — the dashboard plots income against expense, so filtering one out
+   * would leave its net figure meaningless.
+   */
+  kind?: "all" | "income" | "expense"
   today: string
 }) {
   const router = useRouter()
@@ -116,15 +123,18 @@ export function ReportFilters({
         options={PERIODICITIES.map((option) => ({ value: option, label: option }))}
       />
 
-      <Select
-        id="currency"
-        value="IDR"
-        onValueChange={() => {}}
-        options={[
-          { value: "IDR", label: "IDR" },
-          { value: "USD", label: "USD" },
-        ]}
-      />
+      {kind ? (
+        <Select
+          id="kind"
+          value={kind}
+          onValueChange={(value) => setParams({ kind: value })}
+          options={[
+            { value: "all", label: "Income & Expense" },
+            { value: "income", label: "Income" },
+            { value: "expense", label: "Expense" },
+          ]}
+        />
+      ) : null}
     </div>
   )
 }

@@ -42,6 +42,7 @@ async function Ledger({ range }: { range: ReturnType<typeof readReportRange> }) 
       from: range.from,
       to: range.to,
       periodicity: range.periodicity,
+      kind: range.kind,
     }),
     listCategories(),
     listAccounts(),
@@ -86,10 +87,11 @@ export default async function ProfitAndLossPage({
           from={range.customFrom}
           to={range.customTo}
           periodicity={range.periodicity}
+          kind={range.kind}
           today={range.today}
         />
 
-        <Suspense key={`${range.from}:${range.to}:${range.periodicity}`} fallback={<LedgerFallback />}>
+        <Suspense key={`${range.from}:${range.to}:${range.periodicity}:${range.kind}`} fallback={<LedgerFallback />}>
           <Ledger range={range} />
         </Suspense>
       </main>

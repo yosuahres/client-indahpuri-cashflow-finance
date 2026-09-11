@@ -1,4 +1,4 @@
-import { isKind, isSection } from "@/lib/finance"
+import { isKind, isPaymentStatus, isSection } from "@/lib/finance"
 
 export type TransactionInput = {
   occurredOn: string
@@ -10,6 +10,8 @@ export type TransactionInput = {
   reference: string
   amount: string
   notes: string
+  /** "paid" / "unpaid" on an expense; empty on income, which has no equivalent. */
+  paid: string
 }
 
 export function readTransaction(formData: FormData): TransactionInput {
@@ -24,6 +26,7 @@ export function readTransaction(formData: FormData): TransactionInput {
     reference: read("reference"),
     amount: read("amount"),
     notes: read("notes"),
+    paid: read("paid"),
   }
 }
 
@@ -39,6 +42,10 @@ export function validateTransaction(input: TransactionInput) {
   if (!isSection(input.section)) errors.section = "Choose a cash flow section."
   if (!input.category) errors.category = "Category is required."
   if (!input.account) errors.account = "Choose the account the money moved through."
+
+  if (input.kind === "expense" && !isPaymentStatus(input.paid)) {
+    errors.paid = "Say whether this has been paid."
+  }
 
   const amount = Number(input.amount)
   if (!input.amount) errors.amount = "Amount is required."

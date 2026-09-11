@@ -1,14 +1,17 @@
 "use client"
 
-import { useCallback, useMemo, useRef, useState, useTransition } from "react"
-import { Trash2, X } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { createPortal } from "react-dom"
+import { Check, ChevronDown, Trash2, X } from "lucide-react"
 
 import type { Account } from "@/features/accounts/actions"
 import type { Category } from "@/features/categories/actions"
-import { deleteTransactions } from "@/features/transactions/actions"
+import { popoverContainer, usePopoverPosition } from "@/components/form/use-popover"
+import { deleteTransactions, setTransactionPaid } from "@/features/transactions/actions"
 import { TransactionPanel } from "@/features/transactions/components/transaction-panel"
 import { useWindowedRows } from "@/hooks/use-windowed-rows"
 import { cn } from "@/lib/cn"
+import { PAYMENT_STATUSES } from "@/lib/finance"
 import { formatCurrency, formatDate } from "@/lib/format"
 import type { TransactionDetail } from "./types"
 
@@ -62,6 +65,35 @@ export function TransactionTable({
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+
+  // A flip paints before the server answers. Rows arrive fresh from the server
+  // after `refresh()`, so a new array is the signal that the overrides have
+  // been folded in and can go. Adjusted during render rather than in an
+  // effect, so the confirmed rows paint without an extra pass.
+  const [paidOverrides, setPaidOverrides] = useState<ReadonlyMap<string, boolean>>(new Map())
+  const [seenRows, setSeenRows] = useState(transactions)
+  if (transactions !== seenRows) {
+    setSeenRows(transactions)
+    if (paidOverrides.size > 0) setPaidOverrides(new Map())
+  }
+
+  const [, startFlip] = useTransition()
+
+  function flipPaid(id: string, paid: boolean) {
+    setPaidOverrides((current) => new Map(current).set(id, paid))
+    startFlip(async () => {
+      const result = await setTransactionPaid(id, paid)
+      if (!result.ok) {
+        setError(result.error ?? "Could not change that payment status.")
+        // Put the badge back where it was; the server never took the change.
+        setPaidOverrides((current) => {
+          const next = new Map(current)
+          next.delete(id)
+          return next
+        })
+      }
+    })
+  }
 
   const net = useMemo(
     () =>
@@ -151,6 +183,9 @@ export function TransactionTable({
               <th scope="col" className={cn("min-w-[120px]", headCell)}>
                 Type
               </th>
+              <th scope="col" className={cn("min-w-[100px]", headCell)}>
+                Status
+              </th>
               <th scope="col" className={cn(amountCell, "font-medium text-neutral-700")}>
                 Amount
               </th>
@@ -162,7 +197,7 @@ export function TransactionTable({
                 it collapses, so each spacer carries one. */}
             {windowed && windowed.padTop > 0 ? (
               <tr aria-hidden>
-                <td colSpan={6} className="p-0" style={{ height: windowed.padTop }} />
+                <td colSpan={7} className="p-0" style={{ height: windowed.padTop }} />
               </tr>
             ) : null}
 
@@ -230,6 +265,15 @@ export function TransactionTable({
                   ) : null}
                 </td>
                 <td className="px-3 py-2.5 capitalize text-neutral-700">{entry.kind}</td>
+                <StatusCell
+                  entry={
+                    paidOverrides.has(entry.id)
+                      ? { ...entry, paid: paidOverrides.get(entry.id)! }
+                      : entry
+                  }
+                  onChange={(paid) => flipPaid(entry.id, paid)}
+                  disabled={pending}
+                />
                 <td
                   className={cn(
                     amountCell,
@@ -244,14 +288,14 @@ export function TransactionTable({
 
             {windowed && windowed.padBottom > 0 ? (
               <tr aria-hidden>
-                <td colSpan={6} className="p-0" style={{ height: windowed.padBottom }} />
+                <td colSpan={7} className="p-0" style={{ height: windowed.padBottom }} />
               </tr>
             ) : null}
 
             {transactions.length === 0 ? (
               <tr className="border-t border-black/5">
                 <td className={cn(stickyGutter, "bg-white")} />
-                <td colSpan={5} className="px-3 py-8 text-center text-neutral-500">
+                <td colSpan={6} className="px-3 py-8 text-center text-neutral-500">
                   No transactions recorded in this range.
                 </td>
               </tr>
@@ -263,10 +307,10 @@ export function TransactionTable({
               <tr className="border-t border-black/15 bg-neutral-50 font-semibold text-neutral-900">
                 <td className={cn(stickyGutter, "bg-neutral-50")} />
                 <td className={cn(stickyDate, "bg-neutral-50 px-3 py-2.5")}>Total</td>
-                <td colSpan={2} className="px-3 py-2.5 font-normal text-neutral-500">
+                <td colSpan={3} className="px-3 py-2.5 font-normal text-neutral-500">
                   {transactions.length} transaction{transactions.length === 1 ? "" : "s"}
                 </td>
-                {/* The direction column names what the figure beside it is. */}
+                {/* Sits directly beside the figure, naming what it is. */}
                 <td className="px-3 py-2.5">Net</td>
                 <td
                   className={cn(
@@ -367,5 +411,121 @@ export function TransactionTable({
         />
       ) : null}
     </>
+  )
+}
+
+/**
+ * The status badge in the ledger, editable where it stands. Opening the row
+ * just to mark a bill settled was the whole friction; this is one click and a
+ * pick, and the rest of the row still opens the panel.
+ *
+ * Income has no status, so it shows an inert dash rather than a control.
+ */
+function StatusCell({
+  entry,
+  onChange,
+  disabled,
+}: {
+  entry: TransactionDetail
+  onChange: (paid: boolean) => void
+  disabled: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
+  const [container, setContainer] = useState<HTMLElement | null>(null)
+  // Narrow list, so it asks for a fixed width instead of matching the trigger.
+  const style = usePopoverPosition(triggerRef, open, 120, 132)
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node
+      if (triggerRef.current?.contains(target)) return
+      if (popupRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    document.addEventListener("pointerdown", onPointerDown)
+    return () => document.removeEventListener("pointerdown", onPointerDown)
+  }, [open])
+
+  if (entry.paid === null) {
+    return (
+      <td className="px-3 py-2.5">
+        <span className="text-neutral-400" aria-label="Not applicable">
+          —
+        </span>
+      </td>
+    )
+  }
+
+  const paid = entry.paid
+
+  return (
+    // The badge is a border taller than plain text, so the padding gives the
+    // difference back — a windowed row is pinned to ROW_HEIGHT.
+    <td
+      onClick={(event) => event.stopPropagation()}
+      className="px-3 py-[9px]"
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Payment status: ${paid ? "Paid" : "Unpaid"}. Change it.`}
+        onClick={() => {
+          setContainer(popoverContainer(triggerRef.current))
+          setOpen((current) => !current)
+        }}
+        className={cn(
+          "inline-flex cursor-pointer items-center gap-1 rounded border px-1.5 text-xs leading-5 font-medium",
+          "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-neutral-800",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          paid
+            ? "border-black/10 bg-neutral-50 text-neutral-600 hover:border-black/20"
+            : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400",
+        )}
+      >
+        {paid ? "Paid" : "Unpaid"}
+        <ChevronDown className="size-3 shrink-0" strokeWidth={2} />
+      </button>
+
+      {open && container
+        ? createPortal(
+            <div
+              ref={popupRef}
+              style={style}
+              className="z-[100] overflow-hidden rounded-lg border border-black/10 bg-white py-1 shadow-lg"
+            >
+              <ul role="listbox" aria-label="Payment status">
+                {PAYMENT_STATUSES.map((option) => {
+                  const isPaid = option.value === "paid"
+                  return (
+                    <li
+                      key={option.value}
+                      role="option"
+                      aria-selected={isPaid === paid}
+                      onClick={() => {
+                        setOpen(false)
+                        if (isPaid !== paid) onChange(isPaid)
+                      }}
+                      className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-100"
+                    >
+                      <Check
+                        className={cn("size-4 shrink-0", isPaid === paid ? "opacity-100" : "opacity-0")}
+                        strokeWidth={2}
+                      />
+                      {option.label}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>,
+            container,
+          )
+        : null}
+    </td>
   )
 }

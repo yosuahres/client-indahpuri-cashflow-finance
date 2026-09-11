@@ -6,10 +6,29 @@ import { refresh } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { requireUser } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
-import { readTransaction, validateTransaction } from "./validation"
+import {
+  readTransaction,
+  validateTransaction,
+  type TransactionInput,
+} from "./validation"
 
 /** Postgres code for "relation does not exist" — the migration has not been run. */
 const UNDEFINED_TABLE = "42P01"
+
+/** Postgres code for "column does not exist". */
+const UNDEFINED_COLUMN = "42703"
+
+const PAID_HINT =
+  "The transactions table has no `paid` column yet. Run " +
+  "supabase/migrations/0008_expense_paid.sql against the project first."
+
+/**
+ * The column is expense-only, and a check constraint enforces that, so income
+ * clears it rather than carrying a value that would not mean anything.
+ */
+function paidColumn(input: TransactionInput) {
+  return input.kind === "expense" ? input.paid === "paid" : null
+}
 
 export async function createTransaction(
   _prevState: FormState,
@@ -34,6 +53,7 @@ export async function createTransaction(
     reference: input.reference || null,
     amount: Number(input.amount),
     notes: input.notes || null,
+    paid: paidColumn(input),
   })
 
   if (error) {
@@ -43,6 +63,7 @@ export async function createTransaction(
           "The transactions table does not exist yet. Run supabase/migrations/0001_cash_flow.sql against the project first.",
       }
     }
+    if (error.code === UNDEFINED_COLUMN) return { error: PAID_HINT }
     return { error: error.message }
   }
 
@@ -85,12 +106,14 @@ export async function updateTransaction(
       reference: input.reference || null,
       amount: Number(input.amount),
       notes: input.notes || null,
+      paid: paidColumn(input),
     })
     .eq("id", id)
     .select("id")
 
   if (error) {
     if (error.code === UNDEFINED_TABLE) return { error: "The transactions table is missing." }
+    if (error.code === UNDEFINED_COLUMN) return { error: PAID_HINT }
     return { error: error.message }
   }
   if (!data || data.length === 0) {
@@ -99,6 +122,40 @@ export async function updateTransaction(
 
   refresh()
   return { message: "Changes saved.", savedAt: Date.now() }
+}
+
+export type PaidResult = { ok: boolean; error?: string }
+
+/**
+ * Flips one expense between paid and unpaid straight from the ledger, without
+ * opening the row. The `kind` guard keeps income out: a check constraint holds
+ * `paid` to expenses, so an income row would be rejected by the database
+ * anyway — matching nothing here gives a clearer answer than that would.
+ *
+ * Row level security scopes the update to the signed-in user.
+ */
+export async function setTransactionPaid(id: string, paid: boolean): Promise<PaidResult> {
+  if (!id) return { ok: false, error: "That transaction is no longer open." }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("transactions")
+    .update({ paid })
+    .eq("id", id)
+    .eq("kind", "expense")
+    .select("id")
+
+  if (error) {
+    if (error.code === UNDEFINED_TABLE) return { ok: false, error: "The transactions table is missing." }
+    if (error.code === UNDEFINED_COLUMN) return { ok: false, error: PAID_HINT }
+    return { ok: false, error: error.message }
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, error: "That transaction no longer exists, or is not an expense." }
+  }
+
+  refresh()
+  return { ok: true }
 }
 
 export type DeleteResult = { ok: boolean; error?: string; deleted: number }

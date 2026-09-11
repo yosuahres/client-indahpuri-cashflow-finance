@@ -81,6 +81,7 @@ type TransactionRow = {
   category: string
   account: string
   amount: number | string
+  paid: boolean | null
   party: string | null
   reference: string | null
   notes: string | null
@@ -247,10 +248,13 @@ export async function loadProfitAndLossReport({
   from,
   to,
   periodicity = "Quarterly" as Periodicity,
+  kind = "all",
 }: {
   from: string
   to: string
   periodicity?: Periodicity
+  /** Narrows the ledger to one direction; "all" leaves it unfiltered. */
+  kind?: "all" | "income" | "expense"
 }): Promise<ProfitAndLossResult> {
   const { labels: periods, monthToIndex } = buildPeriods(from, to, periodicity)
 
@@ -264,13 +268,19 @@ export async function loadProfitAndLossReport({
   const rows: TransactionRow[] = []
 
   for (let page = 0; ; page += 1) {
-    const { data, error } = await supabase
+    // Narrowed in the database rather than after the fact, so a filtered view
+    // pages through only the rows it will show.
+    let query = supabase
       .from("transactions")
       .select(
-        "id, occurred_on, kind, section, category, account, amount, party, reference, notes",
+        "id, occurred_on, kind, section, category, account, amount, paid, party, reference, notes",
       )
       .gte("occurred_on", from)
       .lte("occurred_on", to)
+
+    if (kind !== "all") query = query.eq("kind", kind)
+
+    const { data, error } = await query
       .order("occurred_on")
       .order("id")
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
@@ -321,6 +331,7 @@ export async function loadProfitAndLossReport({
       account: row.account,
       accountIssuer: accountIssuers.get(row.account) ?? null,
       amount: Number(row.amount) || 0,
+      paid: row.paid ?? null,
       party: row.party ?? "",
       reference: row.reference ?? "",
       notes: row.notes ?? "",

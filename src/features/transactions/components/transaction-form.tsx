@@ -23,8 +23,10 @@ import type { Account } from "@/features/accounts/actions"
 import { CategoryField } from "@/features/categories/components/category-field"
 import type { Category } from "@/features/categories/actions"
 import {
+  PAYMENT_STATUSES,
   SECTIONS,
   TRANSACTION_KINDS,
+  type PaymentStatus,
   type SectionValue,
   type TransactionKind,
 } from "@/lib/finance"
@@ -58,6 +60,7 @@ export function TransactionForm({
   const [category, setCategory] = useState("")
   const [account, setAccount] = useState(defaultAccount ?? "")
   const [amount, setAmount] = useState("")
+  const [paid, setPaid] = useState<PaymentStatus>("paid")
   const [notes, setNotes] = useState("")
   const [party, setParty] = useState("")
   const [reference, setReference] = useState("")
@@ -70,6 +73,7 @@ export function TransactionForm({
   if (state.savedAt !== seenSave) {
     setSeenSave(state.savedAt)
     setAmount("")
+    setPaid("paid")
     setNotes("")
     setParty("")
     setReference("")
@@ -185,6 +189,30 @@ export function TransactionForm({
               invalid={Boolean(errors.amount)}
             />
           </Field>
+
+          {/* Expenses only: income is recorded once it has arrived, so there
+              is nothing left to settle. */}
+          {kind === "expense" ? (
+            <Field
+              label="Payment Status"
+              htmlFor="paid"
+              required
+              error={errors.paid}
+              hint="Unpaid keeps a bill on the books before the money leaves."
+            >
+              <Select
+                id="paid"
+                name="paid"
+                value={paid}
+                onValueChange={(value) => setPaid(value as PaymentStatus)}
+                options={PAYMENT_STATUSES.map((entry) => ({
+                  value: entry.value,
+                  label: entry.label,
+                }))}
+                invalid={Boolean(errors.paid)}
+              />
+            </Field>
+          ) : null}
 
           <Field label="Party" htmlFor="party" hint="Customer or supplier, if this involves one.">
             <TextInput

@@ -14,8 +14,10 @@ import type { Category } from "@/features/categories/actions"
 import { cn } from "@/lib/cn"
 import { formatCurrency } from "@/lib/format"
 import {
+  PAYMENT_STATUSES,
   SECTIONS,
   TRANSACTION_KINDS,
+  type PaymentStatus,
   type SectionValue,
   type TransactionKind,
 } from "@/lib/finance"
@@ -57,6 +59,10 @@ export function TransactionPanel({
   const [category, setCategory] = useState(transaction.category)
   const [account, setAccount] = useState(transaction.account)
   const [amount, setAmount] = useState(String(transaction.amount))
+  // Marking a bill settled is the usual reason to reopen an entry.
+  const [paid, setPaid] = useState<PaymentStatus>(
+    transaction.paid === false ? "unpaid" : "paid",
+  )
   const [party, setParty] = useState(transaction.party)
   const [reference, setReference] = useState(transaction.reference)
   const [notes, setNotes] = useState(transaction.notes)
@@ -211,6 +217,27 @@ export function TransactionPanel({
               invalid={Boolean(errors.account)}
             />
           </Field>
+
+          {kind === "expense" ? (
+            <Field
+              label="Payment Status"
+              htmlFor="panel-paid"
+              required
+              error={errors.paid}
+            >
+              <Select
+                id="panel-paid"
+                name="paid"
+                value={paid}
+                onValueChange={(value) => setPaid(value as PaymentStatus)}
+                options={PAYMENT_STATUSES.map((entry) => ({
+                  value: entry.value,
+                  label: entry.label,
+                }))}
+                invalid={Boolean(errors.paid)}
+              />
+            </Field>
+          ) : null}
 
           <Field label="Party" htmlFor="panel-party" hint="Customer or supplier, if this involves one.">
             <TextInput
