@@ -32,8 +32,18 @@ export function isPaymentStatus(value: unknown): value is PaymentStatus {
   return PAYMENT_STATUSES.some((status) => status.value === value)
 }
 
-export const FREQUENCIES = ["Monthly", "Quarterly", "Yearly"] as const
-export type Frequency = (typeof FREQUENCIES)[number]
+/**
+ * The period a budget plans for. Monthly puts the whole amount in one month;
+ * yearly levels it across the twelve months of the year. Quarterly went with
+ * the distribution rows — a quarter is three monthly plans, and the report
+ * only ever asks about a month or a year.
+ */
+export const BUDGET_PERIODS = [
+  { value: "monthly", label: "Monthly" },
+  { value: "yearly", label: "Yearly" },
+] as const
+
+export type BudgetPeriod = (typeof BUDGET_PERIODS)[number]["value"]
 
 /**
  * Suggestions only — the category list is user-managed. Each one is filed
@@ -77,6 +87,6 @@ export function isKind(value: unknown): value is TransactionKind {
   return TRANSACTION_KINDS.some((kind) => kind.value === value)
 }
 
-export function isFrequency(value: unknown): value is Frequency {
-  return FREQUENCIES.includes(value as Frequency)
+export function isBudgetPeriod(value: unknown): value is BudgetPeriod {
+  return BUDGET_PERIODS.some((period) => period.value === value)
 }

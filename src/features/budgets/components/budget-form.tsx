@@ -18,11 +18,12 @@ import {
 import { Select } from "@/components/form/select"
 import { CategoryField } from "@/features/categories/components/category-field"
 import type { Category } from "@/features/categories/actions"
+import { longMonthName } from "@/features/reporting/months"
 import {
-  FREQUENCIES,
+  BUDGET_PERIODS,
   SECTIONS,
   TRANSACTION_KINDS,
-  type Frequency,
+  type BudgetPeriod,
   type SectionValue,
   type TransactionKind,
 } from "@/lib/finance"
@@ -32,26 +33,46 @@ import { createBudget } from "../actions"
 
 const initialState: FormState = {}
 
+/** Month names come from the report, so both read the period the same way. */
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
+  value: String(index + 1),
+  label: longMonthName(index + 1),
+}))
+
+/** A plan is made for the year ahead or corrected for one just past. */
+function yearOptions(around: number) {
+  return Array.from({ length: 6 }, (_, index) => {
+    const year = around - 2 + index
+    return { value: String(year), label: String(year) }
+  })
+}
+
 export function BudgetForm({
   defaultYear,
+  defaultMonth,
   initialCategories,
   setupError,
 }: {
   defaultYear: number
+  /** 1-12. */
+  defaultMonth: number
   initialCategories: Category[]
   setupError?: string
 }) {
   const [state, formAction, pending] = useActionState(createBudget, initialState)
   const errors = state.fieldErrors ?? {}
 
-  const [fromYear, setFromYear] = useState(String(defaultYear))
-  const [toYear, setToYear] = useState(String(defaultYear))
-  const [frequency, setFrequency] = useState<Frequency>("Monthly")
+  const [period, setPeriod] = useState<BudgetPeriod>("monthly")
+  const [periodYear, setPeriodYear] = useState(String(defaultYear))
+  const [periodMonth, setPeriodMonth] = useState(String(defaultMonth))
   const [amount, setAmount] = useState("")
   const [section, setSection] = useState<SectionValue>("operations")
   const [kind, setKind] = useState<TransactionKind>("expense")
   const [categories, setCategories] = useState(initialCategories)
   const [category, setCategory] = useState("")
+
+  const monthly = period === "monthly"
+  const years = yearOptions(defaultYear)
 
   return (
     <form action={formAction} noValidate className="flex min-h-full flex-col">
@@ -79,6 +100,85 @@ export function BudgetForm({
           {setupError}
         </p>
       ) : null}
+
+      {/* The period comes first because it decides what the rest of the form
+          means: the same category and amount are a different plan in a
+          different month. */}
+      <FormSection>
+        <FormGrid>
+          <Field
+            label="Period Type"
+            htmlFor="period"
+            required
+            error={errors.period}
+            hint="Monthly plans a single month. Yearly plans the whole year."
+          >
+            <Select
+              id="period"
+              name="period"
+              value={period}
+              onValueChange={(value) => setPeriod(value as BudgetPeriod)}
+              options={BUDGET_PERIODS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              invalid={Boolean(errors.period)}
+            />
+          </Field>
+
+          <Field
+            label="Period"
+            htmlFor={monthly ? "periodMonth" : "periodYear"}
+            required
+            error={errors.periodMonth ?? errors.periodYear}
+          >
+            <div className="flex gap-3">
+              {monthly ? (
+                <div className="min-w-0 flex-[3]">
+                  <Select
+                    id="periodMonth"
+                    name="periodMonth"
+                    value={periodMonth}
+                    onValueChange={setPeriodMonth}
+                    options={MONTH_OPTIONS}
+                    invalid={Boolean(errors.periodMonth)}
+                  />
+                </div>
+              ) : null}
+              <div className="min-w-0 flex-[2]">
+                <Select
+                  id="periodYear"
+                  name="periodYear"
+                  value={periodYear}
+                  onValueChange={setPeriodYear}
+                  options={years}
+                  invalid={Boolean(errors.periodYear)}
+                />
+              </div>
+            </div>
+          </Field>
+        </FormGrid>
+
+        <p className="mt-5 text-xs text-neutral-500">
+          {monthly ? (
+            <>
+              This budget applies to{" "}
+              <span className="font-medium text-neutral-700">
+                {longMonthName(Number(periodMonth))} {periodYear}
+              </span>
+              . The Laporan Keuangan counts it in that month and in the year to
+              date once that month is reached.
+            </>
+          ) : (
+            <>
+              This budget applies to the whole of{" "}
+              <span className="font-medium text-neutral-700">{periodYear}</span>. The
+              Laporan Keuangan levels it across the twelve months, so each month
+              carries a twelfth of it.
+            </>
+          )}
+        </p>
+      </FormSection>
 
       <FormSection>
         <FormGrid>
@@ -153,45 +253,6 @@ export function BudgetForm({
               onCategoriesChange={setCategories}
               emptyOptionLabel="Whole section"
               invalid={Boolean(errors.category)}
-            />
-          </Field>
-
-          <Field label="From Fiscal Year" htmlFor="fromYear" required error={errors.fromYear}>
-            <TextInput
-              id="fromYear"
-              name="fromYear"
-              type="number"
-              value={fromYear}
-              onChange={(event) => setFromYear(event.target.value)}
-              aria-invalid={Boolean(errors.fromYear)}
-            />
-          </Field>
-
-          <Field label="To Fiscal Year" htmlFor="toYear" required error={errors.toYear}>
-            <TextInput
-              id="toYear"
-              name="toYear"
-              type="number"
-              value={toYear}
-              onChange={(event) => setToYear(event.target.value)}
-              aria-invalid={Boolean(errors.toYear)}
-            />
-          </Field>
-
-          <Field
-            label="Frequency"
-            htmlFor="frequency"
-            required
-            error={errors.frequency}
-            hint="The cadence this plan is reviewed on."
-          >
-            <Select
-              id="frequency"
-              name="frequency"
-              value={frequency}
-              onValueChange={(next) => setFrequency(next as Frequency)}
-              options={FREQUENCIES.map((option) => ({ value: option, label: option }))}
-              invalid={Boolean(errors.frequency)}
             />
           </Field>
 

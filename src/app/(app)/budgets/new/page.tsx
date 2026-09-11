@@ -10,10 +10,14 @@ export const metadata: Metadata = {
 export default async function NewBudgetPage() {
   const categories = await listCategories()
 
+  // The month being lived in is the one most plans are entered for.
+  const now = new Date()
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <BudgetForm
-        defaultYear={new Date().getUTCFullYear()}
+        defaultYear={now.getUTCFullYear()}
+        defaultMonth={now.getUTCMonth() + 1}
         initialCategories={categories.categories}
         setupError={categories.ok ? undefined : categories.error}
       />

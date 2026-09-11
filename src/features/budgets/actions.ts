@@ -9,6 +9,7 @@ import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { readBudget, validateBudget } from "./validation"
 
 const UNDEFINED_TABLE = "42P01"
+const UNDEFINED_COLUMN = "42703"
 
 export async function createBudget(
   _prevState: FormState,
@@ -30,9 +31,9 @@ export async function createBudget(
       section: input.section,
       category: input.category || null,
       cost_center: input.costCenter || null,
-      fiscal_year_from: Number(input.fromYear),
-      fiscal_year_to: Number(input.toYear),
-      frequency: input.frequency,
+      period_year: Number(input.periodYear),
+      // Null is what marks a plan as covering the whole year.
+      period_month: input.period === "monthly" ? Number(input.periodMonth) : null,
       amount: Number(input.amount),
       warn_on_overrun: formData.get("warnOnOverrun") === "on",
     })
@@ -42,6 +43,12 @@ export async function createBudget(
       return {
         error:
           "The budgets table does not exist yet. Run supabase/migrations/0001_cash_flow.sql against the project first.",
+      }
+    }
+    if (error.code === UNDEFINED_COLUMN) {
+      return {
+        error:
+          "The budgets table has no period columns yet. Run supabase/migrations/0010_budget_period.sql against the project first.",
       }
     }
     return { error: error.message }

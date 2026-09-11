@@ -11,8 +11,9 @@ import {
 import { lastDayOfMonth, monthKey } from "./months"
 
 const UNDEFINED_COLUMN = "42703"
-const KIND_HINT =
-  "Budgets do not have a `kind` column yet. Run supabase/migrations/0004_budget_kind.sql against the project."
+const BUDGET_COLUMN_HINT =
+  "The budgets table is missing columns this report reads. Run the files in " +
+  "supabase/migrations against the project, 0010_budget_period.sql included."
 
 export type ReportLine = {
   label: string
@@ -49,8 +50,9 @@ type BudgetRow = {
   kind: TransactionKind
   category: string | null
   amount: number | string
-  fiscal_year_from: number
-  fiscal_year_to: number
+  period_year: number
+  /** 1-12 for a plan covering one month; null for one covering the year. */
+  period_month: number | null
 }
 
 const zeroColumns = (): ReportColumns => ({
@@ -62,25 +64,15 @@ const zeroColumns = (): ReportColumns => ({
   prevYearActual: 0,
 })
 
-/** Months a budget's fiscal range spans, so the plan can be levelled over them. */
-function monthsBetween(from: string, to: string) {
-  const keys: string[] = []
-  const startYear = Number(from.slice(0, 4))
-  const startMonth = Number(from.slice(5, 7))
-  const endYear = Number(to.slice(0, 4))
-  const endMonth = Number(to.slice(5, 7))
-  if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) return keys
-
-  const last = endYear * 12 + (endMonth - 1)
-  // 600 months is far past any real plan; the guard is against a bad date.
-  for (
-    let index = startYear * 12 + (startMonth - 1);
-    index <= last && keys.length < 600;
-    index += 1
-  ) {
-    keys.push(monthKey(Math.floor(index / 12), (index % 12) + 1))
-  }
-  return keys
+/**
+ * The months a budget's period covers, which is what the amount is levelled
+ * over: one month for a monthly plan, so the whole amount lands there, and
+ * twelve for a yearly one, so each month carries a twelfth.
+ */
+function budgetMonths(budget: BudgetRow) {
+  if (!Number.isFinite(budget.period_year)) return []
+  if (budget.period_month) return [monthKey(budget.period_year, budget.period_month)]
+  return Array.from({ length: 12 }, (_, index) => monthKey(budget.period_year, index + 1))
 }
 
 /**
@@ -119,11 +111,13 @@ export async function loadFinancialReport({
   const [actuals, budgets] = await Promise.all([
     // Actuals are cash that moved, so an expense still unpaid is not one yet.
     loadMonthlyTotals(supabase, from, to, true),
+    // Only the year on screen: the columns a budget feeds — this month's plan
+    // and the year to date — are both inside it. The prior-year columns are
+    // actuals, which have no plan to compare against.
     supabase
       .from("budgets")
-      .select("name, kind, category, amount, fiscal_year_from, fiscal_year_to")
-      .lte("fiscal_year_from", year)
-      .gte("fiscal_year_to", year - 1),
+      .select("name, kind, category, amount, period_year, period_month")
+      .eq("period_year", year),
   ])
 
   if (!actuals.ok) {
@@ -135,7 +129,7 @@ export async function loadFinancialReport({
       ok: false,
       error:
         budgets.error.code === UNDEFINED_COLUMN
-          ? KIND_HINT
+          ? BUDGET_COLUMN_HINT
           : budgets.error.code === UNDEFINED_TABLE
             ? MIGRATION_HINT
             : budgets.error.message,
@@ -168,12 +162,7 @@ export async function loadFinancialReport({
     // A budget with no category plans the whole line under its own name.
     const label = budget.category?.trim() || budget.name
 
-    // The amount is the total for the whole fiscal range, so it levels out
-    // over every month in it.
-    const months = monthsBetween(
-      `${budget.fiscal_year_from}-01-01`,
-      `${budget.fiscal_year_to}-12-31`,
-    )
+    const months = budgetMonths(budget)
     if (months.length === 0) continue
 
     const perMonth = (Number(budget.amount) || 0) / months.length

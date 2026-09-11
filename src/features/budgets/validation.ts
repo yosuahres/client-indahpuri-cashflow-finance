@@ -1,4 +1,4 @@
-import { isFrequency, isKind, isSection } from "@/lib/finance"
+import { isBudgetPeriod, isKind, isSection } from "@/lib/finance"
 
 export type BudgetInput = {
   name: string
@@ -6,9 +6,9 @@ export type BudgetInput = {
   section: string
   category: string
   costCenter: string
-  fromYear: string
-  toYear: string
-  frequency: string
+  period: string
+  periodYear: string
+  periodMonth: string
   amount: string
 }
 
@@ -20,9 +20,9 @@ export function readBudget(formData: FormData): BudgetInput {
     section: read("section"),
     category: read("category"),
     costCenter: read("costCenter"),
-    fromYear: read("fromYear"),
-    toYear: read("toYear"),
-    frequency: read("frequency"),
+    period: read("period"),
+    periodYear: read("periodYear"),
+    periodMonth: read("periodMonth"),
     amount: read("amount"),
   }
 }
@@ -33,14 +33,19 @@ export function validateBudget(input: BudgetInput) {
   if (!input.name) errors.name = "Give this budget a name."
   if (!isKind(input.kind)) errors.kind = "Choose income or expense."
   if (!isSection(input.section)) errors.section = "Choose a cash flow section."
-  if (!isFrequency(input.frequency)) errors.frequency = "Choose a frequency."
+  if (!isBudgetPeriod(input.period)) errors.period = "Choose a monthly or yearly period."
 
-  const from = Number(input.fromYear)
-  const to = Number(input.toYear)
-  if (!Number.isInteger(from)) errors.fromYear = "Enter a fiscal year."
-  if (!Number.isInteger(to)) errors.toYear = "Enter a fiscal year."
-  else if (Number.isInteger(from) && to < from) {
-    errors.toYear = "The end year cannot be before the start year."
+  const year = Number(input.periodYear)
+  if (!Number.isInteger(year) || year < 1970 || year > 9999) {
+    errors.periodYear = "Choose a year."
+  }
+
+  // A yearly plan covers the whole year, so it carries no month at all.
+  if (input.period === "monthly") {
+    const month = Number(input.periodMonth)
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+      errors.periodMonth = "Choose a month."
+    }
   }
 
   const amount = Number(input.amount)
