@@ -148,15 +148,18 @@ function DeleteCell({
 }
 
 /**
- * The plans of one direction. Income and expense are never mixed in a column
- * of figures here — they are opposite signs of the same total, and a table
- * that adds them up reads as if they cancelled.
+ * One direction's plans: a banner, its rows, and its own subtotal.
+ *
+ * Income and expense share the table but never share a total — they are
+ * opposite signs of the same figure, and a column that added them would read
+ * as if they cancelled.
  */
-function KindTable({
+function KindBlock({
   kind,
   entries,
-  caption,
   emptyLabel,
+  dataColumns,
+  columns,
   showPeriod,
   showPerMonth,
   showAccount,
@@ -169,8 +172,9 @@ function KindTable({
 }: {
   kind: TransactionKind
   entries: BudgetEntry[]
-  caption: string
   emptyLabel: string
+  dataColumns: number
+  columns: number
   showPeriod: boolean
   showPerMonth: boolean
   showAccount: boolean
@@ -181,164 +185,115 @@ function KindTable({
   onConfirm: (id: string | null) => void
   pending: boolean
 }) {
-  // Section, Category, Amount, whichever extras are asked for, and the actions.
-  const dataColumns = 3 + (showPeriod ? 1 : 0) + (showAccount ? 1 : 0) + (showPerMonth ? 1 : 0)
-  const columns = dataColumns + 1
-  const total = entries.reduce((sum, entry) => sum + amountOf(entry), 0)
   const income = kind === "income"
+  const total = entries.reduce((sum, entry) => sum + amountOf(entry), 0)
 
   return (
-    <section className="border-t border-black/8">
-      <div className="flex items-baseline justify-between gap-3 px-3 py-2.5 sm:px-4">
-        <h4 className={cn("text-sm font-semibold", income ? "text-emerald-700" : "text-rose-700")}>
-          {kindLabel(kind)}
-        </h4>
-        <span
+    <tbody className="border-t border-black/8">
+      <tr className={income ? "bg-emerald-50/60" : "bg-rose-50/50"}>
+        <td
+          colSpan={columns}
           className={cn(
-            "text-sm font-semibold tabular-nums",
-            income ? "text-neutral-900" : "text-rose-600",
+            "px-2 py-2 text-sm font-semibold sm:px-3",
+            income ? "text-emerald-700" : "text-rose-700",
           )}
         >
-          {formatCurrency(total)}
-        </span>
-      </div>
+          {kindLabel(kind)}
+        </td>
+      </tr>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <caption className="sr-only">{caption}</caption>
-          <thead>
-            <tr className="bg-neutral-50">
-              {showPeriod ? (
-                <th scope="col" className={cn("min-w-[120px]", headCell)}>
-                  Period
-                </th>
-              ) : null}
-              {showAccount ? (
-                <th scope="col" className={cn("min-w-[160px]", headCell)}>
-                  Account
-                </th>
-              ) : null}
-              <th scope="col" className={cn("min-w-[120px]", headCell)}>
-                Section
-              </th>
-              <th scope="col" className={cn("min-w-[180px]", headCell)}>
-                Category
-              </th>
-              {showPerMonth ? (
-                <th scope="col" className={cn(amountCell, "font-medium text-neutral-700")}>
-                  Per Month
-                </th>
-              ) : null}
-              <th scope="col" className={cn(amountCell, "font-medium text-neutral-700")}>
-                Amount
-              </th>
-              <th scope="col" className="w-24 px-2 py-2.5">
-                <span className="sr-only">Row actions</span>
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {entries.map((entry) => {
-              const amount = amountOf(entry)
-              return (
-                <tr key={entry.id} className="border-t border-black/5">
-                  {showPeriod ? (
-                    <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
-                      {entry.month === null ? (
-                        <span className="text-neutral-500">Whole year</span>
-                      ) : (
-                        longMonthName(entry.month)
-                      )}
-                    </td>
-                  ) : null}
-                  {/* The cost center is what tells two otherwise identical plans
-                      apart, so it rides along in the muted half of the cell. A
-                      plan from before accounts were named counts on all of them. */}
-                  {showAccount ? (
-                    <td className={cn(cell, entry.account ? "text-neutral-900" : "text-neutral-500")}>
-                      {entry.account ?? "All accounts"}
-                      {entry.costCenter ? (
-                        <span className="text-neutral-500"> · {entry.costCenter}</span>
-                      ) : null}
-                    </td>
-                  ) : null}
-                  <td className={cn(cell, "text-neutral-700")}>{sectionLabel(entry.section)}</td>
-                  {/* A plan with no category covers its whole section. */}
-                  <td
-                    className={cn(
-                      cell,
-                      entry.category?.trim() ? "text-neutral-900" : "text-neutral-500",
-                    )}
-                  >
-                    {entry.category?.trim() || "Whole section"}
-                  </td>
-                  {showPerMonth ? (
-                    <td className={cn(amountCell, "tabular-nums text-neutral-500")}>
-                      {formatCurrency(amount / 12)}
-                    </td>
-                  ) : null}
-                  <td className="min-w-[150px] px-1 py-1.5 sm:min-w-[170px] sm:px-2">
-                    <AmountInput
-                      value={amount}
-                      expense={!income}
-                      onCommit={(next) => onAmount(entry.id, next)}
-                      label={`Budget amount for ${entry.category?.trim() || entry.name}${
-                        entry.month === null ? "" : `, ${longMonthName(entry.month)}`
-                      }`}
-                    />
-                  </td>
-                  <DeleteCell
-                    entry={entry}
-                    confirming={confirmingId === entry.id}
-                    onConfirm={(next) => onConfirm(next ? entry.id : null)}
-                    onDelete={() => onDelete(entry.id)}
-                    disabled={pending}
-                  />
-                </tr>
-              )
-            })}
-
-            {entries.length === 0 ? (
-              <tr className="border-t border-black/5">
-                <td colSpan={columns} className="px-3 py-6 text-center text-neutral-500">
-                  {emptyLabel}
-                </td>
-              </tr>
+      {entries.map((entry) => {
+        const amount = amountOf(entry)
+        return (
+          <tr key={entry.id} className="border-t border-black/5">
+            {showPeriod ? (
+              <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
+                {entry.month === null ? (
+                  <span className="text-neutral-500">Whole year</span>
+                ) : (
+                  longMonthName(entry.month)
+                )}
+              </td>
             ) : null}
-          </tbody>
-
-          {entries.length > 0 ? (
-            <tfoot>
-              <tr className="border-t border-black/15 bg-neutral-50 font-semibold text-neutral-900">
-                <td className={cell}>Total</td>
-                <td
-                  colSpan={dataColumns - 2 - (showPerMonth ? 1 : 0)}
-                  className={cn(cell, "font-normal text-neutral-500")}
-                >
-                  {entries.length} budget{entries.length === 1 ? "" : "s"}
-                </td>
-                {showPerMonth ? (
-                  <td className={cn(amountCell, "tabular-nums font-normal text-neutral-500")}>
-                    {formatCurrency(total / 12)}
-                  </td>
+            {/* The cost center is what tells two otherwise identical plans
+                apart, so it rides along in the muted half of the cell. A plan
+                from before accounts were named counts on all of them. */}
+            {showAccount ? (
+              <td className={cn(cell, entry.account ? "text-neutral-900" : "text-neutral-500")}>
+                {entry.account ?? "All accounts"}
+                {entry.costCenter ? (
+                  <span className="text-neutral-500"> · {entry.costCenter}</span>
                 ) : null}
-                <td
-                  className={cn(
-                    amountCell,
-                    "tabular-nums",
-                    income ? "text-neutral-900" : "text-rose-600",
-                  )}
-                >
-                  {formatCurrency(total)}
-                </td>
-                <td />
-              </tr>
-            </tfoot>
+              </td>
+            ) : null}
+            <td className={cn(cell, "text-neutral-700")}>{sectionLabel(entry.section)}</td>
+            {/* A plan with no category covers its whole section. */}
+            <td
+              className={cn(cell, entry.category?.trim() ? "text-neutral-900" : "text-neutral-500")}
+            >
+              {entry.category?.trim() || "Whole section"}
+            </td>
+            {showPerMonth ? (
+              <td className={cn(amountCell, "tabular-nums text-neutral-500")}>
+                {formatCurrency(amount / 12)}
+              </td>
+            ) : null}
+            <td className="min-w-[150px] px-1 py-1.5 sm:min-w-[170px] sm:px-2">
+              <AmountInput
+                value={amount}
+                expense={!income}
+                onCommit={(next) => onAmount(entry.id, next)}
+                label={`Budget amount for ${entry.category?.trim() || entry.name}${
+                  entry.month === null ? "" : `, ${longMonthName(entry.month)}`
+                }`}
+              />
+            </td>
+            <DeleteCell
+              entry={entry}
+              confirming={confirmingId === entry.id}
+              onConfirm={(next) => onConfirm(next ? entry.id : null)}
+              onDelete={() => onDelete(entry.id)}
+              disabled={pending}
+            />
+          </tr>
+        )
+      })}
+
+      {entries.length === 0 ? (
+        <tr className="border-t border-black/5">
+          <td colSpan={columns} className="px-3 py-6 text-center text-neutral-500">
+            {emptyLabel}
+          </td>
+        </tr>
+      ) : null}
+
+      {entries.length > 0 ? (
+        <tr className="border-t border-black/10 bg-neutral-50 font-semibold text-neutral-900">
+          <td className={cell}>Total {kindLabel(kind)}</td>
+          <td
+            colSpan={dataColumns - 2 - (showPerMonth ? 1 : 0)}
+            className={cn(cell, "font-normal text-neutral-500")}
+          >
+            {entries.length} budget{entries.length === 1 ? "" : "s"}
+          </td>
+          {showPerMonth ? (
+            <td className={cn(amountCell, "tabular-nums font-normal text-neutral-500")}>
+              {formatCurrency(total / 12)}
+            </td>
           ) : null}
-        </table>
-      </div>
-    </section>
+          <td
+            className={cn(
+              amountCell,
+              "tabular-nums",
+              income ? "text-neutral-900" : "text-rose-600",
+            )}
+          >
+            {formatCurrency(total)}
+          </td>
+          <td />
+        </tr>
+      ) : null}
+    </tbody>
   )
 }
 
@@ -346,6 +301,10 @@ function KindTable({
  * One period's plans, split by direction and editable in place. The figures
  * are plans, not actuals — what was spent against them is the Laporan
  * Keuangan's business, and this sheet deliberately does not repeat it.
+ *
+ * Income and expense share one table rather than having one each. Two tables
+ * meant two horizontal scrollbars stacked in the same card, scrolling
+ * independently, so identical columns drifted out of line with each other.
  */
 export function BudgetSheet({
   entries,
@@ -355,7 +314,7 @@ export function BudgetSheet({
   showAccount = true,
 }: {
   entries: BudgetEntry[]
-  /** The period these belong to, for the captions and the empty rows. */
+  /** The period these belong to, for the caption and the empty rows. */
   label: string
   /** On a yearly view, where rows come from different months. */
   showPeriod?: boolean
@@ -417,32 +376,79 @@ export function BudgetSheet({
     })
   }
 
+  // Section, Category, Amount, whichever extras are asked for, and the actions.
+  const dataColumns = 3 + (showPeriod ? 1 : 0) + (showAccount ? 1 : 0) + (showPerMonth ? 1 : 0)
+  const columns = dataColumns + 1
+
   return (
     <>
       {error ? (
-        <p role="alert" className="border-t border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-800">
+        <p
+          role="alert"
+          className="border-t border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-800"
+        >
           {error}
         </p>
       ) : null}
 
-      {(["income", "expense"] as const).map((kind) => (
-        <KindTable
-          key={kind}
-          kind={kind}
-          entries={live.filter((entry) => entry.kind === kind)}
-          caption={`${kindLabel(kind)} budgets for ${label}`}
-          emptyLabel={`No ${kind} budgets for ${label} yet.`}
-          showPeriod={showPeriod}
-          showPerMonth={showPerMonth}
-          showAccount={showAccount}
-          amountOf={amountOf}
-          onAmount={commitAmount}
-          onDelete={remove}
-          confirmingId={confirmingId}
-          onConfirm={setConfirmingId}
-          pending={pending}
-        />
-      ))}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">
+            Budgets for {label}, income and expense, each figure editable.
+          </caption>
+          <thead>
+            <tr className="bg-neutral-50">
+              {showPeriod ? (
+                <th scope="col" className={cn("min-w-[120px]", headCell)}>
+                  Period
+                </th>
+              ) : null}
+              {showAccount ? (
+                <th scope="col" className={cn("min-w-[160px]", headCell)}>
+                  Account
+                </th>
+              ) : null}
+              <th scope="col" className={cn("min-w-[120px]", headCell)}>
+                Section
+              </th>
+              <th scope="col" className={cn("min-w-[180px]", headCell)}>
+                Category
+              </th>
+              {showPerMonth ? (
+                <th scope="col" className={cn(amountCell, "font-medium text-neutral-700")}>
+                  Per Month
+                </th>
+              ) : null}
+              <th scope="col" className={cn(amountCell, "font-medium text-neutral-700")}>
+                Amount
+              </th>
+              <th scope="col" className="w-24 px-2 py-2.5">
+                <span className="sr-only">Row actions</span>
+              </th>
+            </tr>
+          </thead>
+
+          {(["income", "expense"] as const).map((kind) => (
+            <KindBlock
+              key={kind}
+              kind={kind}
+              entries={live.filter((entry) => entry.kind === kind)}
+              emptyLabel={`No ${kind} budgets for ${label} yet.`}
+              dataColumns={dataColumns}
+              columns={columns}
+              showPeriod={showPeriod}
+              showPerMonth={showPerMonth}
+              showAccount={showAccount}
+              amountOf={amountOf}
+              onAmount={commitAmount}
+              onDelete={remove}
+              confirmingId={confirmingId}
+              onConfirm={setConfirmingId}
+              pending={pending}
+            />
+          ))}
+        </table>
+      </div>
     </>
   )
 }
