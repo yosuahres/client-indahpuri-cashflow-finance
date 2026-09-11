@@ -57,11 +57,14 @@ export async function loadMonthlyTotals(
    * whole picture, do not.
    */
   paidOnly = false,
+  /** One account's movements only. Undefined reads every account. */
+  account?: string,
 ): Promise<MonthlyTotalsResult> {
   const { data, error } = await supabase.rpc("report_monthly_totals", {
     from_date: from,
     to_date: to,
     paid_only: paidOnly,
+    account_name: account ?? null,
   })
 
   if (!error) {
@@ -80,7 +83,7 @@ export async function loadMonthlyTotals(
   // either can land first. Until 0006 has been run there is no function to
   // call, so the old row-by-row path still answers — slower, but not broken.
   if (error.code === UNDEFINED_FUNCTION || error.code === PGRST_NO_FUNCTION) {
-    return aggregateInProcess(supabase, from, to, paidOnly)
+    return aggregateInProcess(supabase, from, to, paidOnly, account)
   }
 
   return {
@@ -105,11 +108,12 @@ async function aggregateInProcess(
   from: string,
   to: string,
   paidOnly: boolean,
+  account?: string,
 ): Promise<MonthlyTotalsResult> {
   const totals = new Map<string, MonthlyTotal>()
 
   for (let page = 0; ; page += 1) {
-    const { data, error } = await supabase
+    let query = supabase
       .from("transactions")
       // Branching the column list costs the literal type supabase-js infers
       // from it, so the rows are named below instead.
@@ -120,6 +124,11 @@ async function aggregateInProcess(
       )
       .gte("occurred_on", from)
       .lte("occurred_on", to)
+
+    // Same narrowing the function applies, for a database that predates it.
+    if (account) query = query.eq("account", account)
+
+    const { data, error } = await query
       .order("occurred_on")
       .order("id")
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Plus } from "lucide-react"
 
 import { Topbar } from "@/components/layout/topbar"
+import { listAccounts } from "@/features/accounts/actions"
 import { SummaryTiles } from "@/components/report/summary-tiles"
 import { Card, CardHeader } from "@/components/ui/card"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
@@ -47,8 +48,20 @@ function ListFallback() {
  * The plans themselves, kept apart from the page so the bar and the period
  * pickers can be sent before the database has answered.
  */
-async function BudgetList({ selection }: { selection: BudgetPeriodSelection }) {
-  const { ok, error, entries } = await listBudgets(selection.year)
+async function BudgetList({
+  selection,
+  account,
+}: {
+  selection: BudgetPeriodSelection
+  account: string
+}) {
+  const { ok, error, entries: all } = await listBudgets(selection.year)
+
+  // A plan naming no account was entered before accounts were, and the only
+  // honest reading of it is "every account" — so it survives the filter.
+  const entries = account
+    ? all.filter((entry) => entry.account === null || entry.account === account)
+    : all
 
   const monthly = selection.period === "monthly"
   const yearPlans = entries.filter((entry) => entry.month === null)
@@ -100,7 +113,7 @@ async function BudgetList({ selection }: { selection: BudgetPeriodSelection }) {
                 caption="Entered against this month, and counted in it whole."
               />
               <div className="mt-4">
-                <BudgetSheet entries={monthPlans} label={label} />
+                <BudgetSheet entries={monthPlans} label={label} showAccount={!account} />
               </div>
             </Card>
 
@@ -113,7 +126,12 @@ async function BudgetList({ selection }: { selection: BudgetPeriodSelection }) {
                   caption={`Levelled across the twelve months, so a twelfth of each lands in ${longMonthName(selection.month)}.`}
                 />
                 <div className="mt-4">
-                  <BudgetSheet entries={yearPlans} label={String(selection.year)} showPerMonth />
+                  <BudgetSheet
+                    entries={yearPlans}
+                    label={String(selection.year)}
+                    showPerMonth
+                    showAccount={!account}
+                  />
                 </div>
               </Card>
             ) : null}
@@ -125,7 +143,7 @@ async function BudgetList({ selection }: { selection: BudgetPeriodSelection }) {
               caption="Every plan filed against this year, whole-year plans first."
             />
             <div className="mt-4">
-              <BudgetSheet entries={entries} label={label} showPeriod />
+              <BudgetSheet entries={entries} label={label} showPeriod showAccount={!account} />
             </div>
           </Card>
         )}
@@ -139,8 +157,10 @@ export default async function BudgetsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const params = await searchParams
+  const [params, accounts] = await Promise.all([searchParams, listAccounts()])
   const selection = readBudgetPeriod(params)
+  const account = typeof params.account === "string" ? params.account.trim() : ""
+  const carried = account ? `&account=${encodeURIComponent(account)}` : ""
 
   return (
     <>
@@ -148,10 +168,10 @@ export default async function BudgetsPage({
         title="Anggaran"
         section={null}
         actions={
-          // The new budget opens on the period being looked at, so entering
-          // one from here does not mean picking the month twice.
+          // The grid opens on the period and account being looked at, so
+          // entering plans from here does not mean picking them twice.
           <Link
-            href={`/budgets/new${periodQuery(selection)}`}
+            href={`/budgets/new${periodQuery(selection)}${carried}`}
             className="inline-flex h-9 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900 sm:h-8"
           >
             <Plus className="size-4 shrink-0" strokeWidth={1.75} />
@@ -164,16 +184,21 @@ export default async function BudgetsPage({
         {/* The period row sits above everything it scopes, on white, so it
             reads as the page's toolbar rather than another card. */}
         <div className="border-b border-black/8 bg-white">
-          <BudgetFilters selection={selection} thisYear={new Date().getUTCFullYear()} />
+          <BudgetFilters
+            selection={selection}
+            thisYear={new Date().getUTCFullYear()}
+            accounts={accounts.accounts}
+            account={account}
+          />
         </div>
 
         {/* Keyed on the period so changing it shows the skeleton again rather
             than leaving the old plans up while the new ones load. */}
         <Suspense
-          key={`${selection.period}:${selection.year}:${selection.month}`}
+          key={`${selection.period}:${selection.year}:${selection.month}:${account}`}
           fallback={<ListFallback />}
         >
-          <BudgetList selection={selection} />
+          <BudgetList selection={selection} account={account} />
         </Suspense>
       </main>
     </>

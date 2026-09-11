@@ -5,6 +5,8 @@ import { CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react"
 
 import { Topbar } from "@/components/layout/topbar"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
+import { listAccounts } from "@/features/accounts/actions"
+import { AccountPicker } from "@/features/reporting/components/account-picker"
 import { FinancialReportTable } from "@/features/reporting/components/financial-report-table"
 import { FitToFrame } from "@/features/reporting/components/fit-to-frame"
 import { longMonthName, readReportMonth, stepMonth } from "@/features/reporting/months"
@@ -35,8 +37,16 @@ function SheetFallback() {
  * export link — is sent as soon as the request arrives, and this replaces the
  * skeleton when the database answers.
  */
-async function Sheet({ year, month }: { year: number; month: number }) {
-  const { ok, error, report } = await loadFinancialReport({ year, month })
+async function Sheet({
+  year,
+  month,
+  account,
+}: {
+  year: number
+  month: number
+  account: string
+}) {
+  const { ok, error, report } = await loadFinancialReport({ year, month, account })
 
   return (
     <>
@@ -50,6 +60,16 @@ async function Sheet({ year, month }: { year: number; month: number }) {
   )
 }
 
+/**
+ * The account picker, behind its own boundary. The page's chrome goes out
+ * before any query has answered, and reading the account list is a query like
+ * any other — it must not be the thing that holds the first flush up.
+ */
+async function AccountControl({ account }: { account: string }) {
+  const accounts = await listAccounts()
+  return <AccountPicker accounts={accounts.accounts} account={account} />
+}
+
 export default async function ReportingPage({
   searchParams,
 }: {
@@ -60,9 +80,12 @@ export default async function ReportingPage({
 
   const rawCompany = typeof params.company === "string" ? params.company.trim() : ""
   const company = rawCompany || "Indah Puri"
+  const account = typeof params.account === "string" ? params.account.trim() : ""
 
-  // Stepping months keeps whatever company the URL was carrying.
-  const carried = rawCompany ? `&company=${encodeURIComponent(rawCompany)}` : ""
+  // Stepping months keeps whatever company and account the URL was carrying.
+  const carried =
+    (rawCompany ? `&company=${encodeURIComponent(rawCompany)}` : "") +
+    (account ? `&account=${encodeURIComponent(account)}` : "")
   const previous = stepMonth(year, month, -1)
   const next = stepMonth(year, month, 1)
   const at = ({ year: y, month: m }: { year: number; month: number }) =>
@@ -96,29 +119,38 @@ export default async function ReportingPage({
               </h1>
               <p className="mt-0.5 text-sm text-neutral-500">
                 Periode Tahun {year} &mdash; Bulan {longMonthName(month).toUpperCase()}
+                {account ? ` — Akun ${account}` : ""}
               </p>
             </div>
 
-            <nav
-              aria-label="Pilih bulan"
-              className="flex items-center gap-1 rounded-lg border border-black/10 px-1.5 py-1"
-            >
-              <Link href={at(previous)} aria-label="Bulan sebelumnya" className={stepper}>
-                <ChevronLeft className="size-4" strokeWidth={2} />
-              </Link>
-              <span className="flex items-center gap-1.5 px-1.5 text-sm text-neutral-900">
-                <CalendarDays className="size-4 text-neutral-400" strokeWidth={1.75} />
-                {longMonthName(month)} {year}
-              </span>
-              <Link href={at(next)} aria-label="Bulan berikutnya" className={stepper}>
-                <ChevronRight className="size-4" strokeWidth={2} />
-              </Link>
-            </nav>
+            {/* The two narrowings the sheet offers, side by side: which
+                account it covers, and which month. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Suspense fallback={<Skeleton className="h-10 w-48" />}>
+                <AccountControl account={account} />
+              </Suspense>
+
+              <nav
+                aria-label="Pilih bulan"
+                className="flex items-center gap-1 rounded-lg border border-black/10 px-1.5 py-1"
+              >
+                <Link href={at(previous)} aria-label="Bulan sebelumnya" className={stepper}>
+                  <ChevronLeft className="size-4" strokeWidth={2} />
+                </Link>
+                <span className="flex items-center gap-1.5 px-1.5 text-sm text-neutral-900">
+                  <CalendarDays className="size-4 text-neutral-400" strokeWidth={1.75} />
+                  {longMonthName(month)} {year}
+                </span>
+                <Link href={at(next)} aria-label="Bulan berikutnya" className={stepper}>
+                  <ChevronRight className="size-4" strokeWidth={2} />
+                </Link>
+              </nav>
+            </div>
           </div>
 
           <div className="border-y border-black/10 lg:min-h-0 lg:flex-1">
-            <Suspense key={`${year}-${month}`} fallback={<SheetFallback />}>
-              <Sheet year={year} month={month} />
+            <Suspense key={`${year}-${month}-${account}`} fallback={<SheetFallback />}>
+              <Sheet year={year} month={month} account={account} />
             </Suspense>
           </div>
         </FitToFrame>

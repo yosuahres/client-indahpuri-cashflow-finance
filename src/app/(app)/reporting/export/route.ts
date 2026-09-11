@@ -10,12 +10,17 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const { year, month } = readReportMonth(Object.fromEntries(url.searchParams))
   const company = url.searchParams.get("company")?.trim() || "Indah Puri"
+  const account = url.searchParams.get("account")?.trim() || ""
 
-  const { report } = await loadFinancialReport({ year, month })
+  const { report } = await loadFinancialReport({ year, month, account })
   const workbook = buildReportWorkbook({ report, company })
 
   const buffer = await workbook.xlsx.writeBuffer()
-  const filename = `laporan-keuangan-${year}-${String(month).padStart(2, "0")}.xlsx`
+  // An account name can carry spaces and punctuation a filename should not.
+  const slug = account.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+  const filename =
+    `laporan-keuangan-${year}-${String(month).padStart(2, "0")}` +
+    `${slug ? `-${slug}` : ""}.xlsx`
 
   return new Response(buffer, {
     headers: {

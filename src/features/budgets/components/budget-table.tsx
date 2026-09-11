@@ -26,6 +26,7 @@ function KindTable({
   emptyLabel,
   showPeriod,
   showPerMonth,
+  showAccount,
 }: {
   kind: TransactionKind
   entries: BudgetEntry[]
@@ -33,9 +34,10 @@ function KindTable({
   emptyLabel: string
   showPeriod: boolean
   showPerMonth: boolean
+  showAccount: boolean
 }) {
-  // Budget, Section, Category, Amount, plus whichever extras are asked for.
-  const columns = 4 + (showPeriod ? 1 : 0) + (showPerMonth ? 1 : 0)
+  // Section, Category, Amount, plus whichever extras are asked for.
+  const columns = 3 + (showPeriod ? 1 : 0) + (showAccount ? 1 : 0) + (showPerMonth ? 1 : 0)
   const total = sum(entries)
   const income = kind === "income"
 
@@ -70,9 +72,11 @@ function KindTable({
                   Period
                 </th>
               ) : null}
-              <th scope="col" className={cn("min-w-[180px]", headCell)}>
-                Budget
-              </th>
+              {showAccount ? (
+                <th scope="col" className={cn("min-w-[160px]", headCell)}>
+                  Account
+                </th>
+              ) : null}
               <th scope="col" className={cn("min-w-[120px]", headCell)}>
                 Section
               </th>
@@ -102,14 +106,19 @@ function KindTable({
                     )}
                   </td>
                 ) : null}
-                {/* The cost center is what tells two same-named plans apart, so
-                    it rides along in the muted half of the name cell. */}
-                <td className={cn(cell, "text-neutral-900")}>
-                  {entry.name}
-                  {entry.costCenter ? (
-                    <span className="text-neutral-500"> · {entry.costCenter}</span>
-                  ) : null}
-                </td>
+                {/* The cost center is what tells two otherwise identical plans
+                    apart, so it rides along in the muted half of the cell. A
+                    plan from before accounts were named counts on all of them. */}
+                {showAccount ? (
+                  <td
+                    className={cn(cell, entry.account ? "text-neutral-900" : "text-neutral-500")}
+                  >
+                    {entry.account ?? "All accounts"}
+                    {entry.costCenter ? (
+                      <span className="text-neutral-500"> · {entry.costCenter}</span>
+                    ) : null}
+                  </td>
+                ) : null}
                 <td className={cn(cell, "text-neutral-700")}>{sectionLabel(entry.section)}</td>
                 {/* A plan with no category covers its whole section. */}
                 <td
@@ -189,6 +198,7 @@ export function BudgetSheet({
   label,
   showPeriod = false,
   showPerMonth = false,
+  showAccount = true,
 }: {
   entries: BudgetEntry[]
   /** The period these belong to, for the captions and the empty rows. */
@@ -197,6 +207,8 @@ export function BudgetSheet({
   showPeriod?: boolean
   /** The twelfth of a yearly plan that lands in each month. */
   showPerMonth?: boolean
+  /** Off once the list is already narrowed to one account. */
+  showAccount?: boolean
 }) {
   return (
     <>
@@ -209,6 +221,7 @@ export function BudgetSheet({
           emptyLabel={`No ${kind} budgets for ${label} yet.`}
           showPeriod={showPeriod}
           showPerMonth={showPerMonth}
+          showAccount={showAccount}
         />
       ))}
     </>

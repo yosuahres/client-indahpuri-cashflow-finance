@@ -64,7 +64,8 @@ export function buildReportWorkbook({
   sheet.mergeCells(title.number, 1, title.number, 8)
 
   const subtitle = sheet.addRow([
-    `Periode Tahun ${year} — Bulan ${longMonthName(month).toUpperCase()}`,
+    `Periode Tahun ${year} — Bulan ${longMonthName(month).toUpperCase()}` +
+      (report.account ? ` — Akun ${report.account}` : ""),
   ])
   subtitle.font = { color: { argb: "FF6B6A66" } }
   sheet.mergeCells(subtitle.number, 1, subtitle.number, 8)

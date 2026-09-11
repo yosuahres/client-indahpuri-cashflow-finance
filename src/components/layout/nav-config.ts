@@ -45,7 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
     defaultOpen: true,
     items: [
       { label: "New Transaction", href: "/transactions/new" },
-      { label: "New Budget", href: "/budgets/new" },
+      { label: "Budget Plan", href: "/budgets/new" },
       { label: "New Account", href: "/accounts/new" },
     ],
   },

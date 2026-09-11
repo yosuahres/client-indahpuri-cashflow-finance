@@ -22,7 +22,8 @@ export function AccountField({
   invalid,
 }: {
   id: string
-  name: string
+  /** Omitted where the value is submitted by a field of the caller's own. */
+  name?: string
   value: string
   onValueChange: (value: string) => void
   accounts: Account[]

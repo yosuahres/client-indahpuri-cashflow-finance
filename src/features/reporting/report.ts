@@ -31,6 +31,8 @@ export type ReportColumns = Omit<ReportLine, "label">
 export type FinancialReport = {
   year: number
   month: number
+  /** Empty when the statement covers every account. */
+  account: string
   income: ReportLine[]
   expense: ReportLine[]
   incomeTotal: ReportColumns
@@ -53,6 +55,8 @@ type BudgetRow = {
   period_year: number
   /** 1-12 for a plan covering one month; null for one covering the year. */
   period_month: number | null
+  /** Null on plans entered before budgets named one — they count everywhere. */
+  account: string | null
 }
 
 const zeroColumns = (): ReportColumns => ({
@@ -83,13 +87,17 @@ function budgetMonths(budget: BudgetRow) {
 export async function loadFinancialReport({
   year,
   month,
+  account = "",
 }: {
   year: number
   month: number
+  /** Narrows both the plan and the actuals to one account. */
+  account?: string
 }): Promise<FinancialReportResult> {
   const empty: FinancialReport = {
     year,
     month,
+    account,
     income: [],
     expense: [],
     incomeTotal: zeroColumns(),
@@ -110,13 +118,13 @@ export async function loadFinancialReport({
   // awaited, which is what `Promise.all` does to both at once.
   const [actuals, budgets] = await Promise.all([
     // Actuals are cash that moved, so an expense still unpaid is not one yet.
-    loadMonthlyTotals(supabase, from, to, true),
+    loadMonthlyTotals(supabase, from, to, true, account || undefined),
     // Only the year on screen: the columns a budget feeds — this month's plan
     // and the year to date — are both inside it. The prior-year columns are
     // actuals, which have no plan to compare against.
     supabase
       .from("budgets")
-      .select("name, kind, category, amount, period_year, period_month")
+      .select("name, kind, category, amount, period_year, period_month, account")
       .eq("period_year", year),
   ])
 
@@ -159,6 +167,12 @@ export async function loadFinancialReport({
   }
 
   for (const budget of (budgets.data ?? []) as BudgetRow[]) {
+    // Narrowed in here rather than in the query: a plan naming no account was
+    // entered before budgets named one, and the only honest reading of it is
+    // "every account", which is awkward to say in a PostgREST filter and
+    // trivial to say over a year's worth of rows.
+    if (account && budget.account && budget.account !== account) continue
+
     // A budget with no category plans the whole line under its own name.
     const label = budget.category?.trim() || budget.name
 
@@ -236,6 +250,7 @@ export async function loadFinancialReport({
     report: {
       year,
       month,
+      account,
       income,
       expense,
       incomeTotal,

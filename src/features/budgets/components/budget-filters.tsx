@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useTransition } from "react"
 
 import { Select } from "@/components/form/select"
+import type { Account } from "@/features/accounts/actions"
 import { cn } from "@/lib/cn"
 import { BUDGET_PERIODS } from "@/lib/finance"
 import { MONTH_OPTIONS, yearOptions, type BudgetPeriodSelection } from "../period"
@@ -15,10 +16,15 @@ import { MONTH_OPTIONS, yearOptions, type BudgetPeriodSelection } from "../perio
 export function BudgetFilters({
   selection,
   thisYear,
+  accounts,
+  account,
 }: {
   selection: BudgetPeriodSelection
   /** Centres the year list on the year being lived in, not the one on screen. */
   thisYear: number
+  accounts: Account[]
+  /** Empty shows every account's plans side by side. */
+  account: string
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -54,6 +60,21 @@ export function BudgetFilters({
             value: option.value,
             label: option.label,
           }))}
+        />
+      </div>
+
+      <div className="flex w-full min-w-0 flex-col gap-1.5 sm:w-56">
+        <label htmlFor="budget-account" className="text-sm text-neutral-600">
+          Account
+        </label>
+        <Select
+          id="budget-account"
+          value={account}
+          onValueChange={(value) => setParams({ account: value })}
+          options={[
+            { value: "", label: "All accounts" },
+            ...accounts.map((entry) => ({ value: entry.name, label: entry.name })),
+          ]}
         />
       </div>
 

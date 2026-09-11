@@ -22,6 +22,8 @@ export type BudgetEntry = {
   section: SectionValue
   category: string | null
   costCenter: string | null
+  /** Null on plans entered before budgets named one — they count everywhere. */
+  account: string | null
   amount: number
   year: number
   /** 1-12, or null when the plan covers the whole year. */
@@ -42,6 +44,7 @@ type Row = {
   section: SectionValue
   category: string | null
   cost_center: string | null
+  account: string | null
   amount: number | string
   period_year: number
   period_month: number | null
@@ -61,7 +64,7 @@ export async function listBudgets(year: number): Promise<BudgetListResult> {
   const { data, error } = await supabase
     .from("budgets")
     .select(
-      "id, name, kind, section, category, cost_center, amount, period_year, period_month, warn_on_overrun",
+      "id, name, kind, section, category, cost_center, account, amount, period_year, period_month, warn_on_overrun",
     )
     .eq("period_year", year)
     // Yearly plans lead, then the months in order: the same order the page
@@ -92,6 +95,7 @@ export async function listBudgets(year: number): Promise<BudgetListResult> {
       section: row.section,
       category: row.category,
       costCenter: row.cost_center,
+      account: row.account,
       amount: Number(row.amount) || 0,
       year: row.period_year,
       month: row.period_month,
