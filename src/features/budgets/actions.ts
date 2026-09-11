@@ -55,5 +55,9 @@ export async function createBudget(
   }
 
   refresh()
-  redirect("/dashboard")
+  // Back to the list, on the period the budget was filed against, so the row
+  // just entered is the one on screen.
+  redirect(
+    `/budgets?period=${input.period}&year=${input.periodYear}&month=${input.periodMonth || 1}`,
+  )
 }

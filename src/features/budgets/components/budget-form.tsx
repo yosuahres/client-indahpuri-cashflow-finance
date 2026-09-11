@@ -30,29 +30,18 @@ import {
 import type { FormState } from "@/lib/form-state"
 
 import { createBudget } from "../actions"
+import { MONTH_OPTIONS, yearOptions } from "../period"
 
 const initialState: FormState = {}
 
-/** Month names come from the report, so both read the period the same way. */
-const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
-  value: String(index + 1),
-  label: longMonthName(index + 1),
-}))
-
-/** A plan is made for the year ahead or corrected for one just past. */
-function yearOptions(around: number) {
-  return Array.from({ length: 6 }, (_, index) => {
-    const year = around - 2 + index
-    return { value: String(year), label: String(year) }
-  })
-}
-
 export function BudgetForm({
+  defaultPeriod,
   defaultYear,
   defaultMonth,
   initialCategories,
   setupError,
 }: {
+  defaultPeriod: BudgetPeriod
   defaultYear: number
   /** 1-12. */
   defaultMonth: number
@@ -62,7 +51,7 @@ export function BudgetForm({
   const [state, formAction, pending] = useActionState(createBudget, initialState)
   const errors = state.fieldErrors ?? {}
 
-  const [period, setPeriod] = useState<BudgetPeriod>("monthly")
+  const [period, setPeriod] = useState<BudgetPeriod>(defaultPeriod)
   const [periodYear, setPeriodYear] = useState(String(defaultYear))
   const [periodMonth, setPeriodMonth] = useState(String(defaultMonth))
   const [amount, setAmount] = useState("")
