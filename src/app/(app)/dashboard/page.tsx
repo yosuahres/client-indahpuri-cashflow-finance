@@ -10,6 +10,9 @@ import { SummaryTiles } from "@/components/report/summary-tiles"
 import type { ChartSeries } from "@/components/report/types"
 import { Card, CardHeader } from "@/components/ui/card"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
+import { listAccounts } from "@/features/accounts/actions"
+import { PlanVsActualTable } from "@/features/budgets/components/plan-vs-actual-table"
+import { loadPlanVsActual } from "@/features/budgets/plan-vs-actual"
 import { readReportRange } from "@/features/reports/range"
 import { loadProfitAndLossSummary } from "@/features/profit-and-loss/report"
 
@@ -74,6 +77,10 @@ function DashboardFallback() {
           ))}
         </div>
         <div className="space-y-4">
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-[220px]" />
+        </div>
+        <div className="space-y-4">
           <Skeleton className="h-5 w-28" />
           <div className="grid gap-4 xl:grid-cols-2">
             <Skeleton className="h-[260px]" />
@@ -99,21 +106,27 @@ async function DashboardFigures({
   suffix: string
 }) {
   // Only the plotted figures, not the ledger behind them: the dashboard shows
-  // no transaction rows, so it never asks for any.
-  const { ok, error, report } = await loadProfitAndLossSummary({
-    from: range.from,
-    to: range.to,
-    periodicity: range.periodicity,
-  })
+  // no transaction rows, so it never asks for any. All three go out together:
+  // they share the one request-scoped Supabase client, which serializes its own
+  // token refresh, so this waits for the slowest rather than for the sum.
+  const [{ ok, error, report }, plan, accounts] = await Promise.all([
+    loadProfitAndLossSummary({
+      from: range.from,
+      to: range.to,
+      periodicity: range.periodicity,
+    }),
+    loadPlanVsActual({ from: range.from, to: range.to }),
+    listAccounts(),
+  ])
 
   // One axis across all three facets.
   const domainValues = report.series.flatMap((entry) => entry.values)
 
   return (
     <>
-      {!ok ? (
+      {!ok || !plan.ok ? (
         <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
-          {error}
+          {error ?? plan.error}
         </p>
       ) : null}
 
@@ -152,6 +165,39 @@ async function DashboardFigures({
               />
             ))}
           </div>
+        </section>
+
+        <section aria-labelledby="dashboard-plan-vs-actual">
+          <div className="flex items-center justify-between gap-3">
+            <h2
+              id="dashboard-plan-vs-actual"
+              className="text-sm font-semibold text-neutral-900"
+            >
+              Plan vs Actual by Account
+            </h2>
+            {/* The dashboard's own filters mean nothing to the Anggaran page,
+                so the link carries the year this range ends in instead. */}
+            <Link
+              href={`/budgets?period=yearly&year=${range.to.slice(0, 4)}`}
+              className="shrink-0 text-sm text-neutral-500 hover:text-neutral-900"
+            >
+              View budgets
+            </Link>
+          </div>
+
+          <Card className="mt-4 min-w-0 overflow-hidden">
+            <CardHeader
+              title="Every account, planned against what moved"
+              caption="Yearly plans count a twelfth per month, so a part-year range carries a part of them. Actuals include unpaid bills, as the figures above do."
+            />
+            <div className="mt-4">
+              <PlanVsActualTable
+                rows={plan.rows}
+                totals={plan.totals}
+                accounts={accounts.accounts}
+              />
+            </div>
+          </Card>
         </section>
 
         <section aria-labelledby="dashboard-by-category">

@@ -81,3 +81,21 @@ export function accountIssuer(account: {
   if (spec.holder) return account.holder?.trim() || null
   return null
 }
+
+/**
+ * "Bank · BCA", "Cash · Front Office", "E-Wallet · GoPay" — what an account is
+ * and where it sits, in one line.
+ *
+ * Lists that store the account by name carry nothing but that name, and a name
+ * on its own ("Operasional") does not say whether it is a bank account or a
+ * tin, let alone which bank. This is what goes underneath it.
+ */
+export function accountDetail(account: {
+  type: string
+  provider?: string | null
+  holder?: string | null
+}): string {
+  const spec = accountTypeSpec(account.type)
+  const issuer = accountIssuer(account)
+  return issuer ? `${spec.label} · ${issuer}` : spec.label
+}

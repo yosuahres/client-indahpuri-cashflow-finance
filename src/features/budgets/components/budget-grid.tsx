@@ -258,8 +258,11 @@ export function BudgetGrid({
       ) : null}
 
       <FormSection wide>
-        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4 xl:max-w-5xl">
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-6 xl:max-w-6xl">
+          {/* Half the row: an account reads "Operasional · BCA · Bank", and a
+              quarter of the width cropped the name off the front of it. */}
           <Field
+            className="lg:col-span-3"
             label="Account"
             htmlFor="account-picker"
             required

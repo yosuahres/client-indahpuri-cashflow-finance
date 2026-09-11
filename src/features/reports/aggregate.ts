@@ -165,3 +165,123 @@ async function aggregateInProcess(
 
   return { ok: true, rows: [...totals.values()] }
 }
+
+/** One account's movements in one month, on one side of the ledger. */
+export type AccountTotal = {
+  kind: TransactionKind
+  account: string
+  /** `YYYY-MM`. */
+  month: string
+  total: number
+}
+
+export type AccountTotalsResult = {
+  ok: boolean
+  error?: string
+  rows: AccountTotal[]
+}
+
+/**
+ * The same rows `loadMonthlyTotals` reads, grouped by account instead of by
+ * category — what the dashboard needs to set each account against its plan.
+ */
+export async function loadAccountTotals(
+  supabase: SupabaseClient,
+  from: string,
+  to: string,
+  paidOnly = false,
+): Promise<AccountTotalsResult> {
+  const { data, error } = await supabase.rpc("report_account_totals", {
+    from_date: from,
+    to_date: to,
+    paid_only: paidOnly,
+  })
+
+  if (!error) {
+    return {
+      ok: true,
+      rows: ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+        kind: row.kind as TransactionKind,
+        account: row.account as string,
+        month: row.month as string,
+        total: Number(row.total) || 0,
+      })),
+    }
+  }
+
+  // Deploying the app and running the migration are two separate acts, and
+  // either can land first. Until 0013 has been run there is no function to
+  // call, so the rows are read and grouped here instead — slower, not broken.
+  if (error.code === UNDEFINED_FUNCTION || error.code === PGRST_NO_FUNCTION) {
+    return accountsInProcess(supabase, from, to, paidOnly)
+  }
+
+  return {
+    ok: false,
+    error: error.code === UNDEFINED_TABLE ? MIGRATION_HINT : error.message,
+    rows: [],
+  }
+}
+
+/** The pre-0013 path: read every row in the window and group them here. */
+async function accountsInProcess(
+  supabase: SupabaseClient,
+  from: string,
+  to: string,
+  paidOnly: boolean,
+): Promise<AccountTotalsResult> {
+  const totals = new Map<string, AccountTotal>()
+
+  for (let page = 0; ; page += 1) {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("occurred_on, kind, account, amount, paid")
+      .gte("occurred_on", from)
+      .lte("occurred_on", to)
+      .order("occurred_on")
+      .order("id")
+      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+
+    if (error) {
+      return {
+        ok: false,
+        error:
+          error.code === UNDEFINED_TABLE
+            ? MIGRATION_HINT
+            : error.code === UNDEFINED_COLUMN
+              ? PAID_HINT
+              : error.message,
+        rows: [],
+      }
+    }
+
+    type Row = {
+      occurred_on: string
+      kind: TransactionKind
+      account: string
+      amount: number | string
+      paid?: boolean | null
+    }
+
+    for (const row of (data ?? []) as unknown as Row[]) {
+      if (paidOnly && row.paid === false) continue
+
+      const month = row.occurred_on.slice(0, 7)
+      const key = `${row.kind} ${row.account} ${month}`
+      const entry = totals.get(key)
+      if (entry) entry.total += Number(row.amount) || 0
+      else {
+        totals.set(key, {
+          kind: row.kind,
+          account: row.account,
+          month,
+          total: Number(row.amount) || 0,
+        })
+      }
+    }
+
+    if (!data || data.length < PAGE_SIZE) break
+  }
+
+  return { ok: true, rows: [...totals.values()] }
+}

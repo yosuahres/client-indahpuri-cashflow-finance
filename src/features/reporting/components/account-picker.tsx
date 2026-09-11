@@ -25,7 +25,7 @@ export function AccountPicker({
   const [pending, startTransition] = useTransition()
 
   return (
-    <div className={cn("w-48", pending && "opacity-60")}>
+    <div className={cn("w-56", pending && "opacity-60")}>
       <label htmlFor="report-account" className="sr-only">
         Akun
       </label>

@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Plus } from "lucide-react"
 
 import { Topbar } from "@/components/layout/topbar"
-import { listAccounts } from "@/features/accounts/actions"
+import { listAccounts, type Account } from "@/features/accounts/actions"
 import { SummaryTiles } from "@/components/report/summary-tiles"
 import { Card, CardHeader } from "@/components/ui/card"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
@@ -51,9 +51,11 @@ function ListFallback() {
 async function BudgetList({
   selection,
   account,
+  accounts,
 }: {
   selection: BudgetPeriodSelection
   account: string
+  accounts: Account[]
 }) {
   const { ok, error, entries: all } = await listBudgets(selection.year)
 
@@ -113,7 +115,12 @@ async function BudgetList({
                 caption="Entered against this month, and counted in it whole. Click a figure to change it."
               />
               <div className="mt-4">
-                <BudgetSheet entries={monthPlans} label={label} showAccount={!account} />
+                <BudgetSheet
+                  entries={monthPlans}
+                  accounts={accounts}
+                  label={label}
+                  showAccount={!account}
+                />
               </div>
             </Card>
 
@@ -128,6 +135,7 @@ async function BudgetList({
                 <div className="mt-4">
                   <BudgetSheet
                     entries={yearPlans}
+                    accounts={accounts}
                     label={String(selection.year)}
                     showPerMonth
                     showAccount={!account}
@@ -143,7 +151,13 @@ async function BudgetList({
               caption="Every plan filed against this year, whole-year plans first. Click a figure to change it."
             />
             <div className="mt-4">
-              <BudgetSheet entries={entries} label={label} showPeriod showAccount={!account} />
+              <BudgetSheet
+                entries={entries}
+                accounts={accounts}
+                label={label}
+                showPeriod
+                showAccount={!account}
+              />
             </div>
           </Card>
         )}
@@ -198,7 +212,7 @@ export default async function BudgetsPage({
           key={`${selection.period}:${selection.year}:${selection.month}:${account}`}
           fallback={<ListFallback />}
         >
-          <BudgetList selection={selection} account={account} />
+          <BudgetList selection={selection} account={account} accounts={accounts.accounts} />
         </Suspense>
       </main>
     </>

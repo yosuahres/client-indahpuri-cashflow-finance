@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react"
 import { Trash2 } from "lucide-react"
 
+import type { Account } from "@/features/accounts/actions"
+import { accountDetail } from "@/features/accounts/constants"
 import { longMonthName } from "@/features/reporting/months"
 import { cn } from "@/lib/cn"
 import { kindLabel, SECTIONS, type TransactionKind } from "@/lib/finance"
@@ -148,6 +150,44 @@ function DeleteCell({
 }
 
 /**
+ * An account as a plan names it: the name it was filed under, and underneath,
+ * what that account is — a bank and which bank, a tin and who holds it.
+ *
+ * Budgets store the account by name so a rename never rewrites them, which
+ * means a plan can outlive the account it points at. That is worth saying: the
+ * plan still counts in the report, but nothing can be filtered to it.
+ */
+function AccountCell({
+  account,
+  detailOf,
+}: {
+  account: string | null
+  detailOf: (name: string) => string | null
+}) {
+  if (!account) {
+    return (
+      <td className={cn(cell, "text-neutral-500")}>
+        All accounts
+        <span className="mt-0.5 block text-xs text-neutral-400">Entered before accounts</span>
+      </td>
+    )
+  }
+
+  const detail = detailOf(account)
+
+  return (
+    <td className={cell}>
+      <span className="text-neutral-900">{account}</span>
+      <span
+        className={cn("mt-0.5 block text-xs", detail ? "text-neutral-500" : "text-amber-600")}
+      >
+        {detail ?? "No longer in your accounts"}
+      </span>
+    </td>
+  )
+}
+
+/**
  * One direction's plans: a banner, its rows, and its own subtotal.
  *
  * Income and expense share the table but never share a total — they are
@@ -164,6 +204,7 @@ function KindBlock({
   showPerMonth,
   showAccount,
   amountOf,
+  detailOf,
   onAmount,
   onDelete,
   confirmingId,
@@ -179,6 +220,7 @@ function KindBlock({
   showPerMonth: boolean
   showAccount: boolean
   amountOf: (entry: BudgetEntry) => number
+  detailOf: (name: string) => string | null
   onAmount: (id: string, amount: number) => void
   onDelete: (id: string) => void
   confirmingId: string | null
@@ -215,23 +257,18 @@ function KindBlock({
                 )}
               </td>
             ) : null}
-            {/* The cost center is what tells two otherwise identical plans
-                apart, so it rides along in the muted half of the cell. A plan
-                from before accounts were named counts on all of them. */}
-            {showAccount ? (
-              <td className={cn(cell, entry.account ? "text-neutral-900" : "text-neutral-500")}>
-                {entry.account ?? "All accounts"}
-                {entry.costCenter ? (
-                  <span className="text-neutral-500"> · {entry.costCenter}</span>
-                ) : null}
-              </td>
-            ) : null}
+            {/* A plan from before accounts were named counts on all of them. */}
+            {showAccount ? <AccountCell account={entry.account} detailOf={detailOf} /> : null}
             <td className={cn(cell, "text-neutral-700")}>{sectionLabel(entry.section)}</td>
             {/* A plan with no category covers its whole section. */}
-            <td
-              className={cn(cell, entry.category?.trim() ? "text-neutral-900" : "text-neutral-500")}
-            >
-              {entry.category?.trim() || "Whole section"}
+            <td className={cell}>
+              <span className={entry.category?.trim() ? "text-neutral-900" : "text-neutral-500"}>
+                {entry.category?.trim() || "Whole section"}
+              </span>
+              {/* What tells two otherwise identical plans apart. */}
+              {entry.costCenter ? (
+                <span className="mt-0.5 block text-xs text-neutral-500">{entry.costCenter}</span>
+              ) : null}
             </td>
             {showPerMonth ? (
               <td className={cn(amountCell, "tabular-nums text-neutral-500")}>
@@ -308,12 +345,15 @@ function KindBlock({
  */
 export function BudgetSheet({
   entries,
+  accounts,
   label,
   showPeriod = false,
   showPerMonth = false,
   showAccount = true,
 }: {
   entries: BudgetEntry[]
+  /** Resolves each plan's account name to what that account actually is. */
+  accounts: Account[]
   /** The period these belong to, for the caption and the empty rows. */
   label: string
   /** On a yearly view, where rows come from different months. */
@@ -341,6 +381,9 @@ export function BudgetSheet({
 
   const amountOf = (entry: BudgetEntry) => amounts.get(entry.id) ?? entry.amount
   const live = entries.filter((entry) => !removed.has(entry.id))
+
+  const details = new Map(accounts.map((entry) => [entry.name, accountDetail(entry)]))
+  const detailOf = (name: string) => details.get(name) ?? null
 
   function commitAmount(id: string, amount: number) {
     setError(null)
@@ -440,6 +483,7 @@ export function BudgetSheet({
               showPerMonth={showPerMonth}
               showAccount={showAccount}
               amountOf={amountOf}
+              detailOf={detailOf}
               onAmount={commitAmount}
               onDelete={remove}
               confirmingId={confirmingId}
