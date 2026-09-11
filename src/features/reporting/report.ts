@@ -117,7 +117,8 @@ export async function loadFinancialReport({
   // sum of them. A query builder does not issue its request until it is
   // awaited, which is what `Promise.all` does to both at once.
   const [actuals, budgets] = await Promise.all([
-    loadMonthlyTotals(supabase, from, to),
+    // Actuals are cash that moved, so an expense still unpaid is not one yet.
+    loadMonthlyTotals(supabase, from, to, true),
     supabase
       .from("budgets")
       .select("name, kind, category, amount, fiscal_year_from, fiscal_year_to")
