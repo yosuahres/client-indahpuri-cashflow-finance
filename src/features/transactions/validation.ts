@@ -10,7 +10,7 @@ export type TransactionInput = {
   reference: string
   amount: string
   notes: string
-  /** "paid" / "unpaid" on an expense; empty on income, which has no equivalent. */
+  /** "paid" / "unpaid" for either an income or expense. */
   paid: string
 }
 
@@ -43,7 +43,7 @@ export function validateTransaction(input: TransactionInput) {
   if (!input.category) errors.category = "Category is required."
   if (!input.account) errors.account = "Choose the account the money moved through."
 
-  if (input.kind === "expense" && !isPaymentStatus(input.paid)) {
+  if (isKind(input.kind) && !isPaymentStatus(input.paid)) {
     errors.paid = "Say whether this has been paid."
   }
 

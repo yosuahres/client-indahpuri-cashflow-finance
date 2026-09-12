@@ -1,5 +1,5 @@
 import { requireUser } from "@/features/auth/session"
-import { readReportMonth } from "@/features/reporting/months"
+import { readReportMonth, readSettlementFilter } from "@/features/reporting/months"
 import { loadFinancialReport } from "@/features/reporting/report"
 import { buildReportWorkbook } from "@/features/reporting/workbook"
 
@@ -11,8 +11,17 @@ export async function GET(request: Request) {
   const { year, month } = readReportMonth(Object.fromEntries(url.searchParams))
   const company = url.searchParams.get("company")?.trim() || "Indah Puri"
   const account = url.searchParams.get("account")?.trim() || ""
+  const params = Object.fromEntries(url.searchParams)
+  const incomeStatus = readSettlementFilter(params, "incomeStatus")
+  const expenseStatus = readSettlementFilter(params, "expenseStatus")
 
-  const { report } = await loadFinancialReport({ year, month, account })
+  const { report } = await loadFinancialReport({
+    year,
+    month,
+    account,
+    incomeStatus,
+    expenseStatus,
+  })
   const workbook = buildReportWorkbook({ report, company })
 
   const buffer = await workbook.xlsx.writeBuffer()

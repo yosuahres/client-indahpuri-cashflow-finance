@@ -16,14 +16,15 @@ export const TRANSACTION_KINDS = [
 
 export type TransactionKind = (typeof TRANSACTION_KINDS)[number]["value"]
 
-/**
- * Whether an expense has actually left the account yet. Income has no
- * equivalent — money that has not arrived is not recorded — so only expenses
- * carry one of these.
- */
+/** Whether money has settled for a transaction. */
 export const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
   { value: "unpaid", label: "Unpaid" },
+] as const
+
+export const INCOME_PAYMENT_STATUSES = [
+  { value: "paid", label: "Setor" },
+  { value: "unpaid", label: "Belum setor" },
 ] as const
 
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number]["value"]

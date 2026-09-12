@@ -11,7 +11,7 @@ import { deleteTransactions, setTransactionPaid } from "@/features/transactions/
 import { TransactionPanel } from "@/features/transactions/components/transaction-panel"
 import { useWindowedRows } from "@/hooks/use-windowed-rows"
 import { cn } from "@/lib/cn"
-import { PAYMENT_STATUSES } from "@/lib/finance"
+import { INCOME_PAYMENT_STATUSES, PAYMENT_STATUSES } from "@/lib/finance"
 import { formatCurrency, formatDate } from "@/lib/format"
 import type { TransactionDetail } from "./types"
 
@@ -419,7 +419,6 @@ export function TransactionTable({
  * just to mark a bill settled was the whole friction; this is one click and a
  * pick, and the rest of the row still opens the panel.
  *
- * Income has no status, so it shows an inert dash rather than a control.
  */
 function StatusCell({
   entry,
@@ -449,17 +448,8 @@ function StatusCell({
     return () => document.removeEventListener("pointerdown", onPointerDown)
   }, [open])
 
-  if (entry.paid === null) {
-    return (
-      <td className="px-3 py-2.5">
-        <span className="text-neutral-400" aria-label="Not applicable">
-          —
-        </span>
-      </td>
-    )
-  }
-
   const paid = entry.paid
+  const statuses = entry.kind === "income" ? INCOME_PAYMENT_STATUSES : PAYMENT_STATUSES
 
   return (
     // The badge is a border taller than plain text, so the padding gives the
@@ -474,7 +464,7 @@ function StatusCell({
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={`Payment status: ${paid ? "Paid" : "Unpaid"}. Change it.`}
+        aria-label={`Payment status: ${statuses[paid ? 0 : 1].label}. Change it.`}
         onClick={() => {
           setContainer(popoverContainer(triggerRef.current))
           setOpen((current) => !current)
@@ -488,7 +478,7 @@ function StatusCell({
             : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400",
         )}
       >
-        {paid ? "Paid" : "Unpaid"}
+        {statuses[paid ? 0 : 1].label}
         <ChevronDown className="size-3 shrink-0" strokeWidth={2} />
       </button>
 
@@ -500,7 +490,7 @@ function StatusCell({
               className="z-[100] overflow-hidden rounded-lg border border-black/10 bg-white py-1 shadow-lg"
             >
               <ul role="listbox" aria-label="Payment status">
-                {PAYMENT_STATUSES.map((option) => {
+                {statuses.map((option) => {
                   const isPaid = option.value === "paid"
                   return (
                     <li

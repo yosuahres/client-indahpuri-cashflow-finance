@@ -22,12 +22,8 @@ const PAID_HINT =
   "The transactions table has no `paid` column yet. Run " +
   "supabase/migrations/0008_expense_paid.sql against the project first."
 
-/**
- * The column is expense-only, and a check constraint enforces that, so income
- * clears it rather than carrying a value that would not mean anything.
- */
 function paidColumn(input: TransactionInput) {
-  return input.kind === "expense" ? input.paid === "paid" : null
+  return input.paid === "paid"
 }
 
 export async function createTransaction(
@@ -127,12 +123,7 @@ export async function updateTransaction(
 export type PaidResult = { ok: boolean; error?: string }
 
 /**
- * Flips one expense between paid and unpaid straight from the ledger, without
- * opening the row. The `kind` guard keeps income out: a check constraint holds
- * `paid` to expenses, so an income row would be rejected by the database
- * anyway — matching nothing here gives a clearer answer than that would.
- *
- * Row level security scopes the update to the signed-in user.
+ * Flips one transaction between settled and unsettled straight from the ledger.
  */
 export async function setTransactionPaid(id: string, paid: boolean): Promise<PaidResult> {
   if (!id) return { ok: false, error: "That transaction is no longer open." }
@@ -142,7 +133,6 @@ export async function setTransactionPaid(id: string, paid: boolean): Promise<Pai
     .from("transactions")
     .update({ paid })
     .eq("id", id)
-    .eq("kind", "expense")
     .select("id")
 
   if (error) {
@@ -151,7 +141,7 @@ export async function setTransactionPaid(id: string, paid: boolean): Promise<Pai
     return { ok: false, error: error.message }
   }
   if (!data || data.length === 0) {
-    return { ok: false, error: "That transaction no longer exists, or is not an expense." }
+    return { ok: false, error: "That transaction no longer exists." }
   }
 
   refresh()

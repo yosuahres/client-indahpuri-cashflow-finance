@@ -2,6 +2,7 @@ import "server-only"
 
 import type { createClient } from "@/lib/supabase/server"
 import type { TransactionKind } from "@/lib/finance"
+import type { SettlementFilter } from "./range"
 
 /** Postgres "relation does not exist" — the migration has not been run. */
 export const UNDEFINED_TABLE = "42P01"
@@ -59,12 +60,16 @@ export async function loadMonthlyTotals(
   paidOnly = false,
   /** One account's movements only. Undefined reads every account. */
   account?: string,
+  incomeStatus: SettlementFilter = "all",
+  expenseStatus: SettlementFilter = "all",
 ): Promise<MonthlyTotalsResult> {
   const { data, error } = await supabase.rpc("report_monthly_totals", {
     from_date: from,
     to_date: to,
     paid_only: paidOnly,
     account_name: account ?? null,
+    income_paid: incomeStatus === "all" ? null : incomeStatus === "paid",
+    expense_paid: expenseStatus === "all" ? null : expenseStatus === "paid",
   })
 
   if (!error) {
@@ -83,7 +88,7 @@ export async function loadMonthlyTotals(
   // either can land first. Until 0006 has been run there is no function to
   // call, so the old row-by-row path still answers — slower, but not broken.
   if (error.code === UNDEFINED_FUNCTION || error.code === PGRST_NO_FUNCTION) {
-    return aggregateInProcess(supabase, from, to, paidOnly, account)
+    return aggregateInProcess(supabase, from, to, paidOnly, account, incomeStatus, expenseStatus)
   }
 
   return {
@@ -109,6 +114,8 @@ async function aggregateInProcess(
   to: string,
   paidOnly: boolean,
   account?: string,
+  incomeStatus: SettlementFilter = "all",
+  expenseStatus: SettlementFilter = "all",
 ): Promise<MonthlyTotalsResult> {
   const totals = new Map<string, MonthlyTotal>()
 
@@ -149,6 +156,8 @@ async function aggregateInProcess(
     for (const row of (data ?? []) as unknown as AggregateRow[]) {
       // Same exclusion the function applies, for a database that predates it.
       if (paidOnly && row.paid === false) continue
+      const status = row.kind === "income" ? incomeStatus : expenseStatus
+      if (status !== "all" && row.paid !== (status === "paid")) continue
 
       const kind = row.kind
       const category = row.category

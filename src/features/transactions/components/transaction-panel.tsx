@@ -14,6 +14,7 @@ import type { Category } from "@/features/categories/actions"
 import { cn } from "@/lib/cn"
 import { formatCurrency } from "@/lib/format"
 import {
+  INCOME_PAYMENT_STATUSES,
   PAYMENT_STATUSES,
   SECTIONS,
   TRANSACTION_KINDS,
@@ -218,26 +219,24 @@ export function TransactionPanel({
             />
           </Field>
 
-          {kind === "expense" ? (
-            <Field
-              label="Payment Status"
-              htmlFor="panel-paid"
-              required
-              error={errors.paid}
-            >
-              <Select
-                id="panel-paid"
-                name="paid"
-                value={paid}
-                onValueChange={(value) => setPaid(value as PaymentStatus)}
-                options={PAYMENT_STATUSES.map((entry) => ({
-                  value: entry.value,
-                  label: entry.label,
-                }))}
-                invalid={Boolean(errors.paid)}
-              />
-            </Field>
-          ) : null}
+          <Field
+            label="Payment Status"
+            htmlFor="panel-paid"
+            required
+            error={errors.paid}
+          >
+            <Select
+              id="panel-paid"
+              name="paid"
+              value={paid}
+              onValueChange={(value) => setPaid(value as PaymentStatus)}
+              options={(kind === "income" ? INCOME_PAYMENT_STATUSES : PAYMENT_STATUSES).map((entry) => ({
+                value: entry.value,
+                label: entry.label,
+              }))}
+              invalid={Boolean(errors.paid)}
+            />
+          </Field>
 
           <Field label="Party" htmlFor="panel-party" hint="Customer or supplier, if this involves one.">
             <TextInput

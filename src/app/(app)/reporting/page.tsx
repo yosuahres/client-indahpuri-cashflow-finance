@@ -7,9 +7,15 @@ import { Topbar } from "@/components/layout/topbar"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
 import { listAccounts } from "@/features/accounts/actions"
 import { AccountPicker } from "@/features/reporting/components/account-picker"
+import { SettlementFilters } from "@/features/reporting/components/settlement-filters"
 import { FinancialReportTable } from "@/features/reporting/components/financial-report-table"
 import { FitToFrame } from "@/features/reporting/components/fit-to-frame"
-import { longMonthName, readReportMonth, stepMonth } from "@/features/reporting/months"
+import {
+  longMonthName,
+  readReportMonth,
+  readSettlementFilter,
+  stepMonth,
+} from "@/features/reporting/months"
 import { loadFinancialReport } from "@/features/reporting/report"
 
 export const metadata: Metadata = {
@@ -41,12 +47,22 @@ async function Sheet({
   year,
   month,
   account,
+  incomeStatus,
+  expenseStatus,
 }: {
   year: number
   month: number
   account: string
+  incomeStatus: import("@/features/reports/range").SettlementFilter
+  expenseStatus: import("@/features/reports/range").SettlementFilter
 }) {
-  const { ok, error, report } = await loadFinancialReport({ year, month, account })
+  const { ok, error, report } = await loadFinancialReport({
+    year,
+    month,
+    account,
+    incomeStatus,
+    expenseStatus,
+  })
 
   return (
     <>
@@ -81,11 +97,14 @@ export default async function ReportingPage({
   const rawCompany = typeof params.company === "string" ? params.company.trim() : ""
   const company = rawCompany || "Indah Puri"
   const account = typeof params.account === "string" ? params.account.trim() : ""
+  const incomeStatus = readSettlementFilter(params, "incomeStatus")
+  const expenseStatus = readSettlementFilter(params, "expenseStatus")
 
   // Stepping months keeps whatever company and account the URL was carrying.
   const carried =
     (rawCompany ? `&company=${encodeURIComponent(rawCompany)}` : "") +
     (account ? `&account=${encodeURIComponent(account)}` : "")
+    + `&incomeStatus=${incomeStatus}&expenseStatus=${expenseStatus}`
   const previous = stepMonth(year, month, -1)
   const next = stepMonth(year, month, 1)
   const at = ({ year: y, month: m }: { year: number; month: number }) =>
@@ -130,6 +149,11 @@ export default async function ReportingPage({
                 <AccountControl account={account} />
               </Suspense>
 
+              <SettlementFilters
+                incomeStatus={incomeStatus}
+                expenseStatus={expenseStatus}
+              />
+
               <nav
                 aria-label="Pilih bulan"
                 className="flex items-center gap-1 rounded-lg border border-black/10 px-1.5 py-1"
@@ -149,8 +173,14 @@ export default async function ReportingPage({
           </div>
 
           <div className="border-y border-black/10 lg:min-h-0 lg:flex-1">
-            <Suspense key={`${year}-${month}-${account}`} fallback={<SheetFallback />}>
-              <Sheet year={year} month={month} account={account} />
+            <Suspense key={`${year}-${month}-${account}:${incomeStatus}:${expenseStatus}`} fallback={<SheetFallback />}>
+              <Sheet
+                year={year}
+                month={month}
+                account={account}
+                incomeStatus={incomeStatus}
+                expenseStatus={expenseStatus}
+              />
             </Suspense>
           </div>
         </FitToFrame>

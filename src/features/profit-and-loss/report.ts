@@ -10,6 +10,7 @@ import type {
 import { accountIssuer } from "@/features/accounts/constants"
 import { buildPeriods, type Periodicity } from "@/features/reports/periods"
 import { loadMonthlyTotals, type MonthlyTotal } from "@/features/reports/aggregate"
+import type { SettlementFilter } from "@/features/reports/range"
 
 const UNDEFINED_TABLE = "42P01"
 const MIGRATION_HINT =
@@ -81,7 +82,7 @@ type TransactionRow = {
   category: string
   account: string
   amount: number | string
-  paid: boolean | null
+  paid: boolean
   party: string | null
   reference: string | null
   notes: string | null
@@ -249,12 +250,16 @@ export async function loadProfitAndLossReport({
   to,
   periodicity = "Quarterly" as Periodicity,
   kind = "all",
+  incomeStatus = "all",
+  expenseStatus = "all",
 }: {
   from: string
   to: string
   periodicity?: Periodicity
   /** Narrows the ledger to one direction; "all" leaves it unfiltered. */
   kind?: "all" | "income" | "expense"
+  incomeStatus?: SettlementFilter
+  expenseStatus?: SettlementFilter
 }): Promise<ProfitAndLossResult> {
   const { labels: periods, monthToIndex } = buildPeriods(from, to, periodicity)
 
@@ -296,7 +301,12 @@ export async function loadProfitAndLossReport({
       }
     }
 
-    rows.push(...((data ?? []) as TransactionRow[]))
+    rows.push(
+      ...((data ?? []) as TransactionRow[]).filter((row) => {
+        const filter = row.kind === "income" ? incomeStatus : expenseStatus
+        return filter === "all" || (filter === "paid" ? row.paid : !row.paid)
+      }),
+    )
     if (!data || data.length < PAGE_SIZE) break
   }
 
@@ -331,7 +341,7 @@ export async function loadProfitAndLossReport({
       account: row.account,
       accountIssuer: accountIssuers.get(row.account) ?? null,
       amount: Number(row.amount) || 0,
-      paid: row.paid ?? null,
+      paid: row.paid ?? true,
       party: row.party ?? "",
       reference: row.reference ?? "",
       notes: row.notes ?? "",

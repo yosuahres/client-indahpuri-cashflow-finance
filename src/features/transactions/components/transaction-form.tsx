@@ -23,6 +23,7 @@ import type { Account } from "@/features/accounts/actions"
 import { CategoryField } from "@/features/categories/components/category-field"
 import type { Category } from "@/features/categories/actions"
 import {
+  INCOME_PAYMENT_STATUSES,
   PAYMENT_STATUSES,
   SECTIONS,
   TRANSACTION_KINDS,
@@ -190,29 +191,25 @@ export function TransactionForm({
             />
           </Field>
 
-          {/* Expenses only: income is recorded once it has arrived, so there
-              is nothing left to settle. */}
-          {kind === "expense" ? (
-            <Field
-              label="Payment Status"
-              htmlFor="paid"
-              required
-              error={errors.paid}
-              hint="Unpaid keeps a bill on the books before the money leaves."
-            >
-              <Select
-                id="paid"
-                name="paid"
-                value={paid}
-                onValueChange={(value) => setPaid(value as PaymentStatus)}
-                options={PAYMENT_STATUSES.map((entry) => ({
-                  value: entry.value,
-                  label: entry.label,
-                }))}
-                invalid={Boolean(errors.paid)}
-              />
-            </Field>
-          ) : null}
+          <Field
+            label="Payment Status"
+            htmlFor="paid"
+            required
+            error={errors.paid}
+            hint={kind === "expense" ? "Unpaid keeps a bill on the books before the money leaves." : "Setor when the income has arrived."}
+          >
+            <Select
+              id="paid"
+              name="paid"
+              value={paid}
+              onValueChange={(value) => setPaid(value as PaymentStatus)}
+              options={(kind === "income" ? INCOME_PAYMENT_STATUSES : PAYMENT_STATUSES).map((entry) => ({
+                value: entry.value,
+                label: entry.label,
+              }))}
+              invalid={Boolean(errors.paid)}
+            />
+          </Field>
 
           <Field label="Party" htmlFor="party" hint="Customer or supplier, if this involves one.">
             <TextInput

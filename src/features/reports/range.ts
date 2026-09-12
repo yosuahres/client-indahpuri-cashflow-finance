@@ -2,6 +2,8 @@ import { PERIODICITIES, endOfYear, startOfYear, type Periodicity } from "./perio
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
+export type SettlementFilter = "all" | "paid" | "unpaid"
+
 function read(params: Record<string, string | string[] | undefined>, key: string) {
   const value = params[key]
   return typeof value === "string" ? value : undefined
@@ -21,6 +23,13 @@ export function readReportRange(params: Record<string, string | string[] | undef
   const kind: "all" | "income" | "expense" =
     rawKind === "income" || rawKind === "expense" ? rawKind : "all"
 
+  const readSettlement = (key: string): SettlementFilter => {
+    const value = read(params, key)
+    return value === "paid" || value === "unpaid" ? value : "all"
+  }
+  const incomeStatus = readSettlement("incomeStatus")
+  const expenseStatus = readSettlement("expenseStatus")
+
   const fromYear = Number(read(params, "fromYear")) || thisYear
   const toYear = Math.max(Number(read(params, "toYear")) || thisYear, fromYear)
 
@@ -34,6 +43,8 @@ export function readReportRange(params: Record<string, string | string[] | undef
   return {
     periodicity,
     kind,
+    incomeStatus,
+    expenseStatus,
     mode: mode as "fiscal" | "range",
     fromYear,
     toYear,

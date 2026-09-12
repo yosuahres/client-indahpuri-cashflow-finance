@@ -7,6 +7,7 @@ import { DatePicker } from "@/components/form/date-picker"
 import { Select } from "@/components/form/select"
 import { cn } from "@/lib/cn"
 import { PERIODICITIES } from "@/features/reports/periods"
+import type { SettlementFilter } from "@/features/reports/range"
 
 const control =
   "h-10 w-full rounded-md bg-neutral-100 px-3 text-base text-neutral-900 sm:text-sm placeholder:text-neutral-400 focus:outline-2 focus:outline-offset-0 focus:outline-neutral-800"
@@ -22,6 +23,8 @@ export function ReportFilters({
   to,
   periodicity,
   kind,
+  incomeStatus,
+  expenseStatus,
   today,
 }: {
   company: string
@@ -37,6 +40,8 @@ export function ReportFilters({
    * would leave its net figure meaningless.
    */
   kind?: "all" | "income" | "expense"
+  incomeStatus?: SettlementFilter
+  expenseStatus?: SettlementFilter
   today: string
 }) {
   const router = useRouter()
@@ -132,6 +137,32 @@ export function ReportFilters({
             { value: "all", label: "Income & Expense" },
             { value: "income", label: "Income" },
             { value: "expense", label: "Expense" },
+          ]}
+        />
+      ) : null}
+
+      {incomeStatus ? (
+        <Select
+          id="income-status"
+          value={incomeStatus}
+          onValueChange={(value) => setParams({ incomeStatus: value })}
+          options={[
+            { value: "all", label: "Income: All" },
+            { value: "paid", label: "Income: Setor" },
+            { value: "unpaid", label: "Income: Belum setor" },
+          ]}
+        />
+      ) : null}
+
+      {expenseStatus ? (
+        <Select
+          id="expense-status"
+          value={expenseStatus}
+          onValueChange={(value) => setParams({ expenseStatus: value })}
+          options={[
+            { value: "all", label: "Expense: All" },
+            { value: "paid", label: "Expense: Paid" },
+            { value: "unpaid", label: "Expense: Unpaid" },
           ]}
         />
       ) : null}

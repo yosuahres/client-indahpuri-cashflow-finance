@@ -9,6 +9,7 @@ import {
 } from "@/features/reports/aggregate"
 
 import { lastDayOfMonth, monthKey } from "./months"
+import type { SettlementFilter } from "@/features/reports/range"
 
 const UNDEFINED_COLUMN = "42703"
 const BUDGET_COLUMN_HINT =
@@ -88,11 +89,15 @@ export async function loadFinancialReport({
   year,
   month,
   account = "",
+  incomeStatus = "paid",
+  expenseStatus = "paid",
 }: {
   year: number
   month: number
   /** Narrows both the plan and the actuals to one account. */
   account?: string
+  incomeStatus?: SettlementFilter
+  expenseStatus?: SettlementFilter
 }): Promise<FinancialReportResult> {
   const empty: FinancialReport = {
     year,
@@ -118,7 +123,15 @@ export async function loadFinancialReport({
   // awaited, which is what `Promise.all` does to both at once.
   const [actuals, budgets] = await Promise.all([
     // Actuals are cash that moved, so an expense still unpaid is not one yet.
-    loadMonthlyTotals(supabase, from, to, true, account || undefined),
+    loadMonthlyTotals(
+      supabase,
+      from,
+      to,
+      false,
+      account || undefined,
+      incomeStatus,
+      expenseStatus,
+    ),
     // Only the year on screen: the columns a budget feeds — this month's plan
     // and the year to date — are both inside it. The prior-year columns are
     // actuals, which have no plan to compare against.

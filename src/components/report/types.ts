@@ -33,8 +33,8 @@ export type TransactionDetail = {
   /** Bank / issuer / holder behind the account, when it has one. */
   accountIssuer: string | null
   amount: number
-  /** Whether the money has left yet. Null on income, which has no equivalent. */
-  paid: boolean | null
+  /** Whether the money has settled. */
+  paid: boolean
   // Only the detail panel shows these; the table has no column for them.
   party: string
   reference: string

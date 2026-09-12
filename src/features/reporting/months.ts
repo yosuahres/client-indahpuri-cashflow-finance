@@ -1,3 +1,5 @@
+import type { SettlementFilter } from "@/features/reports/range"
+
 /** Month vocabulary for the Laporan Keuangan, which reads in Indonesian. */
 
 const shortMonth = new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" })
@@ -58,4 +60,12 @@ export function readReportMonth(params: Record<string, string | string[] | undef
 
   // A hand-typed year far outside the data is a mistake, not a query.
   return { year: Math.min(Math.max(year, 1970), 9999), month }
+}
+
+export function readSettlementFilter(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+): SettlementFilter {
+  const value = params[key]
+  return value === "unpaid" || value === "all" ? value : "paid"
 }
