@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 function LedgerFallback() {
   return (
     <LoadingRegion label="Loading transactions">
-      <div className="space-y-2 p-4 sm:p-6">
+      <div className="h-full space-y-2 overflow-y-auto p-4 sm:p-6">
         <Skeleton className="h-9" />
         {Array.from({ length: 12 }, (_, row) => (
           <Skeleton key={row} className="h-11" />
@@ -51,21 +51,23 @@ async function Ledger({ range }: { range: ReturnType<typeof readReportRange> }) 
   ])
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
       {!ok ? (
         <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
           {error}
         </p>
       ) : null}
 
-      <TransactionTable
-        transactions={report.transactions}
-        caption="Every transaction recorded in the range, newest first."
-        categories={categories.categories}
-        accounts={accounts.accounts}
-        today={range.today}
-      />
-    </>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <TransactionTable
+          transactions={report.transactions}
+          caption="Every transaction recorded in the range, newest first."
+          categories={categories.categories}
+          accounts={accounts.accounts}
+          today={range.today}
+        />
+      </div>
+    </div>
   )
 }
 
@@ -80,7 +82,7 @@ export default async function ProfitAndLossPage({
     <>
       <Topbar title="Profit and Loss" />
 
-      <main className="min-h-0 flex-1 overflow-y-auto">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden">
         <ReportFilters
           company={range.company}
           mode={range.mode}
@@ -95,9 +97,14 @@ export default async function ProfitAndLossPage({
           today={range.today}
         />
 
-        <Suspense key={`${range.from}:${range.to}:${range.periodicity}:${range.kind}:${range.incomeStatus}:${range.expenseStatus}`} fallback={<LedgerFallback />}>
-          <Ledger range={range} />
-        </Suspense>
+        <div className="min-h-0 flex-1 lg:overflow-hidden">
+          <Suspense
+            key={`${range.from}:${range.to}:${range.periodicity}:${range.kind}:${range.incomeStatus}:${range.expenseStatus}`}
+            fallback={<LedgerFallback />}
+          >
+            <Ledger range={range} />
+          </Suspense>
+        </div>
       </main>
     </>
   )
