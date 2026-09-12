@@ -12,6 +12,7 @@ const COLUMNS: Record<number, string> = {
 export type SummaryTile = {
   label: string
   value: number
+  description?: string
   /** Forces the figure red regardless of sign — for the headline number. */
   tone?: "red"
 }
@@ -37,6 +38,11 @@ export function SummaryTiles({ tiles }: { tiles: SummaryTile[] }) {
             )}
           >
             {formatCurrencyWhole(tile.value)}
+            {tile.description ? (
+              <span className="mt-1 block text-xs font-normal text-neutral-400">
+                {tile.description}
+              </span>
+            ) : null}
           </dd>
         </Card>
       ))}

@@ -133,9 +133,19 @@ async function DashboardFigures({
       <div className="space-y-6 p-4 sm:space-y-8 sm:p-6">
         <SummaryTiles
           tiles={[
+            {
+              label: "Saldo Awal",
+              description: `From previous year ${range.fromYear - 1}`,
+              value: report.totals.openingBalance,
+            },
             { label: "Total Income", value: report.totals.income },
             { label: "Total Expense", value: report.totals.expense },
-            { label: "Net Profit", value: report.totals.netProfit, tone: "red" as const },
+            {
+              label: "Net Profit",
+              description: "Saldo Awal + Total Income - Total Expense",
+              value: report.totals.netProfit,
+              tone: "red" as const,
+            },
           ]}
         />
 

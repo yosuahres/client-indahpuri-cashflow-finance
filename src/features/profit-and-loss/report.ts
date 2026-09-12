@@ -120,7 +120,7 @@ export type ProfitAndLossReport = {
   series: ChartSeries[]
   /** Category split of each kind, for the pies. */
   breakdown: { income: CategorySlice[]; expense: CategorySlice[] }
-  totals: { income: number; expense: number; netProfit: number }
+  totals: { openingBalance: number; income: number; expense: number; netProfit: number }
 }
 
 /** The three plotted series of the statement, in palette order. */
@@ -172,13 +172,29 @@ export async function loadProfitAndLossSummary({
   const { labels: periods, monthToIndex } = buildPeriods(from, to, periodicity)
 
   const supabase = await createClient()
-  const totals = await loadMonthlyTotals(supabase, from, to)
+  const fromYear = Number(from.slice(0, 4))
+  const previousYear = fromYear - 1
+  const [totals, previousYearTotals] = await Promise.all([
+    loadMonthlyTotals(supabase, from, to),
+    loadMonthlyTotals(supabase, "1970-01-01", `${previousYear}-12-31`),
+  ])
 
-  if (!totals.ok) {
-    return { ok: false, error: totals.error, report: summarize([], periods, monthToIndex) }
+  if (!totals.ok || !previousYearTotals.ok) {
+    return {
+      ok: false,
+      error: totals.error ?? previousYearTotals.error,
+      report: summarize([], periods, monthToIndex),
+    }
   }
 
-  return { ok: true, report: summarize(totals.rows, periods, monthToIndex) }
+  // The opening balance is the accumulated net profit through the prior year,
+  // so each year's balance carries forward the previous year's displayed net.
+  const openingBalance = previousYearTotals.rows.reduce(
+    (total, row) => total + (row.kind === "income" ? row.total : -row.total),
+    0,
+  )
+
+  return { ok: true, report: summarize(totals.rows, periods, monthToIndex, openingBalance) }
 }
 
 /** Folds monthly category totals into the periods the filters asked for. */
@@ -186,6 +202,7 @@ function summarize(
   rows: MonthlyTotal[],
   periods: string[],
   monthToIndex: Map<string, number>,
+  openingBalance = 0,
 ): ProfitAndLossSummary {
   const empty = () => periods.map(() => 0)
 
@@ -230,9 +247,10 @@ function summarize(
       expense: buildBreakdown(byKind.expense),
     },
     totals: {
+      openingBalance,
       income: sum(income),
       expense: sum(expense),
-      netProfit: sum(netProfit),
+      netProfit: openingBalance + sum(income) - sum(expense),
     },
   }
 }
@@ -358,6 +376,6 @@ function emptyReport(periods: string[]): ProfitAndLossReport {
     transactions: [],
     series: buildSeries(zeros, zeros, zeros),
     breakdown: { income: [], expense: [] },
-    totals: { income: 0, expense: 0, netProfit: 0 },
+    totals: { openingBalance: 0, income: 0, expense: 0, netProfit: 0 },
   }
 }
