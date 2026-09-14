@@ -35,7 +35,7 @@ export type TransactionDetail = {
   amount: number
   /** Whether the money has settled. */
   paid: boolean
-  // Only the detail panel shows these; the table has no column for them.
+  // Only the detail panel shows section, reference and notes; the table shows party.
   party: string
   reference: string
   notes: string

@@ -1,4 +1,4 @@
-import { Suspense } from "react"
+import { Suspense, type ReactNode } from "react"
 import type { Metadata } from "next"
 import Link from "next/link"
 
@@ -8,7 +8,7 @@ import { ReportFilters } from "@/components/report/report-filters"
 import { SeriesChart } from "@/components/report/series-chart"
 import { SummaryTiles } from "@/components/report/summary-tiles"
 import type { ChartSeries } from "@/components/report/types"
-import { Card, CardHeader } from "@/components/ui/card"
+import { CARD_ACTION_CLASS, Card, CardHeader } from "@/components/ui/card"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
 import { listAccounts } from "@/features/accounts/actions"
 import { canVisit, type Role } from "@/features/auth/roles"
@@ -30,7 +30,7 @@ const CAPTIONS: Record<string, string> = {
 }
 
 /** Height of a facet, x-axis band included, so no card scrolls vertically. */
-const FACET_HEIGHT = 220
+const FACET_HEIGHT = 170
 
 /**
  * One series, one card. Split apart, income and expense can no longer be
@@ -41,15 +41,22 @@ function ChartCard({
   entry,
   periods,
   domainValues,
+  action,
 }: {
   entry: ChartSeries
   periods: string[]
   domainValues: number[]
+  action?: ReactNode
 }) {
   return (
-    <Card className="min-w-0">
-      <CardHeader title={entry.label} caption={CAPTIONS[entry.key]} />
-      <div className="px-2 pt-3 pb-4 sm:px-3">
+    <Card variant="flat" className="min-w-0">
+      <CardHeader
+        variant="flat"
+        title={entry.label}
+        caption={CAPTIONS[entry.key]}
+        action={action}
+      />
+      <div className="px-2 pt-2 pb-3 sm:px-3">
         <SeriesChart
           periods={periods}
           series={[entry]}
@@ -66,28 +73,19 @@ function ChartCard({
 function DashboardFallback() {
   return (
     <LoadingRegion label="Loading the dashboard figures">
-      <div className="space-y-6 p-4 sm:space-y-8 sm:p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {[0, 1, 2].map((tile) => (
-            <Skeleton key={tile} className="h-[86px]" />
+      <div className="space-y-4 px-4 pt-3 pb-6 sm:px-6 sm:pt-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[0, 1, 2, 3].map((tile) => (
+            <Skeleton key={tile} className="h-[82px]" />
           ))}
         </div>
-        <div className="space-y-4">
-          <Skeleton className="h-5 w-40" />
-          {[0, 1, 2].map((facet) => (
-            <Skeleton key={facet} className="h-[286px]" />
-          ))}
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-5 w-44" />
-          <Skeleton className="h-[220px]" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-5 w-28" />
-          <div className="grid gap-4 xl:grid-cols-2">
-            <Skeleton className="h-[260px]" />
-            <Skeleton className="h-[260px]" />
-          </div>
+        {[0, 1, 2].map((facet) => (
+          <Skeleton key={facet} className="h-[234px]" />
+        ))}
+        <Skeleton className="h-[220px]" />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Skeleton className="h-[250px]" />
+          <Skeleton className="h-[250px]" />
         </div>
       </div>
     </LoadingRegion>
@@ -135,7 +133,7 @@ async function DashboardFigures({
         </p>
       ) : null}
 
-      <div className="space-y-6 p-4 sm:space-y-8 sm:p-6">
+      <div className="space-y-4 px-4 pt-3 pb-6 sm:px-6 sm:pt-4">
         <SummaryTiles
           tiles={[
             {
@@ -152,64 +150,60 @@ async function DashboardFigures({
               tone: "red" as const,
             },
           ]}
+          variant="flat"
         />
 
         <section aria-labelledby="dashboard-profit-and-loss">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="dashboard-profit-and-loss" className="text-sm font-semibold text-neutral-900">
-              Profit and Loss
-            </h2>
-            {/* Every figure the plots carry is also in the statement table. */}
-            {canVisit(role, "/profit-and-loss") ? (
-              <Link
-                href={`/profit-and-loss${suffix}`}
-                className="shrink-0 text-sm text-neutral-500 hover:text-neutral-900"
-              >
-                View statement
-              </Link>
-            ) : null}
-          </div>
+          {/* The cards carry their own titles; the section name is for
+              screen readers only. */}
+          <h2 id="dashboard-profit-and-loss" className="sr-only">
+            Profit and Loss
+          </h2>
 
           {/* Stacked rather than side by side: the facets then share an x
-              position as well as a scale, and none has to scroll. */}
-          <div className="mt-4 space-y-4">
-            {report.series.map((entry) => (
+              position as well as a scale, and none has to scroll. Each is
+              kept wide and short so the three fit on one screen. */}
+          <div className="space-y-4">
+            {report.series.map((entry, index) => (
               <ChartCard
                 key={entry.key}
                 entry={entry}
                 periods={report.periods}
                 domainValues={domainValues}
+                action={
+                  // Every figure the plots carry is also in the statement table.
+                  index === 0 && canVisit(role, "/profit-and-loss") ? (
+                    <Link href={`/profit-and-loss${suffix}`} className={CARD_ACTION_CLASS}>
+                      View statement
+                    </Link>
+                  ) : null
+                }
               />
             ))}
           </div>
         </section>
 
         <section aria-labelledby="dashboard-plan-vs-actual">
-          <div className="flex items-center justify-between gap-3">
-            <h2
-              id="dashboard-plan-vs-actual"
-              className="text-sm font-semibold text-neutral-900"
-            >
-              Plan vs Actual by Account
-            </h2>
-            {/* The dashboard's own filters mean nothing to the Anggaran page,
-                so the link carries the year this range ends in instead. */}
-            {canVisit(role, "/budgets") ? (
-              <Link
-                href={`/budgets?period=yearly&year=${range.to.slice(0, 4)}`}
-                className="shrink-0 text-sm text-neutral-500 hover:text-neutral-900"
-              >
-                View budgets
-              </Link>
-            ) : null}
-          </div>
-
-          <Card className="mt-4 min-w-0 overflow-hidden">
+          <Card variant="flat" className="min-w-0 overflow-hidden">
             <CardHeader
-              title="Every account, planned against what moved"
+              variant="flat"
+              id="dashboard-plan-vs-actual"
+              title="Plan vs Actual by Account"
               caption="Yearly plans count a twelfth per month, so a part-year range carries a part of them. Actuals include unpaid bills, as the figures above do."
+              action={
+                // The dashboard's own filters mean nothing to the Anggaran page,
+                // so the link carries the year this range ends in instead.
+                canVisit(role, "/budgets") ? (
+                  <Link
+                    href={`/budgets?period=yearly&year=${range.to.slice(0, 4)}`}
+                    className={CARD_ACTION_CLASS}
+                  >
+                    View budgets
+                  </Link>
+                ) : null
+              }
             />
-            <div className="mt-4">
+            <div className="mt-3">
               <PlanVsActualTable
                 rows={plan.rows}
                 totals={plan.totals}
@@ -220,24 +214,32 @@ async function DashboardFigures({
         </section>
 
         <section aria-labelledby="dashboard-by-category">
-          <h2 id="dashboard-by-category" className="text-sm font-semibold text-neutral-900">
+          <h2 id="dashboard-by-category" className="sr-only">
             By Category
           </h2>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-2">
-            <Card className="min-w-0 p-4 sm:p-5">
-              <CategoryPie
-                title="Income"
-                slices={report.breakdown.income}
-                emptyLabel="No income recorded in this range."
-              />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card variant="flat" className="min-w-0">
+              <CardHeader variant="flat" title="Income by Category" caption="Money in, per category" />
+              <div className="p-2.5 pt-3">
+                <CategoryPie
+                  bare
+                  title="Income"
+                  slices={report.breakdown.income}
+                  emptyLabel="No income recorded in this range."
+                />
+              </div>
             </Card>
-            <Card className="min-w-0 p-4 sm:p-5">
-              <CategoryPie
-                title="Expense"
-                slices={report.breakdown.expense}
-                emptyLabel="No expense recorded in this range."
-              />
+            <Card variant="flat" className="min-w-0">
+              <CardHeader variant="flat" title="Expense by Category" caption="Money out, per category" />
+              <div className="p-2.5 pt-3">
+                <CategoryPie
+                  bare
+                  title="Expense"
+                  slices={report.breakdown.expense}
+                  emptyLabel="No expense recorded in this range."
+                />
+              </div>
             </Card>
           </div>
         </section>
@@ -265,7 +267,7 @@ export default async function DashboardPage({
     <>
       <Topbar title="Dashboard" section={null} />
 
-      <main className="min-h-0 flex-1 overflow-y-auto bg-neutral-50">
+      <main className="min-h-0 flex-1 overflow-y-auto bg-white">
         {/* One filter row above everything it scopes, held on white so it
             reads as the page's toolbar rather than another card. */}
         <div className="border-b border-black/8 bg-white">

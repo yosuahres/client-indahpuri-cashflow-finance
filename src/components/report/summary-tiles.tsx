@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card"
+import { Card, type CardVariant } from "@/components/ui/card"
 import { formatCurrencyWhole } from "@/lib/format"
 import { cn } from "@/lib/cn"
 
@@ -25,16 +25,30 @@ export type SummaryTile = {
  * The figures keep the font's proportional digits: `tabular-nums` is for
  * columns that must align, and only makes a display-size number look loose.
  */
-export function SummaryTiles({ tiles }: { tiles: SummaryTile[] }) {
+export function SummaryTiles({
+  tiles,
+  variant = "raised",
+}: {
+  tiles: SummaryTile[]
+  variant?: CardVariant
+}) {
+  const flat = variant === "flat"
+
   return (
     <dl className={cn("grid gap-4", COLUMNS[tiles.length] ?? "grid-cols-2 sm:grid-cols-4")}>
       {tiles.map((tile) => (
-        <Card key={tile.label} className="px-4 py-4 sm:px-5 sm:py-5">
-          <dt className="text-sm text-neutral-500">{tile.label}</dt>
+        <Card key={tile.label} variant={variant} className={flat ? "px-4 py-3.5" : "px-4 py-4 sm:px-5 sm:py-5"}>
+          <dt className={flat ? "text-sm font-medium text-neutral-800" : "text-sm text-neutral-500"}>
+            {tile.label}
+          </dt>
           <dd
             className={cn(
-              "mt-1.5 text-xl font-semibold sm:text-2xl",
-              tile.tone === "red" || tile.value < 0 ? "text-rose-600" : "text-neutral-900",
+              flat ? "mt-1.5 text-xl font-semibold" : "mt-1.5 text-xl font-semibold sm:text-2xl",
+              tile.tone === "red" || tile.value < 0
+                ? "text-rose-600"
+                : flat
+                  ? "text-neutral-800"
+                  : "text-neutral-900",
             )}
           >
             {formatCurrencyWhole(tile.value)}

@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react"
 
+import { CardEmpty } from "@/components/ui/card"
 import { cn } from "@/lib/cn"
 import { formatCurrency, formatPercent } from "@/lib/format"
 import type { CategorySlice, SliceTexture } from "./types"
@@ -53,11 +54,14 @@ export function CategoryPie({
   title,
   slices,
   emptyLabel,
+  bare = false,
 }: {
   title: string
   slices: CategorySlice[]
   /** Shown instead of the pie when nothing was recorded in the range. */
   emptyLabel: string
+  /** The card around it already carries the title, so none is drawn here. */
+  bare?: boolean
 }) {
   const [hovered, setHovered] = useState<string | null>(null)
   // Two pies share the page, so the pattern ids have to be per instance. React
@@ -67,6 +71,8 @@ export function CategoryPie({
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
 
   if (slices.length === 0 || total === 0) {
+    if (bare) return <CardEmpty label={emptyLabel} />
+
     return (
       <div>
         <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
@@ -88,9 +94,9 @@ export function CategoryPie({
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
+      {bare ? null : <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>}
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-5">
+      <div className={cn("flex flex-wrap items-center gap-x-8 gap-y-5", !bare && "mt-4")}>
         <svg
           width={SIZE}
           height={SIZE}

@@ -180,6 +180,9 @@ export function TransactionTable({
               <th scope="col" className={cn("min-w-[200px]", headCell)}>
                 Account
               </th>
+              <th scope="col" className={cn("min-w-[160px]", headCell)}>
+                Party
+              </th>
               <th scope="col" className={cn("min-w-[120px]", headCell)}>
                 Type
               </th>
@@ -197,7 +200,7 @@ export function TransactionTable({
                 it collapses, so each spacer carries one. */}
             {windowed && windowed.padTop > 0 ? (
               <tr aria-hidden>
-                <td colSpan={7} className="p-0" style={{ height: windowed.padTop }} />
+                <td colSpan={8} className="p-0" style={{ height: windowed.padTop }} />
               </tr>
             ) : null}
 
@@ -264,6 +267,9 @@ export function TransactionTable({
                     <span className="text-neutral-500"> · {entry.accountIssuer}</span>
                   ) : null}
                 </td>
+                <td className="px-3 py-2.5 text-neutral-700">
+                  {entry.party || <span className="text-neutral-400">—</span>}
+                </td>
                 <td className="px-3 py-2.5 capitalize text-neutral-700">{entry.kind}</td>
                 <StatusCell
                   entry={
@@ -288,14 +294,14 @@ export function TransactionTable({
 
             {windowed && windowed.padBottom > 0 ? (
               <tr aria-hidden>
-                <td colSpan={7} className="p-0" style={{ height: windowed.padBottom }} />
+                <td colSpan={8} className="p-0" style={{ height: windowed.padBottom }} />
               </tr>
             ) : null}
 
             {transactions.length === 0 ? (
               <tr className="border-t border-black/5">
                 <td className={cn(stickyGutter, "bg-white")} />
-                <td colSpan={6} className="px-3 py-8 text-center text-neutral-500">
+                <td colSpan={7} className="px-3 py-8 text-center text-neutral-500">
                   No transactions recorded in this range.
                 </td>
               </tr>
@@ -307,7 +313,7 @@ export function TransactionTable({
               <tr className="border-t border-black/15 bg-neutral-50 font-semibold text-neutral-900">
                 <td className={cn(stickyGutter, "bg-neutral-50")} />
                 <td className={cn(stickyDate, "bg-neutral-50 px-3 py-2.5")}>Total</td>
-                <td colSpan={3} className="px-3 py-2.5 font-normal text-neutral-500">
+                <td colSpan={4} className="px-3 py-2.5 font-normal text-neutral-500">
                   {transactions.length} transaction{transactions.length === 1 ? "" : "s"}
                 </td>
                 {/* Sits directly beside the figure, naming what it is. */}

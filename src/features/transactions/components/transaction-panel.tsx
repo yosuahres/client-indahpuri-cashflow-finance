@@ -29,8 +29,8 @@ import { deleteTransactions, updateTransaction } from "../actions"
 const initialState: FormState = {}
 
 /**
- * The whole of one entry, opened from the ledger: the four fields the table has
- * no column for — section, party, reference and notes — alongside the six it
+ * The whole of one entry, opened from the ledger: the three fields the table has
+ * no column for — section, reference and notes — alongside the seven it
  * shows, all editable in place. Mounted only while a row is open and keyed by
  * its id, so the fields start from that row's values without an effect to sync
  * them.
