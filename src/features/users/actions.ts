@@ -7,7 +7,6 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { requireRole } from "@/features/auth/session"
 import { isRole, type Role } from "@/features/auth/roles"
-import { MIN_PASSWORD_LENGTH } from "@/features/auth/validation"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 
 export type TeamMember = {
@@ -100,9 +99,9 @@ export async function createMember(
   if (name.length > 80) fieldErrors.name = "Keep the name under 80 characters."
   if (!email) fieldErrors.email = "Email is required."
   else if (!EMAIL_PATTERN.test(email)) fieldErrors.email = "Enter a valid email address."
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    fieldErrors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
-  }
+  // No length rule of our own: Supabase applies the project's password policy
+  // and its message is passed through below.
+  if (!password) fieldErrors.password = "Password is required."
   if (!isRole(role)) fieldErrors.role = "Pick a role."
   if (hasFieldErrors(fieldErrors) || !isRole(role)) return { fieldErrors }
 
@@ -121,6 +120,9 @@ export async function createMember(
       return { fieldErrors: { email: "Someone has already signed up with this email." } }
     }
     if (error?.status === 401 || error?.status === 403) return { error: KEY_HINT }
+    if (error?.code === "weak_password") {
+      return { fieldErrors: { password: error.message } }
+    }
     return { error: error?.message ?? "Could not create that user." }
   }
 

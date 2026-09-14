@@ -13,7 +13,6 @@ import {
 } from "@/components/form/form-shell"
 import { Select } from "@/components/form/select"
 import { ROLES, type Role } from "@/features/auth/roles"
-import { MIN_PASSWORD_LENGTH } from "@/features/auth/validation"
 import type { FormState } from "@/lib/form-state"
 
 import { createMember } from "../actions"
@@ -81,7 +80,7 @@ export function UserForm() {
             htmlFor="password"
             required
             error={errors.password}
-            hint={`At least ${MIN_PASSWORD_LENGTH} characters. Pass it on to them yourself — no email is sent.`}
+            hint="Pass it on to them yourself — no email is sent."
           >
             <div className="relative">
               <TextInput
