@@ -14,27 +14,40 @@ import { Select } from "@/components/form/select"
 import type { FormState } from "@/lib/form-state"
 
 import { ACCOUNT_TYPES, accountTypeSpec, type AccountTypeValue } from "../constants"
-import { createAccount } from "../actions"
+import { createAccount, updateAccount, type AccountDetails } from "../actions"
 
 const initialState: FormState = {}
 
-export function AccountForm({ next }: { next: string }) {
-  const [state, formAction, pending] = useActionState(createAccount, initialState)
+export function AccountForm({
+  next,
+  account,
+}: {
+  /** Where a new account returns to. Unused when editing. */
+  next?: string
+  /** Given when editing; the form opens on its current values. */
+  account?: AccountDetails
+}) {
+  const editing = Boolean(account)
+  const [state, formAction, pending] = useActionState(
+    editing ? updateAccount : createAccount,
+    initialState,
+  )
   const errors = state.fieldErrors ?? {}
 
-  const [type, setType] = useState<AccountTypeValue>("bank")
-  const [isCompanyAccount, setIsCompanyAccount] = useState(true)
+  const [type, setType] = useState<AccountTypeValue>(account?.type ?? "bank")
+  const [isCompanyAccount, setIsCompanyAccount] = useState(account?.isCompanyAccount ?? true)
 
   // The type decides which of the remaining fields make sense.
   const spec = accountTypeSpec(type)
 
   return (
     <form action={formAction} noValidate className="flex min-h-full flex-col">
-      <input type="hidden" name="next" value={next} />
+      {account ? <input type="hidden" name="id" value={account.id} /> : null}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
 
       <FormHeader
-        crumbs={[{ label: "Accounts" }]}
-        title="New Account"
+        crumbs={[{ label: "Accounts", href: "/accounts" }]}
+        title={account ? `Edit ${account.name}` : "New Account"}
         status={<NotSavedBadge />}
         action={<SaveButton pending={pending} />}
       />
@@ -62,6 +75,7 @@ export function AccountForm({ next }: { next: string }) {
               id="name"
               name="name"
               placeholder="e.g. Bank BCA — Operational"
+              defaultValue={account?.name}
               aria-invalid={Boolean(errors.name)}
             />
           </Field>
@@ -95,6 +109,7 @@ export function AccountForm({ next }: { next: string }) {
                 id="provider"
                 name="provider"
                 placeholder={spec.provider.placeholder}
+                defaultValue={account?.provider ?? undefined}
                 aria-invalid={Boolean(errors.provider)}
               />
             </Field>
@@ -108,6 +123,7 @@ export function AccountForm({ next }: { next: string }) {
                 inputMode="numeric"
                 autoComplete="off"
                 placeholder={spec.accountNo.placeholder}
+                defaultValue={account?.accountNo ?? undefined}
                 aria-invalid={Boolean(errors.accountNo)}
               />
             </Field>
@@ -119,13 +135,24 @@ export function AccountForm({ next }: { next: string }) {
               htmlFor="holder"
               hint="Who is responsible for this money."
             >
-              <TextInput id="holder" name="holder" placeholder={spec.holder.placeholder} />
+              <TextInput
+                id="holder"
+                name="holder"
+                placeholder={spec.holder.placeholder}
+                defaultValue={account?.holder ?? undefined}
+              />
             </Field>
           ) : null}
 
           {spec.notes ? (
             <Field label={spec.notes.label} htmlFor="notes" className="md:col-span-2">
-              <TextArea id="notes" name="notes" rows={3} placeholder={spec.notes.placeholder} />
+              <TextArea
+                id="notes"
+                name="notes"
+                rows={3}
+                placeholder={spec.notes.placeholder}
+                defaultValue={account?.notes ?? undefined}
+              />
             </Field>
           ) : null}
 

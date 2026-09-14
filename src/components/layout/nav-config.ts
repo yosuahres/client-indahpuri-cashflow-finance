@@ -37,6 +37,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Laporan Keuangan", href: "/reporting" },
       { label: "Profit and Loss", href: "/profit-and-loss" },
       { label: "Anggaran", href: "/budgets" },
+      { label: "Accounts", href: "/accounts" },
     ],
   },
   {
