@@ -1,4 +1,6 @@
 import type { Metadata } from "next"
+import Link from "next/link"
+import { Plus } from "lucide-react"
 
 import { Topbar } from "@/components/layout/topbar"
 import { Card, CardHeader } from "@/components/ui/card"
@@ -16,7 +18,19 @@ export default async function UsersPage() {
 
   return (
     <>
-      <Topbar title="Users" section={null} />
+      <Topbar
+        title="Users"
+        section={null}
+        actions={
+          <Link
+            href="/users/new"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900 sm:h-8"
+          >
+            <Plus className="size-4 shrink-0" strokeWidth={1.75} />
+            <span className="hidden sm:inline">New User</span>
+          </Link>
+        }
+      />
 
       <main className="min-h-0 flex-1 overflow-y-auto bg-neutral-50">
         {!result.ok ? (
@@ -32,7 +46,6 @@ export default async function UsersPage() {
           <Card className="overflow-hidden">
             <CardHeader
               title="Team"
-              caption="New people sign up themselves, then wait here until you give them a role. Managers can do everything; Admins only see the Dashboard and Laporan Keuangan."
             />
             <div className="mt-4">
               <UserTable members={result.members} meId={me.id} />

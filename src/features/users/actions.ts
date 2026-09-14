@@ -1,10 +1,14 @@
 "use server"
 
+import { redirect } from "next/navigation"
 import { refresh } from "next/cache"
 
+import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { requireRole } from "@/features/auth/session"
 import { isRole, type Role } from "@/features/auth/roles"
+import { MIN_PASSWORD_LENGTH } from "@/features/auth/validation"
+import { hasFieldErrors, type FormState } from "@/lib/form-state"
 
 export type TeamMember = {
   id: string
@@ -63,6 +67,79 @@ export async function listTeam(): Promise<TeamResult> {
   })
 
   return { ok: true, members }
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const KEY_HINT =
+  "Creating users needs the Supabase service role key. Add SUPABASE_SERVICE_ROLE_KEY " +
+  "to the server environment (see .env.example) and restart the app."
+
+/**
+ * Creates a login for someone and lets them straight in with the chosen role.
+ *
+ * The address is marked confirmed, so no email goes out and they can sign in
+ * with the password given here as soon as it is passed on to them.
+ *
+ * The profile is written with the admin client rather than left to the
+ * sign-up trigger and then updated: that way it is right even if the trigger
+ * is missing, and it is one statement instead of two.
+ */
+export async function createMember(
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireRole("manager")
+
+  const name = String(formData.get("name") ?? "").trim()
+  const email = String(formData.get("email") ?? "").trim().toLowerCase()
+  const password = String(formData.get("password") ?? "")
+  const role = String(formData.get("role") ?? "")
+
+  const fieldErrors: Record<string, string> = {}
+  if (name.length > 80) fieldErrors.name = "Keep the name under 80 characters."
+  if (!email) fieldErrors.email = "Email is required."
+  else if (!EMAIL_PATTERN.test(email)) fieldErrors.email = "Enter a valid email address."
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    fieldErrors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+  }
+  if (!isRole(role)) fieldErrors.role = "Pick a role."
+  if (hasFieldErrors(fieldErrors) || !isRole(role)) return { fieldErrors }
+
+  const admin = createAdminClient()
+  if (!admin) return { error: KEY_HINT }
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: name ? { full_name: name } : undefined,
+  })
+
+  if (error || !data.user) {
+    if (error?.code === "email_exists") {
+      return { fieldErrors: { email: "Someone has already signed up with this email." } }
+    }
+    if (error?.status === 401 || error?.status === 403) return { error: KEY_HINT }
+    return { error: error?.message ?? "Could not create that user." }
+  }
+
+  const { error: profileError } = await admin.from("profiles").upsert({
+    id: data.user.id,
+    email,
+    full_name: name || null,
+    role,
+  })
+
+  if (profileError) {
+    const reason = profileError.code === UNDEFINED_TABLE ? MIGRATION_HINT : profileError.message
+    return {
+      error: `The login for ${email} was created, but their role was not set: ${reason} Set it from the Users list.`,
+    }
+  }
+
+  refresh()
+  redirect("/users")
 }
 
 /**

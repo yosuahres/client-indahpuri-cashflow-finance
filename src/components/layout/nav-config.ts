@@ -56,7 +56,10 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Management",
     icon: Settings2,
     defaultOpen: true,
-    items: [{ label: "Users", href: "/users" }],
+    items: [
+      { label: "Users", href: "/users" },
+      { label: "New User", href: "/users/new" },
+    ],
   },
 ]
 
