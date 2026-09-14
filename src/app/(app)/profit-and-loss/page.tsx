@@ -9,6 +9,7 @@ import { ReportFilters } from "@/components/report/report-filters"
 import { TransactionTable } from "@/components/report/transaction-table"
 import { readReportRange } from "@/features/reports/range"
 import { loadProfitAndLossReport } from "@/features/profit-and-loss/report"
+import { requireRole } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "Profit and Loss",
@@ -76,6 +77,7 @@ export default async function ProfitAndLossPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  await requireRole("manager")
   const range = readReportRange(await searchParams)
 
   return (

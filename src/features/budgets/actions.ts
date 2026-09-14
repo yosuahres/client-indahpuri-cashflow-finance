@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireUser } from "@/features/auth/session"
+import { requireRole } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import type { SectionValue, TransactionKind } from "@/lib/finance"
 import { readBudgetPlan, validateBudgetPlan } from "./validation"
@@ -41,16 +41,15 @@ export async function saveBudgetPlan(
   if (hasFieldErrors(errors)) return { fieldErrors: errors }
 
   const supabase = await createClient()
-  const user = await requireUser()
+  const user = await requireRole("manager")
 
   const kind = input.kind as TransactionKind
 
   // Everything filed under this slice goes, whether the grid still shows it or
-  // not. RLS scopes it to this user; the explicit user_id is belt and braces.
+  // not — whoever on the team entered it, since the books are shared.
   let wipe = supabase
     .from("budgets")
     .delete()
-    .eq("user_id", user.id)
     .eq("period_year", year)
     .eq("kind", kind)
     .eq("account", input.account)
@@ -108,12 +107,12 @@ export type RowResult = { ok: boolean; error?: string }
  * Changes one plan's figure where it stands, from the Anggaran table.
  *
  * The amount has a positive check constraint behind it, so zero is not how a
- * plan is removed — `deleteBudget` is. Row level security scopes the update to
- * the signed-in user, so an id belonging to someone else matches nothing
- * rather than erroring.
+ * plan is removed — `deleteBudget` is. Row level security lets only managers
+ * change it; for anyone else the id matches nothing rather than erroring.
  */
 export async function setBudgetAmount(id: string, amount: number): Promise<RowResult> {
   if (!id) return { ok: false, error: "That budget is no longer open." }
+  await requireRole("manager")
   if (!Number.isFinite(amount) || amount <= 0) {
     return { ok: false, error: "Enter a positive amount." }
   }
@@ -138,6 +137,7 @@ export async function setBudgetAmount(id: string, amount: number): Promise<RowRe
  */
 export async function deleteBudget(id: string): Promise<RowResult> {
   if (!id) return { ok: false, error: "That budget is no longer open." }
+  await requireRole("manager")
 
   const supabase = await createClient()
   const { data, error } = await supabase

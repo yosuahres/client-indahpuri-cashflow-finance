@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 
 import { getAccount } from "@/features/accounts/actions"
 import { AccountForm } from "@/features/accounts/components/account-form"
+import { requireRole } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "Edit Account",
@@ -13,6 +14,7 @@ export default async function EditAccountPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireRole("manager")
   const { id } = await params
   const result = await getAccount(id)
 

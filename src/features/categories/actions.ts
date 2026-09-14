@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { getUser } from "@/features/auth/session"
+import { requireRole } from "@/features/auth/session"
 import { isKind, isSection, type SectionValue, type TransactionKind } from "@/lib/finance"
 
 export type Category = {
@@ -62,8 +62,7 @@ export async function addCategory(
   }
 
   const supabase = await createClient()
-  const user = await getUser()
-  if (!user) return { ok: false, error: "Your session expired.", categories: [] }
+  const user = await requireRole("manager")
 
   const { error } = await supabase
     .from("categories")
@@ -84,6 +83,7 @@ export async function addCategory(
 }
 
 export async function deleteCategory(id: string): Promise<CategoryResult> {
+  await requireRole("manager")
   const supabase = await createClient()
   const { error } = await supabase.from("categories").delete().eq("id", id)
 
@@ -99,8 +99,7 @@ export async function seedCategories(
   suggestions: { name: string; section: SectionValue; kind: TransactionKind }[],
 ): Promise<CategoryResult> {
   const supabase = await createClient()
-  const user = await getUser()
-  if (!user) return { ok: false, error: "Your session expired.", categories: [] }
+  const user = await requireRole("manager")
 
   const rows = suggestions
     .filter((entry) => isSection(entry.section) && isKind(entry.kind) && entry.name.trim())
@@ -114,7 +113,7 @@ export async function seedCategories(
   // Skip anything already there rather than failing the whole batch.
   const { error } = await supabase
     .from("categories")
-    .upsert(rows, { onConflict: "user_id,kind,section,name", ignoreDuplicates: true })
+    .upsert(rows, { onConflict: "kind,section,name", ignoreDuplicates: true })
 
   if (error) {
     const current = await fetchAll()

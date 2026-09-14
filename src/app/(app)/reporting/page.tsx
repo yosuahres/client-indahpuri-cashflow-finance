@@ -17,6 +17,7 @@ import {
   stepMonth,
 } from "@/features/reporting/months"
 import { loadFinancialReport } from "@/features/reporting/report"
+import { requireUser } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "Laporan Keuangan",
@@ -91,6 +92,7 @@ export default async function ReportingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  await requireUser()
   const params = await searchParams
   const { year, month } = readReportMonth(params)
 

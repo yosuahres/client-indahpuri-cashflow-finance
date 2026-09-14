@@ -11,6 +11,8 @@ import type { ChartSeries } from "@/components/report/types"
 import { Card, CardHeader } from "@/components/ui/card"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
 import { listAccounts } from "@/features/accounts/actions"
+import { canVisit, type Role } from "@/features/auth/roles"
+import { requireUser } from "@/features/auth/session"
 import { PlanVsActualTable } from "@/features/budgets/components/plan-vs-actual-table"
 import { loadPlanVsActual } from "@/features/budgets/plan-vs-actual"
 import { readReportRange } from "@/features/reports/range"
@@ -101,9 +103,12 @@ function DashboardFallback() {
 async function DashboardFigures({
   range,
   suffix,
+  role,
 }: {
   range: ReturnType<typeof readReportRange>
   suffix: string
+  /** Links out to pages this role cannot open are left off. */
+  role: Role
 }) {
   // Only the plotted figures, not the ledger behind them: the dashboard shows
   // no transaction rows, so it never asks for any. All three go out together:
@@ -155,12 +160,14 @@ async function DashboardFigures({
               Profit and Loss
             </h2>
             {/* Every figure the plots carry is also in the statement table. */}
-            <Link
-              href={`/profit-and-loss${suffix}`}
-              className="shrink-0 text-sm text-neutral-500 hover:text-neutral-900"
-            >
-              View statement
-            </Link>
+            {canVisit(role, "/profit-and-loss") ? (
+              <Link
+                href={`/profit-and-loss${suffix}`}
+                className="shrink-0 text-sm text-neutral-500 hover:text-neutral-900"
+              >
+                View statement
+              </Link>
+            ) : null}
           </div>
 
           {/* Stacked rather than side by side: the facets then share an x
@@ -187,12 +194,14 @@ async function DashboardFigures({
             </h2>
             {/* The dashboard's own filters mean nothing to the Anggaran page,
                 so the link carries the year this range ends in instead. */}
-            <Link
-              href={`/budgets?period=yearly&year=${range.to.slice(0, 4)}`}
-              className="shrink-0 text-sm text-neutral-500 hover:text-neutral-900"
-            >
-              View budgets
-            </Link>
+            {canVisit(role, "/budgets") ? (
+              <Link
+                href={`/budgets?period=yearly&year=${range.to.slice(0, 4)}`}
+                className="shrink-0 text-sm text-neutral-500 hover:text-neutral-900"
+              >
+                View budgets
+              </Link>
+            ) : null}
           </div>
 
           <Card className="mt-4 min-w-0 overflow-hidden">
@@ -242,7 +251,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const params = await searchParams
+  const [params, user] = await Promise.all([searchParams, requireUser()])
   const range = readReportRange(params)
 
   // Carry the active filters over, so the statement opens on the same range.
@@ -275,7 +284,7 @@ export default async function DashboardPage({
         {/* Keyed on the range so changing a filter shows the skeleton again
             rather than leaving the old figures up while the new ones load. */}
         <Suspense key={`${range.from}:${range.to}:${range.periodicity}`} fallback={<DashboardFallback />}>
-          <DashboardFigures range={range} suffix={suffix} />
+          <DashboardFigures range={range} suffix={suffix} role={user.role} />
         </Suspense>
       </main>
     </>

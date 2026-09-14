@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireUser } from "@/features/auth/session"
+import { requireRole } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { safeRedirectPath } from "@/lib/site-url"
 import type { AccountTypeValue } from "./constants"
@@ -107,7 +107,7 @@ export async function createAccount(
   if (hasFieldErrors(fieldErrors)) return { fieldErrors }
 
   const supabase = await createClient()
-  const user = await requireUser()
+  const user = await requireRole("manager")
 
   const { error } = await supabase.from("accounts").insert({
     user_id: user.id,
@@ -120,7 +120,7 @@ export async function createAccount(
   if (error) {
     if (error.code === UNDEFINED_TABLE) return { error: MIGRATION_HINT }
     if (error.code === UNIQUE_VIOLATION) {
-      return { fieldErrors: { name: `You already have an account called "${input.name}".` } }
+      return { fieldErrors: { name: `There is already an account called "${input.name}".` } }
     }
     return { error: error.message }
   }
@@ -154,7 +154,7 @@ export async function updateAccount(
   if (hasFieldErrors(fieldErrors)) return { fieldErrors }
 
   const supabase = await createClient()
-  const user = await requireUser()
+  await requireRole("manager")
 
   const { data: before, error: readError } = await supabase
     .from("accounts")
@@ -179,7 +179,7 @@ export async function updateAccount(
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) {
-      return { fieldErrors: { name: `You already have an account called "${input.name}".` } }
+      return { fieldErrors: { name: `There is already an account called "${input.name}".` } }
     }
     return { error: error.message }
   }
@@ -190,7 +190,6 @@ export async function updateAccount(
       const { error: carryError } = await supabase
         .from(table)
         .update({ account: input.name })
-        .eq("user_id", user.id)
         .eq("account", oldName)
 
       if (carryError) {
@@ -214,6 +213,7 @@ export type RowResult = { ok: boolean; error?: string }
  */
 export async function deleteAccount(id: string): Promise<RowResult> {
   if (!id) return { ok: false, error: "That account is no longer open." }
+  await requireRole("manager")
 
   const supabase = await createClient()
   const { data, error } = await supabase

@@ -6,7 +6,9 @@ import { useState } from "react"
 import { ChevronDown, ChevronRight, ChevronsUpDown, X } from "lucide-react"
 
 import { cn } from "@/lib/cn"
-import { NAV_GROUPS, NAV_LINKS, type NavGroup } from "./nav-config"
+import { roleLabel, type Role } from "@/features/auth/roles"
+
+import { navFor, type NavGroup, type NavLink } from "./nav-config"
 import { useSidebar } from "./sidebar-state"
 
 function initials(name: string) {
@@ -19,12 +21,12 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-function NavLinks() {
+function NavLinks({ links }: { links: NavLink[] }) {
   const pathname = usePathname()
 
   return (
     <ul className="mb-1">
-      {NAV_LINKS.map((link) => {
+      {links.map((link) => {
         const active = pathname === link.href
         const Icon = link.icon
 
@@ -106,7 +108,7 @@ function NavGroupBlock({ group }: { group: NavGroup }) {
   )
 }
 
-type SidebarUser = { name: string; email: string }
+type SidebarUser = { name: string; email: string; role: Role | null }
 
 /** Everything inside the panel — shared by the fixed desktop rail and the drawer. */
 function SidebarBody({
@@ -119,6 +121,8 @@ function SidebarBody({
   /** Rendered as a close button in the drawer; absent on desktop. */
   onClose?: () => void
 }) {
+  const nav = navFor(user.role)
+
   return (
     <>
       {/* Workspace switcher */}
@@ -155,8 +159,8 @@ function SidebarBody({
 
       {/* Report navigation */}
       <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-        <NavLinks />
-        {NAV_GROUPS.map((group) => (
+        <NavLinks links={nav.links} />
+        {nav.groups.map((group) => (
           <NavGroupBlock key={group.label} group={group} />
         ))}
       </nav>
@@ -172,7 +176,7 @@ function SidebarBody({
               {user.name}
             </span>
             <span className="block truncate text-xs text-neutral-500">
-              {user.email}
+              {roleLabel(user.role)} · {user.email}
             </span>
           </span>
           {onSignOut}

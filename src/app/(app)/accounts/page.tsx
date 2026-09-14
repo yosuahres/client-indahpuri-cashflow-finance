@@ -6,12 +6,14 @@ import { Topbar } from "@/components/layout/topbar"
 import { Card, CardHeader } from "@/components/ui/card"
 import { listAccounts } from "@/features/accounts/actions"
 import { AccountTable } from "@/features/accounts/components/account-table"
+import { requireRole } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "Accounts",
 }
 
 export default async function AccountsPage() {
+  await requireRole("manager")
   const result = await listAccounts()
 
   return (

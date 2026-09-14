@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireUser } from "@/features/auth/session"
+import { requireRole } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import {
   readTransaction,
@@ -36,7 +36,7 @@ export async function createTransaction(
   if (hasFieldErrors(fieldErrors)) return { fieldErrors }
 
   const supabase = await createClient()
-  const user = await requireUser()
+  const user = await requireRole("manager")
 
   const { error } = await supabase.from("transactions").insert({
     user_id: user.id,
@@ -74,9 +74,9 @@ export async function createTransaction(
 }
 
 /**
- * Saves an edit made in the detail panel. Row level security scopes the update
- * to the signed-in user, so an id that is not theirs matches nothing and comes
- * back as "no longer exists" rather than silently succeeding.
+ * Saves an edit made in the detail panel. Row level security lets only managers
+ * change a row, so for anyone else the id matches nothing and comes back as
+ * "no longer exists" rather than silently succeeding.
  */
 export async function updateTransaction(
   _prevState: FormState,
@@ -84,6 +84,7 @@ export async function updateTransaction(
 ): Promise<FormState> {
   const id = String(formData.get("id") ?? "").trim()
   if (!id) return { error: "That transaction is no longer open." }
+  await requireRole("manager")
 
   const input = readTransaction(formData)
   const fieldErrors = validateTransaction(input)
@@ -127,6 +128,7 @@ export type PaidResult = { ok: boolean; error?: string }
  */
 export async function setTransactionPaid(id: string, paid: boolean): Promise<PaidResult> {
   if (!id) return { ok: false, error: "That transaction is no longer open." }
+  await requireRole("manager")
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -152,13 +154,13 @@ export type DeleteResult = { ok: boolean; error?: string; deleted: number }
 
 /**
  * Removes recorded transactions outright — the ledger keeps no tombstone, so
- * the caller is expected to have confirmed first. Row level security scopes the
- * delete to the signed-in user, so an id belonging to someone else is a no-op
- * rather than an error.
+ * the caller is expected to have confirmed first. Row level security lets only
+ * managers delete, so for anyone else it is a no-op rather than an error.
  */
 export async function deleteTransactions(ids: string[]): Promise<DeleteResult> {
   const unique = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))]
   if (unique.length === 0) return { ok: false, error: "Nothing selected.", deleted: 0 }
+  await requireRole("manager")
 
   const supabase = await createClient()
   const { data, error } = await supabase

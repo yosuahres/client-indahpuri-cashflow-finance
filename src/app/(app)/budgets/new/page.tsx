@@ -6,6 +6,7 @@ import { loadBudgetPlan } from "@/features/budgets/plan"
 import { listAccounts } from "@/features/accounts/actions"
 import { listCategories } from "@/features/categories/actions"
 import { isKind, type TransactionKind } from "@/lib/finance"
+import { requireRole } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "Budget Plan",
@@ -16,6 +17,7 @@ export default async function NewBudgetPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  await requireRole("manager")
   const params = await searchParams
   const selection = readBudgetPeriod(params)
   const kind: TransactionKind = isKind(params.kind) ? params.kind : "expense"

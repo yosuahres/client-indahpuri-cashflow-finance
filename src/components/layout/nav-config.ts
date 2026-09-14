@@ -1,4 +1,6 @@
-import { LayoutDashboard, PlusCircle, ScanEye, type LucideIcon } from "lucide-react"
+import { LayoutDashboard, PlusCircle, ScanEye, Settings2, type LucideIcon } from "lucide-react"
+
+import { canVisit, type Role } from "@/features/auth/roles"
 
 export type NavItem = {
   label: string
@@ -50,4 +52,24 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "New Account", href: "/accounts/new" },
     ],
   },
+  {
+    label: "Management",
+    icon: Settings2,
+    defaultOpen: true,
+    items: [{ label: "Users", href: "/users" }],
+  },
 ]
+
+/**
+ * The links and groups a role can actually open. A group left with nothing in
+ * it is dropped rather than shown as an empty heading.
+ */
+export function navFor(role: Role | null) {
+  return {
+    links: NAV_LINKS.filter((link) => canVisit(role, link.href)),
+    groups: NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.href && canVisit(role, item.href)),
+    })).filter((group) => group.items.length > 0),
+  }
+}

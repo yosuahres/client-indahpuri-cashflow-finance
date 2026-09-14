@@ -18,6 +18,7 @@ import {
   type BudgetPeriodSelection,
 } from "@/features/budgets/period"
 import { longMonthName } from "@/features/reporting/months"
+import { requireRole } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "Anggaran",
@@ -171,6 +172,7 @@ export default async function BudgetsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  await requireRole("manager")
   const [params, accounts] = await Promise.all([searchParams, listAccounts()])
   const selection = readBudgetPeriod(params)
   const account = typeof params.account === "string" ? params.account.trim() : ""

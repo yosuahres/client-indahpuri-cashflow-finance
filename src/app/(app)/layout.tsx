@@ -7,13 +7,13 @@ import { SignOutIcon } from "@/features/auth/components/sign-out-icon"
 import { requireUser } from "@/features/auth/session"
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const { name, email } = await requireUser()
+  const { name, email, role } = await requireUser()
 
   return (
     <SidebarProvider>
       <div className="flex h-dvh overflow-hidden bg-white">
         <AppSidebar
-          user={{ name, email }}
+          user={{ name, email, role }}
           onSignOut={
             <form action={signOut}>
               <SignOutIcon />
