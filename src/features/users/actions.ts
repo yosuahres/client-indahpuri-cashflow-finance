@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server"
 import { requireRole } from "@/features/auth/session"
 import { isRole, type Role } from "@/features/auth/roles"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
+import { flash } from "@/lib/flash"
 
 export type TeamMember = {
   id: string
@@ -141,6 +142,7 @@ export async function createMember(
   }
 
   refresh()
+  await flash("success", "User added.")
   redirect("/users")
 }
 

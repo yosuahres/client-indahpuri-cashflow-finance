@@ -11,6 +11,7 @@ import {
   type SectionValue,
   type TransactionKind,
 } from "@/lib/finance"
+import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 
 import { addCategory, deleteCategory, seedCategories, type Category } from "../actions"
@@ -42,7 +43,6 @@ export function CategoryManager({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [kind, setKind] = useState<TransactionKind>(defaultKind)
   const [section, setSection] = useState<SectionValue>(defaultSection)
@@ -54,11 +54,15 @@ export function CategoryManager({
     if (!open && dialog.open) dialog.close()
   }, [open])
 
-  function run(action: () => Promise<{ ok: boolean; error?: string; categories: Category[] }>) {
+  function run(
+    action: () => Promise<{ ok: boolean; error?: string; categories: Category[] }>,
+    success: string,
+  ) {
     startTransition(async () => {
       const result = await action()
       onCategoriesChange(result.categories)
-      setError(result.ok ? null : (result.error ?? null))
+      if (result.ok) toast.success(success)
+      else toast.error(result.error ?? "Could not update categories.")
     })
   }
 
@@ -66,7 +70,7 @@ export function CategoryManager({
     if (!name.trim()) return
     const pendingName = name
     setName("")
-    run(async () => addCategory(pendingName, section, kind))
+    run(async () => addCategory(pendingName, section, kind), "Category added.")
   }
 
   return (
@@ -90,11 +94,6 @@ export function CategoryManager({
         </button>
       </div>
 
-      {error ? (
-        <p role="alert" className="border-b border-rose-200 bg-rose-50 px-5 py-2.5 text-sm text-rose-800">
-          {error}
-        </p>
-      ) : null}
 
       {/* Add */}
       <div className="flex flex-col gap-2 border-b border-black/8 px-4 py-4 sm:flex-row sm:items-end sm:px-5">
@@ -156,7 +155,7 @@ export function CategoryManager({
             <p className="text-sm text-neutral-500">No categories yet.</p>
             <button
               type="button"
-              onClick={() => run(async () => seedCategories(CATEGORY_SUGGESTIONS))}
+              onClick={() => run(async () => seedCategories(CATEGORY_SUGGESTIONS), "Suggested categories added.")}
               disabled={pending}
               className="mt-3 rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-40"
             >
@@ -190,7 +189,7 @@ export function CategoryManager({
                       </span>
                       <button
                         type="button"
-                        onClick={() => run(async () => deleteCategory(category.id))}
+                        onClick={() => run(async () => deleteCategory(category.id), "Category removed.")}
                         disabled={pending}
                         aria-label={`Delete ${category.name}`}
                         className="grid size-7 place-items-center rounded-md text-neutral-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"

@@ -12,6 +12,7 @@ import type { Account } from "@/features/accounts/actions"
 import { CategoryField } from "@/features/categories/components/category-field"
 import type { Category } from "@/features/categories/actions"
 import { cn } from "@/lib/cn"
+import { toast, useActionToast } from "@/components/ui/toast"
 import { formatCurrency } from "@/lib/format"
 import {
   INCOME_PAYMENT_STATUSES,
@@ -52,6 +53,7 @@ export function TransactionPanel({
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [state, formAction, saving] = useActionState(updateTransaction, initialState)
   const errors = state.fieldErrors ?? {}
+  useActionToast(state)
 
   const [categoryList, setCategoryList] = useState(categories)
   const [date, setDate] = useState(transaction.occurredOn)
@@ -69,7 +71,6 @@ export function TransactionPanel({
   const [notes, setNotes] = useState(transaction.notes)
 
   const [confirming, setConfirming] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, startDelete] = useTransition()
 
   const busy = saving || deleting
@@ -90,9 +91,10 @@ export function TransactionPanel({
     startDelete(async () => {
       const result = await deleteTransactions([transaction.id])
       if (!result.ok) {
-        setDeleteError(result.error ?? "Could not delete this transaction.")
+        toast.error(result.error ?? "Could not delete this transaction.")
         return
       }
+      toast.success("Transaction deleted.")
       onClose()
     })
   }
@@ -131,17 +133,7 @@ export function TransactionPanel({
           </button>
         </div>
 
-        {state.error ? (
-          <p role="alert" className="border-b border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-800 sm:px-5">
-            {state.error}
-          </p>
-        ) : null}
 
-        {deleteError ? (
-          <p role="alert" className="border-b border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-800 sm:px-5">
-            {deleteError}
-          </p>
-        ) : null}
 
         <div className="grid grid-cols-1 gap-4 px-4 py-4 sm:grid-cols-2 sm:px-5 sm:py-5">
           <Field label="Date" htmlFor="panel-occurredOn" required error={errors.occurredOn}>
@@ -300,7 +292,6 @@ export function TransactionPanel({
             <button
               type="button"
               onClick={() => {
-                setDeleteError(null)
                 setConfirming(true)
               }}
               disabled={busy}

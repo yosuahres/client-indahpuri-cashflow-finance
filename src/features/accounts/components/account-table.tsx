@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import Link from "next/link"
 import { Pencil, Trash2 } from "lucide-react"
 
+import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 
 import { deleteAccount, type Account } from "../actions"
@@ -26,7 +27,6 @@ const iconButton = cn(
  * takes history with it.
  */
 export function AccountTable({ accounts }: { accounts: Account[] }) {
-  const [error, setError] = useState<string | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -42,13 +42,13 @@ export function AccountTable({ accounts }: { accounts: Account[] }) {
   const live = accounts.filter((account) => !removed.has(account.id))
 
   function remove(id: string) {
-    setError(null)
     setConfirmingId(null)
     setRemoved((current) => new Set(current).add(id))
     startTransition(async () => {
       const result = await deleteAccount(id)
+      if (result.ok) toast.success("Account removed.")
       if (!result.ok) {
-        setError(result.error ?? "Could not remove that account.")
+        toast.error(result.error ?? "Could not remove that account.")
         setRemoved((current) => {
           const next = new Set(current)
           next.delete(id)
@@ -60,15 +60,6 @@ export function AccountTable({ accounts }: { accounts: Account[] }) {
 
   return (
     <>
-      {error ? (
-        <p
-          role="alert"
-          className="border-t border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-800"
-        >
-          {error}
-        </p>
-      ) : null}
-
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">Your accounts, each editable and removable.</caption>

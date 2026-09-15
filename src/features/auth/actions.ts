@@ -57,7 +57,16 @@ export async function signup(
   })
 
   if (error) {
-    return { error: error.message }
+    // Same notice as a fresh sign-up, so the form cannot confirm that an
+    // address is registered.
+    if (error.code === "user_already_exists" || error.code === "email_exists") {
+      return {
+        message: `We sent a confirmation link to ${email}. Open it to finish signing up.`,
+      }
+    }
+    if (error.code === "weak_password") return { fieldErrors: { password: error.message } }
+    if (error.status === 429) return { error: "Too many attempts. Wait a minute and try again." }
+    return { error: "Could not sign you up right now. Try again shortly." }
   }
 
   // With email confirmation on, signing up with an address that already exists

@@ -5,6 +5,7 @@ import { UserX } from "lucide-react"
 
 import { Select } from "@/components/form/select"
 import { ROLES, type Role } from "@/features/auth/roles"
+import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 
 import { setMemberRole, type TeamMember } from "../actions"
@@ -25,7 +26,6 @@ const NO_ACCESS = ""
  * someone out mid-task.
  */
 export function UserTable({ members, meId }: { members: TeamMember[]; meId: string }) {
-  const [error, setError] = useState<string | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -41,13 +41,13 @@ export function UserTable({ members, meId }: { members: TeamMember[]; meId: stri
   const roleOf = (member: TeamMember) => (roles.has(member.id) ? (roles.get(member.id) ?? null) : member.role)
 
   function change(member: TeamMember, role: Role | null) {
-    setError(null)
     setConfirmingId(null)
     setRoles((current) => new Map(current).set(member.id, role))
     startTransition(async () => {
       const result = await setMemberRole(member.id, role)
+      if (result.ok) toast.success("Role updated.")
       if (!result.ok) {
-        setError(result.error ?? "Could not change that role.")
+        toast.error(result.error ?? "Could not change that role.")
         // Put it back; the server never took the change.
         setRoles((current) => {
           const next = new Map(current)
@@ -65,15 +65,6 @@ export function UserTable({ members, meId }: { members: TeamMember[]; meId: stri
 
   return (
     <>
-      {error ? (
-        <p
-          role="alert"
-          className="border-t border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-800"
-        >
-          {error}
-        </p>
-      ) : null}
-
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">Everyone who has signed up, and their role.</caption>

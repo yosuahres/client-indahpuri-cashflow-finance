@@ -26,5 +26,18 @@ export async function getSiteUrl() {
 export function safeRedirectPath(value: string | null | undefined, fallback = "/dashboard") {
   if (!value) return fallback
   if (!value.startsWith("/") || value.startsWith("//")) return fallback
+  // Browsers read `\` as `/`, so `/\evil.com` is `//evil.com` by the time it
+  // is followed; control characters are stripped the same way. Neither has
+  // any business in a path of ours.
+  if (/[\\\u0000-\u001f\u007f]/.test(value)) return fallback
+
+  // Last word goes to the URL parser: whatever it resolves to has to stay on
+  // this origin.
+  const base = "http://localhost"
+  try {
+    if (new URL(value, base).origin !== base) return fallback
+  } catch {
+    return fallback
+  }
   return value
 }

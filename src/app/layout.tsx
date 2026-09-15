@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
+
+import { Toaster } from "@/components/ui/toast";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,7 +30,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full overflow-hidden antialiased`}
     >
-      <body className="flex h-full flex-col overflow-hidden bg-white text-black">{children}</body>
+      <body className="flex h-full flex-col overflow-hidden bg-white text-black">
+        {children}
+        {/* Reads the URL, so it may not hold up a static page's render. */}
+        <Suspense>
+          <Toaster />
+        </Suspense>
+      </body>
     </html>
   );
 }

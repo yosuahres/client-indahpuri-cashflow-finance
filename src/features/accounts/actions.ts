@@ -4,9 +4,10 @@ import { redirect } from "next/navigation"
 import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireRole } from "@/features/auth/session"
+import { requireRole, requireUser } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { safeRedirectPath } from "@/lib/site-url"
+import { flash } from "@/lib/flash"
 import type { AccountTypeValue } from "./constants"
 import { forType, readAccount, validateAccount } from "./validation"
 
@@ -31,6 +32,9 @@ export type AccountsResult =
   | { ok: false; error: string; accounts: Account[] }
 
 export async function listAccounts(): Promise<AccountsResult> {
+  // Exported from a "use server" file, so callable from any browser — row
+  // level security would return nothing, but refuse before asking.
+  await requireUser()
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("accounts")
@@ -67,6 +71,7 @@ export type AccountResult =
   | { ok: false; error: string; account: null }
 
 export async function getAccount(id: string): Promise<AccountResult> {
+  await requireUser()
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("accounts")
@@ -130,6 +135,7 @@ export async function createAccount(
   // Return to whatever sent us here, with the new account pre-selected.
   const next = safeRedirectPath(formData.get("next")?.toString(), "/transactions/new")
   const separator = next.includes("?") ? "&" : "?"
+  await flash("success", "Account saved.")
   redirect(`${next}${separator}account=${encodeURIComponent(input.name)}`)
 }
 
@@ -201,6 +207,7 @@ export async function updateAccount(
   }
 
   refresh()
+  await flash("success", "Account updated.")
   redirect("/accounts")
 }
 

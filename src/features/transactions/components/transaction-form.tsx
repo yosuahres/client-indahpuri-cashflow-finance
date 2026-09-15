@@ -32,6 +32,7 @@ import {
   type TransactionKind,
 } from "@/lib/finance"
 import type { FormState } from "@/lib/form-state"
+import { useActionToast } from "@/components/ui/toast"
 
 import { createTransaction } from "../actions"
 
@@ -53,6 +54,7 @@ export function TransactionForm({
 }) {
   const [state, formAction, pending] = useActionState(createTransaction, initialState)
   const errors = state.fieldErrors ?? {}
+  useActionToast(state)
 
   const [categories, setCategories] = useState(initialCategories)
   const [date, setDate] = useState(today)
@@ -89,17 +91,7 @@ export function TransactionForm({
         action={<SaveButton pending={pending} />}
       />
 
-      {state.message ? (
-        <p role="status" className="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 sm:px-6">
-          {state.message}
-        </p>
-      ) : null}
 
-      {state.error ? (
-        <p role="alert" className="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 sm:px-6">
-          {state.error}
-        </p>
-      ) : null}
 
       {setupError ? (
         <p role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">

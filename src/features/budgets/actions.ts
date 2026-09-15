@@ -6,6 +6,7 @@ import { refresh } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { requireRole } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
+import { flash } from "@/lib/flash"
 import type { SectionValue, TransactionKind } from "@/lib/finance"
 import { readBudgetPlan, validateBudgetPlan } from "./validation"
 
@@ -98,6 +99,7 @@ export async function saveBudgetPlan(
     return { message: "Plan cleared — every figure for this account and period is gone.", savedAt: Date.now() }
   }
 
+  await flash("success", "Budget plan saved.")
   redirect(`/budgets?period=${input.period}&year=${year}&month=1&account=${encodeURIComponent(input.account)}`)
 }
 

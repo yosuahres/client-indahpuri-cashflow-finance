@@ -14,6 +14,7 @@ import {
 import { Select } from "@/components/form/select"
 import { ROLES, type Role } from "@/features/auth/roles"
 import type { FormState } from "@/lib/form-state"
+import { useActionToast } from "@/components/ui/toast"
 
 import { createMember } from "../actions"
 
@@ -22,6 +23,7 @@ const initialState: FormState = {}
 export function UserForm() {
   const [state, formAction, pending] = useActionState(createMember, initialState)
   const errors = state.fieldErrors ?? {}
+  useActionToast(state)
 
   // Held in state so a rejected save does not wipe what was typed: React
   // resets uncontrolled fields once a form action finishes.
@@ -42,11 +44,6 @@ export function UserForm() {
         action={<SaveButton pending={pending}>Create</SaveButton>}
       />
 
-      {state.error ? (
-        <p role="alert" className="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 sm:px-6">
-          {state.error}
-        </p>
-      ) : null}
 
       <FormSection title="Login">
         <FormGrid>

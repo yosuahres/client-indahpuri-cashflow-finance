@@ -12,6 +12,7 @@ import {
 } from "@/components/form/form-shell"
 import { Select } from "@/components/form/select"
 import type { FormState } from "@/lib/form-state"
+import { useActionToast } from "@/components/ui/toast"
 
 import { ACCOUNT_TYPES, accountTypeSpec, type AccountTypeValue } from "../constants"
 import { createAccount, updateAccount, type AccountDetails } from "../actions"
@@ -33,6 +34,7 @@ export function AccountForm({
     initialState,
   )
   const errors = state.fieldErrors ?? {}
+  useActionToast(state)
 
   const [type, setType] = useState<AccountTypeValue>(account?.type ?? "bank")
   const [isCompanyAccount, setIsCompanyAccount] = useState(account?.isCompanyAccount ?? true)
@@ -52,11 +54,6 @@ export function AccountForm({
         action={<SaveButton pending={pending} />}
       />
 
-      {state.error ? (
-        <p role="alert" className="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 sm:px-6">
-          {state.error}
-        </p>
-      ) : null}
 
       <FormSection>
         <FormGrid>

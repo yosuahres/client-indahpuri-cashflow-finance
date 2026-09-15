@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react"
 import type { Account } from "@/features/accounts/actions"
 import { accountDetail } from "@/features/accounts/constants"
 import { longMonthName } from "@/features/reporting/months"
+import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 import { kindLabel, SECTIONS, type TransactionKind } from "@/lib/finance"
 import { formatCurrency } from "@/lib/format"
@@ -363,7 +364,6 @@ export function BudgetSheet({
   /** Off once the list is already narrowed to one account. */
   showAccount?: boolean
 }) {
-  const [error, setError] = useState<string | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -386,12 +386,12 @@ export function BudgetSheet({
   const detailOf = (name: string) => details.get(name) ?? null
 
   function commitAmount(id: string, amount: number) {
-    setError(null)
     setAmounts((current) => new Map(current).set(id, amount))
     startTransition(async () => {
       const result = await setBudgetAmount(id, amount)
+      if (result.ok) toast.success("Amount updated.")
       if (!result.ok) {
-        setError(result.error ?? "Could not change that amount.")
+        toast.error(result.error ?? "Could not change that amount.")
         // Put the figure back; the server never took the change.
         setAmounts((current) => {
           const next = new Map(current)
@@ -403,13 +403,13 @@ export function BudgetSheet({
   }
 
   function remove(id: string) {
-    setError(null)
     setConfirmingId(null)
     setRemoved((current) => new Set(current).add(id))
     startTransition(async () => {
       const result = await deleteBudget(id)
+      if (result.ok) toast.success("Budget removed.")
       if (!result.ok) {
-        setError(result.error ?? "Could not remove that budget.")
+        toast.error(result.error ?? "Could not remove that budget.")
         setRemoved((current) => {
           const next = new Set(current)
           next.delete(id)
@@ -425,15 +425,6 @@ export function BudgetSheet({
 
   return (
     <>
-      {error ? (
-        <p
-          role="alert"
-          className="border-t border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-800"
-        >
-          {error}
-        </p>
-      ) : null}
-
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">

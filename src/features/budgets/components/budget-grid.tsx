@@ -17,6 +17,7 @@ import type { Account } from "@/features/accounts/actions"
 import type { Category } from "@/features/categories/actions"
 import { shortMonthName } from "@/features/reporting/months"
 import { cn } from "@/lib/cn"
+import { useActionToast } from "@/components/ui/toast"
 import {
   BUDGET_PERIODS,
   SECTIONS,
@@ -128,6 +129,7 @@ export function BudgetGrid({
 }) {
   const [state, formAction, pending] = useActionState(saveBudgetPlan, initialState)
   const errors = state.fieldErrors ?? {}
+  useActionToast(state)
 
   const router = useRouter()
   const pathname = usePathname()
@@ -239,15 +241,10 @@ export function BudgetGrid({
         )}
       />
 
-      {state.message ? (
-        <p role="status" className="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 sm:px-6">
-          {state.message}
-        </p>
-      ) : null}
 
-      {state.error ?? errors.lines ? (
+      {errors.lines ? (
         <p role="alert" className="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 sm:px-6">
-          {state.error ?? errors.lines}
+          {errors.lines}
         </p>
       ) : null}
 

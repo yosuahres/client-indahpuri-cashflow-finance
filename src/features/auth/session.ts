@@ -16,9 +16,6 @@ export type SessionUser = {
   role: Role | null
 }
 
-/** Postgres "relation does not exist" — the roles migration has not been run. */
-const UNDEFINED_TABLE = "42P01"
-
 /**
  * Data Access Layer for the current user.
  *
@@ -48,21 +45,16 @@ export const getUser = cache(async (): Promise<SessionUser | null> => {
   const email = claims.email ?? ""
   const fullName = claims.user_metadata?.full_name
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", claims.sub)
     .maybeSingle()
 
-  // Before the roles migration every user ran their own books with full
-  // access, so that is what they keep until it is run. Nobody can have been
-  // made an admin without it.
-  const role: Role | null =
-    profileError?.code === UNDEFINED_TABLE
-      ? "manager"
-      : isRole(profile?.role)
-        ? profile.role
-        : null
+  // Fails closed: if the role cannot be read for any reason — the lookup
+  // errored, the profile is missing — the user waits on the pending page
+  // rather than being handed access.
+  const role: Role | null = isRole(profile?.role) ? profile.role : null
 
   return {
     id: claims.sub,

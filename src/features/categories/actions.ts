@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireRole } from "@/features/auth/session"
+import { requireRole, requireUser } from "@/features/auth/session"
 import { isKind, isSection, type SectionValue, type TransactionKind } from "@/lib/finance"
 
 export type Category = {
@@ -44,6 +44,8 @@ async function fetchAll(): Promise<CategoryResult> {
 }
 
 export async function listCategories(): Promise<CategoryResult> {
+  // Exported from a "use server" file, so callable from any browser.
+  await requireUser()
   return fetchAll()
 }
 

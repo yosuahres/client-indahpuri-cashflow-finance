@@ -6,6 +6,7 @@ import { refresh } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { requireRole } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
+import { flash } from "@/lib/flash"
 import {
   readTransaction,
   validateTransaction,
@@ -70,6 +71,7 @@ export async function createTransaction(
     return { message: "Transaction saved.", savedAt: Date.now() }
   }
 
+  await flash("success", "Transaction saved.")
   redirect("/dashboard")
 }
 

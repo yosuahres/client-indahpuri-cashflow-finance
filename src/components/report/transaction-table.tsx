@@ -10,6 +10,7 @@ import { popoverContainer, usePopoverPosition } from "@/components/form/use-popo
 import { deleteTransactions, setTransactionPaid } from "@/features/transactions/actions"
 import { TransactionPanel } from "@/features/transactions/components/transaction-panel"
 import { useWindowedRows } from "@/hooks/use-windowed-rows"
+import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 import { INCOME_PAYMENT_STATUSES, PAYMENT_STATUSES } from "@/lib/finance"
 import { formatCurrency, formatDate } from "@/lib/format"
@@ -63,7 +64,6 @@ export function TransactionTable({
   const closePanel = useCallback(() => setOpenId(null), [])
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   // A flip paints before the server answers. Rows arrive fresh from the server
@@ -83,8 +83,9 @@ export function TransactionTable({
     setPaidOverrides((current) => new Map(current).set(id, paid))
     startFlip(async () => {
       const result = await setTransactionPaid(id, paid)
+      if (result.ok) toast.success("Payment status updated.")
       if (!result.ok) {
-        setError(result.error ?? "Could not change that payment status.")
+        toast.error(result.error ?? "Could not change that payment status.")
         // Put the badge back where it was; the server never took the change.
         setPaidOverrides((current) => {
           const next = new Map(current)
@@ -134,7 +135,6 @@ export function TransactionTable({
     : transactions
 
   function toggle(id: string) {
-    setError(null)
     setConfirming(false)
     setSelected((current) => {
       const next = new Set(current)
@@ -146,7 +146,6 @@ export function TransactionTable({
   function clear() {
     setSelected(new Set())
     setConfirming(false)
-    setError(null)
   }
 
   function remove() {
@@ -154,9 +153,10 @@ export function TransactionTable({
     startTransition(async () => {
       const result = await deleteTransactions(ids)
       if (!result.ok) {
-        setError(result.error ?? "Could not delete those transactions.")
+        toast.error(result.error ?? "Could not delete those transactions.")
         return
       }
+      toast.success(`${result.deleted} transaction${result.deleted === 1 ? "" : "s"} deleted.`)
       clear()
     })
   }
@@ -341,11 +341,7 @@ export function TransactionTable({
           className="fixed inset-x-0 bottom-5 z-30 flex justify-center px-4 sm:bottom-6"
         >
           <div className="flex max-w-full items-center gap-1 rounded-full bg-neutral-900 py-1.5 pr-1.5 pl-4 text-white shadow-lg shadow-black/25">
-            {error ? (
-              <p role="alert" className="px-1 text-sm text-rose-300">
-                {error}
-              </p>
-            ) : confirming ? (
+            {confirming ? (
               <>
                 {/* Nothing recovers a deleted entry, so the count is spelled
                     out once more before it goes. */}
