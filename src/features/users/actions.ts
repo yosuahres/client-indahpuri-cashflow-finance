@@ -179,3 +179,72 @@ export async function setMemberRole(id: string, role: Role | null): Promise<RowR
   refresh()
   return { ok: true }
 }
+
+const DELETE_KEY_HINT =
+  "Deleting users needs the Supabase service role key. Add SUPABASE_SERVICE_ROLE_KEY " +
+  "to the server environment (see .env.example) and restart the app."
+
+/**
+ * Deletes someone's login and profile for good. What they entered stays on
+ * the books with no author (0026_delete_users.sql).
+ *
+ * Not yourself, for the same reason as `setMemberRole`, and never the last
+ * manager — the database refuses that too, but with a message the auth API
+ * would swallow.
+ */
+export async function deleteMember(id: string): Promise<RowResult> {
+  const me = await requirePermission("users.manage")
+
+  if (!id) return { ok: false, error: "That user is no longer listed." }
+  if (id === me.id) return { ok: false, error: "You cannot delete yourself." }
+
+  const admin = createAdminClient()
+  if (!admin) return { ok: false, error: DELETE_KEY_HINT }
+
+  // Before 0026 the foreign keys cascade: deleting the login would delete every
+  // record they entered. Refuse rather than find out.
+  const { error: migrationError } = await admin.rpc("deleting_users_keeps_records")
+  if (migrationError) {
+    return {
+      ok: false,
+      error:
+        "Run supabase/migrations/0026_delete_users.sql first. Until then, deleting a " +
+        "user would also delete every record they entered.",
+    }
+  }
+
+  const { data: target, error: targetError } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (targetError) {
+    return {
+      ok: false,
+      error: targetError.code === UNDEFINED_TABLE ? MIGRATION_HINT : targetError.message,
+    }
+  }
+
+  if (target?.role === "manager") {
+    const { count, error: countError } = await admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "manager")
+      .neq("id", id)
+    if (countError) return { ok: false, error: countError.message }
+    if (!count) return { ok: false, error: "There has to be at least one manager." }
+  }
+
+  const { error } = await admin.auth.admin.deleteUser(id)
+
+  if (error) {
+    if (error.status === 401 || error.status === 403) return { ok: false, error: DELETE_KEY_HINT }
+    if (error.status === 404) return { ok: false, error: "That user no longer exists." }
+    // The last-manager trigger's sentence does not survive the auth API.
+    return { ok: false, error: error.message || "Could not delete that user." }
+  }
+
+  refresh()
+  return { ok: true }
+}

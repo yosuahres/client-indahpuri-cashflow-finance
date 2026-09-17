@@ -1,17 +1,24 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { UserX } from "lucide-react"
+import { Trash2, UserX } from "lucide-react"
 
 import { Select } from "@/components/form/select"
 import type { Role, RoleSummary } from "@/features/auth/roles"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 
-import { setMemberRole, type TeamMember } from "../actions"
+import { deleteMember, setMemberRole, type TeamMember } from "../actions"
 
 const headCell = "px-2 py-2.5 text-left font-medium text-neutral-700 sm:px-3"
 const cell = "px-2 py-2.5 sm:px-3"
+
+const iconButton = cn(
+  "grid size-8 place-items-center rounded-md text-neutral-400",
+  "hover:bg-neutral-100 hover:text-rose-600",
+  "focus-visible:text-rose-600 focus-visible:outline-2 focus-visible:outline-neutral-800",
+  "disabled:pointer-events-none disabled:opacity-40",
+)
 
 const joined = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" })
 
@@ -21,9 +28,9 @@ const NO_ACCESS = ""
 /**
  * Everyone who has signed up, and what each of them may do.
  *
- * A role change applies on pick. Taking access away takes two clicks, as
- * deleting does elsewhere — it does not remove the login, but it does shut
- * someone out mid-task.
+ * A role change applies on pick. Taking access away and deleting both take
+ * two clicks: the first shuts someone out mid-task, the second removes their
+ * login for good (what they entered stays).
  */
 export function UserTable({
   members,
@@ -34,7 +41,11 @@ export function UserTable({
   roles: RoleSummary[]
   meId: string
 }) {
-  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState<{ id: string; action: "revoke" | "delete" } | null>(
+    null,
+  )
+  // Deleted rows leave at once; the server's list confirms it on refresh.
+  const [deleted, setDeleted] = useState<ReadonlySet<string>>(new Set())
   const [pending, startTransition] = useTransition()
 
   // A change paints before the server answers. Rows arrive fresh after
@@ -44,12 +55,13 @@ export function UserTable({
   if (members !== seenRows) {
     setSeenRows(members)
     if (roles.size > 0) setRoles(new Map())
+    if (deleted.size > 0) setDeleted(new Set())
   }
 
   const roleOf = (member: TeamMember) => (roles.has(member.id) ? (roles.get(member.id) ?? null) : member.role)
 
   function change(member: TeamMember, role: Role | null) {
-    setConfirmingId(null)
+    setConfirming(null)
     setRoles((current) => new Map(current).set(member.id, role))
     startTransition(async () => {
       const result = await setMemberRole(member.id, role)
@@ -65,6 +77,25 @@ export function UserTable({
       }
     })
   }
+
+  function remove(member: TeamMember) {
+    setConfirming(null)
+    setDeleted((current) => new Set(current).add(member.id))
+    startTransition(async () => {
+      const result = await deleteMember(member.id)
+      if (result.ok) toast.success(`${member.name} deleted.`)
+      if (!result.ok) {
+        toast.error(result.error ?? "Could not delete that user.")
+        setDeleted((current) => {
+          const next = new Set(current)
+          next.delete(member.id)
+          return next
+        })
+      }
+    })
+  }
+
+  const visible = members.filter((member) => !deleted.has(member.id))
 
   const options = [
     ...roleList.map((role) => ({ value: role.key, label: role.name })),
@@ -87,17 +118,17 @@ export function UserTable({
               <th scope="col" className={cn("min-w-[110px]", headCell)}>
                 Joined
               </th>
-              <th scope="col" className="w-36 px-2 py-2.5">
+              <th scope="col" className="w-44 px-2 py-2.5">
                 <span className="sr-only">Row actions</span>
               </th>
             </tr>
           </thead>
 
           <tbody>
-            {members.map((member) => {
+            {visible.map((member) => {
               const role = roleOf(member)
               const me = member.id === meId
-              const confirming = confirmingId === member.id
+              const pendingAction = confirming?.id === member.id ? confirming.action : null
 
               return (
                 <tr
@@ -141,48 +172,59 @@ export function UserTable({
                     {joined.format(new Date(member.joinedAt))}
                   </td>
 
-                  <td className="w-36 px-2 py-1.5 text-right">
-                    {me || !role ? null : confirming ? (
+                  <td className="w-44 px-2 py-1.5 text-right">
+                    {me ? null : pendingAction ? (
                       <span className="inline-flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => setConfirmingId(null)}
+                          onClick={() => setConfirming(null)}
                           className="rounded px-1.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
-                          onClick={() => change(member, null)}
+                          onClick={() =>
+                            pendingAction === "delete" ? remove(member) : change(member, null)
+                          }
                           disabled={pending}
                           className="rounded bg-rose-600 px-1.5 py-1 text-xs font-medium whitespace-nowrap text-white hover:bg-rose-500 disabled:opacity-50"
                         >
-                          Remove access
+                          {pendingAction === "delete" ? "Delete user" : "Remove access"}
                         </button>
                       </span>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingId(member.id)}
-                        disabled={pending}
-                        aria-label={`Remove access for ${member.name}`}
-                        title="Remove access"
-                        className={cn(
-                          "ml-auto grid size-8 place-items-center rounded-md text-neutral-400",
-                          "hover:bg-neutral-100 hover:text-rose-600",
-                          "focus-visible:text-rose-600 focus-visible:outline-2 focus-visible:outline-neutral-800",
-                          "disabled:pointer-events-none disabled:opacity-40",
-                        )}
-                      >
-                        <UserX className="size-4" strokeWidth={1.75} />
-                      </button>
+                      <span className="inline-flex items-center gap-0.5">
+                        {role ? (
+                          <button
+                            type="button"
+                            onClick={() => setConfirming({ id: member.id, action: "revoke" })}
+                            disabled={pending}
+                            aria-label={`Remove access for ${member.name}`}
+                            title="Remove access"
+                            className={iconButton}
+                          >
+                            <UserX className="size-4" strokeWidth={1.75} />
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => setConfirming({ id: member.id, action: "delete" })}
+                          disabled={pending}
+                          aria-label={`Delete ${member.name}`}
+                          title="Delete user"
+                          className={iconButton}
+                        >
+                          <Trash2 className="size-4" strokeWidth={1.75} />
+                        </button>
+                      </span>
                     )}
                   </td>
                 </tr>
               )
             })}
 
-            {members.length === 0 ? (
+            {visible.length === 0 ? (
               <tr className="border-t border-black/5">
                 <td colSpan={4} className="px-3 py-6 text-center text-neutral-500">
                   Nobody has signed up yet.
