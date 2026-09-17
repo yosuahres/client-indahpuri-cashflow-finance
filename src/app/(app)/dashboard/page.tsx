@@ -11,7 +11,8 @@ import type { ChartSeries } from "@/components/report/types"
 import { CARD_ACTION_CLASS, Card, CardHeader } from "@/components/ui/card"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
 import { listAccounts } from "@/features/accounts/actions"
-import { canVisit, type Role } from "@/features/auth/roles"
+import { canVisit, type Permission } from "@/features/auth/permissions"
+import type { Role } from "@/features/auth/roles"
 import { requireUser } from "@/features/auth/session"
 import { PlanVsActualTable } from "@/features/budgets/components/plan-vs-actual-table"
 import { loadPlanVsActual } from "@/features/budgets/plan-vs-actual"
@@ -102,11 +103,13 @@ async function DashboardFigures({
   range,
   suffix,
   role,
+  permissions,
 }: {
   range: ReturnType<typeof readReportRange>
   suffix: string
   /** Links out to pages this role cannot open are left off. */
   role: Role
+  permissions: Permission[]
 }) {
   // Only the plotted figures, not the ledger behind them: the dashboard shows
   // no transaction rows, so it never asks for any. All three go out together:
@@ -172,7 +175,7 @@ async function DashboardFigures({
                 domainValues={domainValues}
                 action={
                   // Every figure the plots carry is also in the statement table.
-                  index === 0 && canVisit(role, "/profit-and-loss") ? (
+                  index === 0 && canVisit(role, permissions, "/profit-and-loss") ? (
                     <Link href={`/profit-and-loss${suffix}`} className={CARD_ACTION_CLASS}>
                       View statement
                     </Link>
@@ -193,7 +196,7 @@ async function DashboardFigures({
               action={
                 // The dashboard's own filters mean nothing to the Anggaran page,
                 // so the link carries the year this range ends in instead.
-                canVisit(role, "/budgets") ? (
+                canVisit(role, permissions, "/budgets") ? (
                   <Link
                     href={`/budgets?period=yearly&year=${range.to.slice(0, 4)}`}
                     className={CARD_ACTION_CLASS}
@@ -286,7 +289,7 @@ export default async function DashboardPage({
         {/* Keyed on the range so changing a filter shows the skeleton again
             rather than leaving the old figures up while the new ones load. */}
         <Suspense key={`${range.from}:${range.to}:${range.periodicity}`} fallback={<DashboardFallback />}>
-          <DashboardFigures range={range} suffix={suffix} role={user.role} />
+          <DashboardFigures range={range} suffix={suffix} role={user.role} permissions={user.permissions} />
         </Suspense>
       </main>
     </>

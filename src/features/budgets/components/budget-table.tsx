@@ -211,6 +211,7 @@ function KindBlock({
   confirmingId,
   onConfirm,
   pending,
+  canEdit,
 }: {
   kind: TransactionKind
   entries: BudgetEntry[]
@@ -227,6 +228,7 @@ function KindBlock({
   confirmingId: string | null
   onConfirm: (id: string | null) => void
   pending: boolean
+  canEdit: boolean
 }) {
   const income = kind === "income"
   const total = entries.reduce((sum, entry) => sum + amountOf(entry), 0)
@@ -276,23 +278,40 @@ function KindBlock({
                 {formatCurrency(amount / 12)}
               </td>
             ) : null}
-            <td className="min-w-[150px] px-1 py-1.5 sm:min-w-[170px] sm:px-2">
-              <AmountInput
-                value={amount}
-                expense={!income}
-                onCommit={(next) => onAmount(entry.id, next)}
-                label={`Budget amount for ${entry.category?.trim() || entry.name}${
-                  entry.month === null ? "" : `, ${longMonthName(entry.month)}`
-                }`}
-              />
-            </td>
-            <DeleteCell
-              entry={entry}
-              confirming={confirmingId === entry.id}
-              onConfirm={(next) => onConfirm(next ? entry.id : null)}
-              onDelete={() => onDelete(entry.id)}
-              disabled={pending}
-            />
+            {canEdit ? (
+              <>
+                <td className="min-w-[150px] px-1 py-1.5 sm:min-w-[170px] sm:px-2">
+                  <AmountInput
+                    value={amount}
+                    expense={!income}
+                    onCommit={(next) => onAmount(entry.id, next)}
+                    label={`Budget amount for ${entry.category?.trim() || entry.name}${
+                      entry.month === null ? "" : `, ${longMonthName(entry.month)}`
+                    }`}
+                  />
+                </td>
+                <DeleteCell
+                  entry={entry}
+                  confirming={confirmingId === entry.id}
+                  onConfirm={(next) => onConfirm(next ? entry.id : null)}
+                  onDelete={() => onDelete(entry.id)}
+                  disabled={pending}
+                />
+              </>
+            ) : (
+              <>
+                <td
+                  className={cn(
+                    amountCell,
+                    "tabular-nums",
+                    income ? "text-neutral-900" : "text-rose-600",
+                  )}
+                >
+                  {formatCurrency(amount)}
+                </td>
+                <td className="w-24" />
+              </>
+            )}
           </tr>
         )
       })}
@@ -351,6 +370,7 @@ export function BudgetSheet({
   showPeriod = false,
   showPerMonth = false,
   showAccount = true,
+  canEdit = true,
 }: {
   entries: BudgetEntry[]
   /** Resolves each plan's account name to what that account actually is. */
@@ -363,6 +383,8 @@ export function BudgetSheet({
   showPerMonth?: boolean
   /** Off once the list is already narrowed to one account. */
   showAccount?: boolean
+  /** Off for someone who may read the plans but not change them. */
+  canEdit?: boolean
 }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -428,7 +450,7 @@ export function BudgetSheet({
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">
-            Budgets for {label}, income and expense, each figure editable.
+            Budgets for {label}, income and expense{canEdit ? ", each figure editable" : ""}.
           </caption>
           <thead>
             <tr className="bg-neutral-50">
@@ -480,6 +502,7 @@ export function BudgetSheet({
               confirmingId={confirmingId}
               onConfirm={setConfirmingId}
               pending={pending}
+              canEdit={canEdit}
             />
           ))}
         </table>

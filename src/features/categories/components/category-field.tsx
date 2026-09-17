@@ -24,6 +24,7 @@ export function CategoryField({
   onCategoriesChange,
   invalid,
   emptyOptionLabel,
+  canManage = true,
 }: {
   id: string
   name: string
@@ -41,6 +42,8 @@ export function CategoryField({
    * transactions leave it off, since an entry always names a category.
    */
   emptyOptionLabel?: string
+  /** Managers only: the panel adds and removes categories for everyone. */
+  canManage?: boolean
 }) {
   const [managing, setManaging] = useState(false)
 
@@ -64,10 +67,12 @@ export function CategoryField({
         invalid={invalid}
         placeholder={
           matches.length === 0
-            ? `No ${kind} categories here — add one`
+            ? canManage
+              ? `No ${kind} categories here — add one`
+              : `No ${kind} categories here yet`
             : "Select a category…"
         }
-        footer={(close) => (
+        footer={canManage ? (close) => (
           <button
             type="button"
             onClick={() => {
@@ -79,7 +84,7 @@ export function CategoryField({
             <Settings2 className="size-4 text-neutral-500" strokeWidth={1.75} />
             Manage categories
           </button>
-        )}
+        ) : undefined}
       />
 
       <CategoryManager

@@ -12,7 +12,7 @@ import {
   SaveButton,
 } from "@/components/form/form-shell"
 import { Select } from "@/components/form/select"
-import { ROLES, type Role } from "@/features/auth/roles"
+import { MANAGER, type Role, type RoleSummary } from "@/features/auth/roles"
 import type { FormState } from "@/lib/form-state"
 import { useActionToast } from "@/components/ui/toast"
 
@@ -20,7 +20,7 @@ import { createMember } from "../actions"
 
 const initialState: FormState = {}
 
-export function UserForm() {
+export function UserForm({ roles }: { roles: RoleSummary[] }) {
   const [state, formAction, pending] = useActionState(createMember, initialState)
   const errors = state.fieldErrors ?? {}
   useActionToast(state)
@@ -30,15 +30,18 @@ export function UserForm() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState<Role>("admin")
+  const [role, setRole] = useState<Role>(
+    // Handing out Manager is a deliberate pick, never the default.
+    () => (roles.find((entry) => entry.key !== MANAGER) ?? roles[0])?.key ?? "",
+  )
   const [showPassword, setShowPassword] = useState(false)
 
-  const spec = ROLES.find((entry) => entry.value === role)
+  const spec = roles.find((entry) => entry.key === role)
 
   return (
     <form action={formAction} noValidate className="flex min-h-full flex-col">
       <FormHeader
-        crumbs={[{ label: "Users", href: "/users" }]}
+        crumbs={[{ label: "Settings" }, { label: "Users", href: "/settings/users" }]}
         title="New User"
         status={<NotSavedBadge />}
         action={<SaveButton pending={pending}>Create</SaveButton>}
@@ -114,8 +117,8 @@ export function UserForm() {
               id="role"
               name="role"
               value={role}
-              onValueChange={(value) => setRole(value as Role)}
-              options={ROLES.map((entry) => ({ value: entry.value, label: entry.label }))}
+              onValueChange={setRole}
+              options={roles.map((entry) => ({ value: entry.key, label: entry.name }))}
               invalid={Boolean(errors.role)}
             />
           </Field>

@@ -1,41 +1,38 @@
 /**
- * Who may open what. Shared by the server guards and the sidebar, so a page
- * someone cannot open is never offered to them either.
- *
- * The database enforces the same split on its own (supabase/migrations/
- * 0016_roles.sql): these checks decide what is shown, row level security
- * decides what is allowed.
+ * Roles are rows in the database (supabase/migrations/0025_custom_roles.sql),
+ * added and named in Settings → Roles. A role is referred to by its key; what
+ * it may do is in permissions.ts.
  */
-export type Role = "manager" | "admin"
+export type Role = string
 
-export const ROLES: { value: Role; label: string; description: string }[] = [
-  {
-    value: "manager",
-    label: "Manager",
-    description: "Everything, including users",
-  },
-  {
-    value: "admin",
-    label: "Admin",
-    description: "Dashboard and Laporan Keuangan, read-only",
-  },
+export type RoleSummary = {
+  key: Role
+  name: string
+  description: string
+  /** Built-in roles cannot be deleted. */
+  builtIn: boolean
+}
+
+/** The role the app itself leans on: never deleted, always manages users. */
+export const MANAGER: Role = "manager"
+
+/** The roles before 0025 has run, when they were fixed in code. */
+export const FALLBACK_ROLES: RoleSummary[] = [
+  { key: "manager", name: "Manager", description: "Runs the books and the team", builtIn: true },
+  { key: "admin", name: "Admin", description: "Day-to-day finance work", builtIn: false },
 ]
 
 export function isRole(value: unknown): value is Role {
-  return ROLES.some((role) => role.value === value)
+  return typeof value === "string" && value.length > 0
 }
 
-export function roleLabel(role: Role | null): string {
-  return ROLES.find((entry) => entry.value === role)?.label ?? "No access"
-}
-
-/** Everything an admin can open. Managers can open every page. */
-const ADMIN_ROUTES = ["/dashboard", "/reporting"]
-
-export function canVisit(role: Role | null, href: string): boolean {
-  if (role === "manager") return true
-  if (role !== "admin") return false
-
-  const path = href.split("?")[0]
-  return ADMIN_ROUTES.some((route) => path === route || path.startsWith(`${route}/`))
+/** "Front Office" → "front_office": what a new role is keyed by. */
+export function roleKeyFrom(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 36)
+  return /^[a-z]/.test(slug) ? slug : `role_${slug}`.slice(0, 36)
 }

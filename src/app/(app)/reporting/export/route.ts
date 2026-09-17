@@ -1,11 +1,11 @@
-import { requireUser } from "@/features/auth/session"
+import { requirePermission } from "@/features/auth/session"
 import { readReportMonth, readSettlementFilter } from "@/features/reporting/months"
 import { loadFinancialReport } from "@/features/reporting/report"
 import { buildReportWorkbook } from "@/features/reporting/workbook"
 
 export async function GET(request: Request) {
   // Route handlers are not covered by the page DAL, so re-verify here.
-  await requireUser()
+  await requirePermission("reports.view")
 
   const url = new URL(request.url)
   const { year, month } = readReportMonth(Object.fromEntries(url.searchParams))

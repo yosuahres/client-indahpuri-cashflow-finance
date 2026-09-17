@@ -4,7 +4,7 @@ import { useState, useTransition } from "react"
 import { UserX } from "lucide-react"
 
 import { Select } from "@/components/form/select"
-import { ROLES, type Role } from "@/features/auth/roles"
+import type { Role, RoleSummary } from "@/features/auth/roles"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 
@@ -25,7 +25,15 @@ const NO_ACCESS = ""
  * deleting does elsewhere — it does not remove the login, but it does shut
  * someone out mid-task.
  */
-export function UserTable({ members, meId }: { members: TeamMember[]; meId: string }) {
+export function UserTable({
+  members,
+  roles: roleList,
+  meId,
+}: {
+  members: TeamMember[]
+  roles: RoleSummary[]
+  meId: string
+}) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -59,7 +67,7 @@ export function UserTable({ members, meId }: { members: TeamMember[]; meId: stri
   }
 
   const options = [
-    ...ROLES.map((role) => ({ value: role.value, label: role.label })),
+    ...roleList.map((role) => ({ value: role.key, label: role.name })),
     { value: NO_ACCESS, label: "No access" },
   ]
 
@@ -109,7 +117,7 @@ export function UserTable({ members, meId }: { members: TeamMember[]; meId: stri
                   <td className="px-2 py-1.5 sm:px-3">
                     {me ? (
                       <span className="text-neutral-700">
-                        {ROLES.find((entry) => entry.value === role)?.label}
+                        {roleList.find((entry) => entry.key === role)?.name ?? role}
                       </span>
                     ) : (
                       <div className="w-40">
@@ -117,7 +125,7 @@ export function UserTable({ members, meId }: { members: TeamMember[]; meId: stri
                           id={`role-${member.id}`}
                           value={role ?? NO_ACCESS}
                           onValueChange={(value) =>
-                            change(member, value === NO_ACCESS ? null : (value as Role))
+                            change(member, value === NO_ACCESS ? null : value)
                           }
                           options={options}
                           disabled={pending}

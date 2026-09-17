@@ -3,7 +3,8 @@ import type { Metadata } from "next"
 import { listAccounts } from "@/features/accounts/actions"
 import { listCategories } from "@/features/categories/actions"
 import { TransactionForm } from "@/features/transactions/components/transaction-form"
-import { requireRole } from "@/features/auth/session"
+import { can } from "@/features/auth/permissions"
+import { requireEntry } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "New Transaction",
@@ -14,7 +15,7 @@ export default async function NewTransactionPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireRole("manager")
+  const { permissions, kinds } = await requireEntry()
   const params = await searchParams
 
   // Computed on the server so the default date follows the request, not the
@@ -31,6 +32,9 @@ export default async function NewTransactionPage({
     <div className="min-h-0 flex-1 overflow-y-auto">
       <TransactionForm
         today={today}
+        kinds={kinds}
+        canManageCategories={can(permissions, "categories.manage")}
+        canCreateAccounts={can(permissions, "accounts.manage")}
         initialCategories={categories.categories}
         initialAccounts={accounts.accounts}
         defaultAccount={defaultAccount}

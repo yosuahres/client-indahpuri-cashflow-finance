@@ -3,23 +3,15 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { ChevronDown, ChevronRight, ChevronsUpDown, X } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronRight, ChevronsUpDown, X } from "lucide-react"
 
 import { cn } from "@/lib/cn"
-import { roleLabel, type Role } from "@/features/auth/roles"
+import type { Permission } from "@/features/auth/permissions"
+import type { Role } from "@/features/auth/roles"
 
-import { navFor, type NavGroup, type NavLink } from "./nav-config"
+import { navFor, type NavGroup, type NavLink, type SidebarArea } from "./nav-config"
 import { useSidebar } from "./sidebar-state"
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
-}
+import { UserMenu } from "./user-menu"
 
 function NavLinks({ links }: { links: NavLink[] }) {
   const pathname = usePathname()
@@ -27,7 +19,7 @@ function NavLinks({ links }: { links: NavLink[] }) {
   return (
     <ul className="mb-1">
       {links.map((link) => {
-        const active = pathname === link.href
+        const active = pathname === link.href || pathname.startsWith(`${link.href}/`)
         const Icon = link.icon
 
         return (
@@ -108,42 +100,54 @@ function NavGroupBlock({ group }: { group: NavGroup }) {
   )
 }
 
-type SidebarUser = { name: string; email: string; role: Role | null }
+type SidebarUser = {
+  name: string
+  email: string
+  role: Role | null
+  roleName: string | null
+  permissions: Permission[]
+}
 
 /** Everything inside the panel — shared by the fixed desktop rail and the drawer. */
 function SidebarBody({
+  module,
   user,
-  onSignOut,
+  signOut,
   onClose,
 }: {
+  module: SidebarArea
   user: SidebarUser
-  onSignOut: React.ReactNode
+  signOut: () => Promise<void>
   /** Rendered as a close button in the drawer; absent on desktop. */
   onClose?: () => void
 }) {
-  const nav = navFor(user.role)
+  const nav = navFor(module, user.role, user.permissions)
 
   return (
     <>
-      {/* Workspace switcher */}
+      {/* Workspace, or the Settings title */}
       <div className="flex items-center gap-1 p-3">
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100"
-        >
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-600 text-sm font-bold text-white">
-            IP
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-neutral-900">
-              Indah Puri
+        {module === "settings" ? (
+          <p className="min-w-0 flex-1 truncate px-2 py-1.5 text-base font-semibold text-neutral-900">
+            Settings
+          </p>
+        ) : (
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100"
+          >
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-600 text-sm font-bold text-white">
+              IP
             </span>
-            <span className="block truncate text-xs text-neutral-500">
-              Cash Flow
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-neutral-900">
+                Indah Puri
+              </span>
+              <span className="block truncate text-xs text-neutral-500">Cash Flow</span>
             </span>
-          </span>
-          <ChevronsUpDown className="size-4 shrink-0 text-neutral-400" strokeWidth={2} />
-        </button>
+            <ChevronsUpDown className="size-4 shrink-0 text-neutral-400" strokeWidth={2} />
+          </button>
+        )}
 
         {onClose ? (
           <button
@@ -165,41 +169,41 @@ function SidebarBody({
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* Footer: who is signed in, or in Settings the way back out */}
       <div className="border-t border-black/8 p-3">
-        <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-rose-100 text-xs font-semibold text-rose-700">
-            {initials(user.name)}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-neutral-900">
-              {user.name}
-            </span>
-            <span className="block truncate text-xs text-neutral-500">
-              {roleLabel(user.role)} · {user.email}
-            </span>
-          </span>
-          {onSignOut}
-        </div>
+        {module === "settings" ? (
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
+          >
+            <ArrowLeft className="size-4 shrink-0 text-neutral-500" strokeWidth={1.75} />
+            Back to Dashboard
+          </Link>
+        ) : (
+          <UserMenu user={user} signOut={signOut} />
+        )}
       </div>
     </>
   )
 }
 
 export function AppSidebar({
+  module,
   user,
-  onSignOut,
+  signOut,
 }: {
+  /** Which app's navigation to show, or Settings'. */
+  module: SidebarArea
   user: SidebarUser
-  onSignOut: React.ReactNode
+  signOut: () => Promise<void>
 }) {
   const { open, setOpen } = useSidebar()
 
   return (
     <>
       {/* Desktop rail */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-black/8 bg-neutral-50 lg:flex">
-        <SidebarBody user={user} onSignOut={onSignOut} />
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-black/8 bg-neutral-50 lg:flex">
+        <SidebarBody module={module} user={user} signOut={signOut} />
       </aside>
 
       {/* Off-canvas drawer, below lg. Kept mounted so it can slide, and inert
@@ -226,8 +230,9 @@ export function AppSidebar({
           )}
         >
           <SidebarBody
+            module={module}
             user={user}
-            onSignOut={onSignOut}
+            signOut={signOut}
             onClose={() => setOpen(false)}
           />
         </div>

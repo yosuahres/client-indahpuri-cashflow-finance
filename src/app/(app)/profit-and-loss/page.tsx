@@ -9,7 +9,8 @@ import { ReportFilters } from "@/components/report/report-filters"
 import { TransactionTable } from "@/components/report/transaction-table"
 import { readReportRange } from "@/features/reports/range"
 import { loadProfitAndLossReport } from "@/features/profit-and-loss/report"
-import { requireRole } from "@/features/auth/session"
+import { can } from "@/features/auth/permissions"
+import { requirePermission, requireUser } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "Profit and Loss",
@@ -38,7 +39,7 @@ async function Ledger({ range }: { range: ReturnType<typeof readReportRange> }) 
   // New Transaction form uses. All three go out together: they share the one
   // request-scoped Supabase client, which serializes its own token refresh, so
   // the page waits for the slowest query rather than for the sum of them.
-  const [{ ok, error, report }, categories, accounts] = await Promise.all([
+  const [{ ok, error, report }, categories, accounts, { permissions }] = await Promise.all([
     loadProfitAndLossReport({
       from: range.from,
       to: range.to,
@@ -49,6 +50,7 @@ async function Ledger({ range }: { range: ReturnType<typeof readReportRange> }) 
     }),
     listCategories(),
     listAccounts(),
+    requireUser(),
   ])
 
   return (
@@ -66,6 +68,9 @@ async function Ledger({ range }: { range: ReturnType<typeof readReportRange> }) 
           categories={categories.categories}
           accounts={accounts.accounts}
           today={range.today}
+          canEdit={can(permissions, "transactions.edit")}
+          canManageCategories={can(permissions, "categories.manage")}
+          canCreateAccounts={can(permissions, "accounts.manage")}
         />
       </div>
     </div>
@@ -77,7 +82,7 @@ export default async function ProfitAndLossPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireRole("manager")
+  await requirePermission("profit_loss.view")
   const range = readReportRange(await searchParams)
 
   return (

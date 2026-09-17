@@ -18,7 +18,8 @@ import {
   type BudgetPeriodSelection,
 } from "@/features/budgets/period"
 import { longMonthName } from "@/features/reporting/months"
-import { requireRole } from "@/features/auth/session"
+import { can } from "@/features/auth/permissions"
+import { requirePermission } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "Anggaran",
@@ -53,10 +54,12 @@ async function BudgetList({
   selection,
   account,
   accounts,
+  canEdit,
 }: {
   selection: BudgetPeriodSelection
   account: string
   accounts: Account[]
+  canEdit: boolean
 }) {
   const { ok, error, entries: all } = await listBudgets(selection.year)
 
@@ -121,6 +124,7 @@ async function BudgetList({
                   accounts={accounts}
                   label={label}
                   showAccount={!account}
+                  canEdit={canEdit}
                 />
               </div>
             </Card>
@@ -140,6 +144,7 @@ async function BudgetList({
                     label={String(selection.year)}
                     showPerMonth
                     showAccount={!account}
+                  canEdit={canEdit}
                   />
                 </div>
               </Card>
@@ -158,6 +163,7 @@ async function BudgetList({
                 label={label}
                 showPeriod
                 showAccount={!account}
+                canEdit={canEdit}
               />
             </div>
           </Card>
@@ -172,7 +178,8 @@ export default async function BudgetsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireRole("manager")
+  const { permissions } = await requirePermission("budgets.view")
+  const canEdit = can(permissions, "budgets.manage")
   const [params, accounts] = await Promise.all([searchParams, listAccounts()])
   const selection = readBudgetPeriod(params)
   const account = typeof params.account === "string" ? params.account.trim() : ""
@@ -186,13 +193,15 @@ export default async function BudgetsPage({
         actions={
           // The grid opens on the period and account being looked at, so
           // entering plans from here does not mean picking them twice.
-          <Link
-            href={`/budgets/new${periodQuery(selection)}${carried}`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900 sm:h-8"
-          >
-            <Plus className="size-4 shrink-0" strokeWidth={1.75} />
-            <span className="hidden sm:inline">New Budget</span>
-          </Link>
+          canEdit ? (
+            <Link
+              href={`/budgets/new${periodQuery(selection)}${carried}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900 sm:h-8"
+            >
+              <Plus className="size-4 shrink-0" strokeWidth={1.75} />
+              <span className="hidden sm:inline">New Budget</span>
+            </Link>
+          ) : null
         }
       />
 
@@ -214,7 +223,12 @@ export default async function BudgetsPage({
           key={`${selection.period}:${selection.year}:${selection.month}:${account}`}
           fallback={<ListFallback />}
         >
-          <BudgetList selection={selection} account={account} accounts={accounts.accounts} />
+          <BudgetList
+            selection={selection}
+            account={account}
+            accounts={accounts.accounts}
+            canEdit={canEdit}
+          />
         </Suspense>
       </main>
     </>

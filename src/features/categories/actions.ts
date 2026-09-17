@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireRole, requireUser } from "@/features/auth/session"
+import { requirePermission, requireUser } from "@/features/auth/session"
 import { isKind, isSection, type SectionValue, type TransactionKind } from "@/lib/finance"
 
 export type Category = {
@@ -64,7 +64,7 @@ export async function addCategory(
   }
 
   const supabase = await createClient()
-  const user = await requireRole("manager")
+  const user = await requirePermission("categories.manage")
 
   const { error } = await supabase
     .from("categories")
@@ -85,7 +85,7 @@ export async function addCategory(
 }
 
 export async function deleteCategory(id: string): Promise<CategoryResult> {
-  await requireRole("manager")
+  await requirePermission("categories.manage")
   const supabase = await createClient()
   const { error } = await supabase.from("categories").delete().eq("id", id)
 
@@ -101,7 +101,7 @@ export async function seedCategories(
   suggestions: { name: string; section: SectionValue; kind: TransactionKind }[],
 ): Promise<CategoryResult> {
   const supabase = await createClient()
-  const user = await requireRole("manager")
+  const user = await requirePermission("categories.manage")
 
   const rows = suggestions
     .filter((entry) => isSection(entry.section) && isKind(entry.kind) && entry.name.trim())

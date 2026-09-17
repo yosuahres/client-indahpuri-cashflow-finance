@@ -5,7 +5,7 @@ import { refresh } from "next/cache"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
-import { requireRole } from "@/features/auth/session"
+import { requirePermission } from "@/features/auth/session"
 import { isRole, type Role } from "@/features/auth/roles"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { flash } from "@/lib/flash"
@@ -26,13 +26,14 @@ export type TeamResult =
 export type RowResult = { ok: boolean; error?: string }
 
 const UNDEFINED_TABLE = "42P01"
+const FOREIGN_KEY_VIOLATION = "23503"
 
 const MIGRATION_HINT =
   "The profiles table does not exist yet. Run supabase/migrations/0016_roles.sql against the project."
 
 /** Everyone who has signed up, newest waiting first, then the team by name. */
 export async function listTeam(): Promise<TeamResult> {
-  await requireRole("manager")
+  await requirePermission("users.manage")
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -89,7 +90,7 @@ export async function createMember(
   _prevState: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("manager")
+  await requirePermission("users.manage")
 
   const name = String(formData.get("name") ?? "").trim()
   const email = String(formData.get("email") ?? "").trim().toLowerCase()
@@ -143,7 +144,7 @@ export async function createMember(
 
   refresh()
   await flash("success", "User added.")
-  redirect("/users")
+  redirect("/settings/users")
 }
 
 /**
@@ -154,7 +155,7 @@ export async function createMember(
  * a stray click would lose the page they would need to undo it.
  */
 export async function setMemberRole(id: string, role: Role | null): Promise<RowResult> {
-  const me = await requireRole("manager")
+  const me = await requirePermission("users.manage")
 
   if (!id) return { ok: false, error: "That user is no longer listed." }
   if (id === me.id) return { ok: false, error: "You cannot change your own role." }
@@ -170,6 +171,7 @@ export async function setMemberRole(id: string, role: Role | null): Promise<RowR
 
   // The last-manager trigger raises a sentence meant to be shown as it is.
   if (error) {
+    if (error.code === FOREIGN_KEY_VIOLATION) return { ok: false, error: "That role no longer exists." }
     return { ok: false, error: error.code === UNDEFINED_TABLE ? MIGRATION_HINT : error.message }
   }
   if (!data || data.length === 0) return { ok: false, error: "That user no longer exists." }

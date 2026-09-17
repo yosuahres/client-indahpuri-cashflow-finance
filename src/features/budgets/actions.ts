@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireRole } from "@/features/auth/session"
+import { requirePermission } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { flash } from "@/lib/flash"
 import type { SectionValue, TransactionKind } from "@/lib/finance"
@@ -42,7 +42,7 @@ export async function saveBudgetPlan(
   if (hasFieldErrors(errors)) return { fieldErrors: errors }
 
   const supabase = await createClient()
-  const user = await requireRole("manager")
+  const user = await requirePermission("budgets.manage")
 
   const kind = input.kind as TransactionKind
 
@@ -114,7 +114,7 @@ export type RowResult = { ok: boolean; error?: string }
  */
 export async function setBudgetAmount(id: string, amount: number): Promise<RowResult> {
   if (!id) return { ok: false, error: "That budget is no longer open." }
-  await requireRole("manager")
+  await requirePermission("budgets.manage")
   if (!Number.isFinite(amount) || amount <= 0) {
     return { ok: false, error: "Enter a positive amount." }
   }
@@ -139,7 +139,7 @@ export async function setBudgetAmount(id: string, amount: number): Promise<RowRe
  */
 export async function deleteBudget(id: string): Promise<RowResult> {
   if (!id) return { ok: false, error: "That budget is no longer open." }
-  await requireRole("manager")
+  await requirePermission("budgets.manage")
 
   const supabase = await createClient()
   const { data, error } = await supabase

@@ -4,33 +4,22 @@ import { Plus } from "lucide-react"
 
 import { Topbar } from "@/components/layout/topbar"
 import { Card, CardHeader } from "@/components/ui/card"
-import { requireRole } from "@/features/auth/session"
+import { requirePermission } from "@/features/auth/session"
+import { listRoles } from "@/features/roles/actions"
 import { listTeam } from "@/features/users/actions"
 import { UserTable } from "@/features/users/components/user-table"
 
 export const metadata: Metadata = {
-  title: "Users",
+  title: "Users · Settings",
 }
 
-export default async function UsersPage() {
-  const me = await requireRole("manager")
-  const result = await listTeam()
+export default async function SettingsUsersPage() {
+  const me = await requirePermission("users.manage")
+  const [result, { roles }] = await Promise.all([listTeam(), listRoles()])
 
   return (
     <>
-      <Topbar
-        title="Users"
-        section={null}
-        actions={
-          <Link
-            href="/users/new"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900 sm:h-8"
-          >
-            <Plus className="size-4 shrink-0" strokeWidth={1.75} />
-            <span className="hidden sm:inline">New User</span>
-          </Link>
-        }
-      />
+      <Topbar title="Users" section="Settings" />
 
       <main className="min-h-0 flex-1 overflow-y-auto bg-neutral-50">
         {!result.ok ? (
@@ -46,9 +35,19 @@ export default async function UsersPage() {
           <Card className="overflow-hidden">
             <CardHeader
               title="Team"
+              caption="Everyone who has signed up, and the role they have."
+              action={
+                <Link
+                  href="/settings/users/new"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900"
+                >
+                  <Plus className="size-4 shrink-0" strokeWidth={1.75} />
+                  New User
+                </Link>
+              }
             />
             <div className="mt-4">
-              <UserTable members={result.members} meId={me.id} />
+              <UserTable members={result.members} roles={roles} meId={me.id} />
             </div>
           </Card>
         </div>

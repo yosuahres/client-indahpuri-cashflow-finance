@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireRole, requireUser } from "@/features/auth/session"
+import { requirePermission, requireUser } from "@/features/auth/session"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { safeRedirectPath } from "@/lib/site-url"
 import { flash } from "@/lib/flash"
@@ -112,7 +112,7 @@ export async function createAccount(
   if (hasFieldErrors(fieldErrors)) return { fieldErrors }
 
   const supabase = await createClient()
-  const user = await requireRole("manager")
+  const user = await requirePermission("accounts.manage")
 
   const { error } = await supabase.from("accounts").insert({
     user_id: user.id,
@@ -160,7 +160,7 @@ export async function updateAccount(
   if (hasFieldErrors(fieldErrors)) return { fieldErrors }
 
   const supabase = await createClient()
-  await requireRole("manager")
+  await requirePermission("accounts.manage")
 
   const { data: before, error: readError } = await supabase
     .from("accounts")
@@ -220,7 +220,7 @@ export type RowResult = { ok: boolean; error?: string }
  */
 export async function deleteAccount(id: string): Promise<RowResult> {
   if (!id) return { ok: false, error: "That account is no longer open." }
-  await requireRole("manager")
+  await requirePermission("accounts.manage")
 
   const supabase = await createClient()
   const { data, error } = await supabase

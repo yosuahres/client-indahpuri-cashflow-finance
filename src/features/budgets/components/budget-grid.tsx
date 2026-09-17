@@ -113,6 +113,7 @@ export function BudgetGrid({
   warnOnOverrun: seedWarn,
   loadError,
   setupError,
+  canCreateAccounts,
 }: {
   account: string
   kind: TransactionKind
@@ -126,6 +127,7 @@ export function BudgetGrid({
   /** The plan could not be read — shown instead of pretending it is empty. */
   loadError?: string
   setupError?: string
+  canCreateAccounts: boolean
 }) {
   const [state, formAction, pending] = useActionState(saveBudgetPlan, initialState)
   const errors = state.fieldErrors ?? {}
@@ -272,6 +274,7 @@ export function BudgetGrid({
               onValueChange={(value) => moveTo({ account: value })}
               accounts={accounts}
               invalid={Boolean(errors.account)}
+              canCreate={canCreateAccounts}
             />
           </Field>
 

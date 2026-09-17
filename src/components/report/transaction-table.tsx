@@ -50,6 +50,9 @@ export function TransactionTable({
   categories,
   accounts,
   today,
+  canEdit,
+  canManageCategories,
+  canCreateAccounts,
 }: {
   transactions: TransactionDetail[]
   /** Screen-reader description of what the table holds. */
@@ -58,6 +61,10 @@ export function TransactionTable({
   categories: Category[]
   accounts: Account[]
   today: string
+  /** Opening, settling, ticking and deleting rows; without it the ledger only reads. */
+  canEdit: boolean
+  canManageCategories: boolean
+  canCreateAccounts: boolean
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
   // Stable, so the panel's close-on-save effect does not re-fire every render.
@@ -207,10 +214,11 @@ export function TransactionTable({
             {rows.map((entry) => (
               <tr
                 key={entry.id}
-                onClick={() => setOpenId(entry.id)}
+                onClick={canEdit ? () => setOpenId(entry.id) : undefined}
                 style={windowed ? { height: ROW_HEIGHT } : undefined}
                 className={cn(
-                  "cursor-pointer border-t border-black/5",
+                  "border-t border-black/5",
+                  canEdit && "cursor-pointer",
                   // A windowed row must be exactly the height the spacers
                   // assume, so its cells may not wrap onto a second line.
                   windowed && "[&>td]:truncate [&>td]:whitespace-nowrap",
@@ -226,14 +234,16 @@ export function TransactionTable({
                     selected.has(entry.id) ? "bg-neutral-100" : "bg-white",
                   )}
                 >
-                  <input
-                    type="checkbox"
-                    className={checkbox}
-                    checked={selected.has(entry.id)}
-                    disabled={pending}
-                    onChange={() => toggle(entry.id)}
-                    aria-label={`Select ${formatDate(entry.occurredOn)}, ${entry.category}, ${formatCurrency(entry.amount)}`}
-                  />
+                  {canEdit ? (
+                    <input
+                      type="checkbox"
+                      className={checkbox}
+                      checked={selected.has(entry.id)}
+                      disabled={pending}
+                      onChange={() => toggle(entry.id)}
+                      aria-label={`Select ${formatDate(entry.occurredOn)}, ${entry.category}, ${formatCurrency(entry.amount)}`}
+                    />
+                  ) : null}
                 </td>
                 <td
                   className={cn(
@@ -244,19 +254,23 @@ export function TransactionTable({
                 >
                   {/* A row is not focusable, so the real control lives here —
                       the same panel, reachable by keyboard. */}
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setOpenId(entry.id)
-                    }}
-                    className="rounded-sm underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-neutral-800"
-                  >
-                    {formatDate(entry.occurredOn)}
-                    <span className="sr-only">
-                      {` — open ${entry.category}, ${formatCurrency(entry.amount)}`}
-                    </span>
-                  </button>
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setOpenId(entry.id)
+                      }}
+                      className="rounded-sm underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-neutral-800"
+                    >
+                      {formatDate(entry.occurredOn)}
+                      <span className="sr-only">
+                        {` — open ${entry.category}, ${formatCurrency(entry.amount)}`}
+                      </span>
+                    </button>
+                  ) : (
+                    formatDate(entry.occurredOn)
+                  )}
                 </td>
                 <td className="px-3 py-2.5 text-neutral-900">{entry.category}</td>
                 {/* The name alone repeats across banks, so the bank behind it
@@ -279,6 +293,7 @@ export function TransactionTable({
                   }
                   onChange={(paid) => flipPaid(entry.id, paid)}
                   disabled={pending}
+                  readOnly={!canEdit}
                 />
                 <td
                   className={cn(
@@ -410,6 +425,8 @@ export function TransactionTable({
           accounts={accounts}
           today={today}
           onClose={closePanel}
+          canManageCategories={canManageCategories}
+          canCreateAccounts={canCreateAccounts}
         />
       ) : null}
     </>
@@ -426,10 +443,13 @@ function StatusCell({
   entry,
   onChange,
   disabled,
+  readOnly,
 }: {
   entry: TransactionDetail
   onChange: (paid: boolean) => void
   disabled: boolean
+  /** Shown as a plain badge, for someone who may not settle transactions. */
+  readOnly: boolean
 }) {
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -452,6 +472,23 @@ function StatusCell({
 
   const paid = entry.paid
   const statuses = entry.kind === "income" ? INCOME_PAYMENT_STATUSES : PAYMENT_STATUSES
+
+  if (readOnly) {
+    return (
+      <td className="px-3 py-[9px]">
+        <span
+          className={cn(
+            "inline-flex items-center rounded border px-1.5 text-xs leading-5 font-medium",
+            paid
+              ? "border-black/10 bg-neutral-50 text-neutral-600"
+              : "border-amber-300 bg-amber-50 text-amber-700",
+          )}
+        >
+          {statuses[paid ? 0 : 1].label}
+        </span>
+      </td>
+    )
+  }
 
   return (
     // The badge is a border taller than plain text, so the padding gives the

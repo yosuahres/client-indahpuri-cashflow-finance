@@ -20,6 +20,7 @@ export function AccountField({
   onValueChange,
   accounts,
   invalid,
+  canCreate = true,
 }: {
   id: string
   /** Omitted where the value is submitted by a field of the caller's own. */
@@ -28,6 +29,8 @@ export function AccountField({
   onValueChange: (value: string) => void
   accounts: Account[]
   invalid?: boolean
+  /** Managers only: accounts are part of the books' setup. */
+  canCreate?: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -48,8 +51,12 @@ export function AccountField({
       onValueChange={onValueChange}
       options={options}
       invalid={invalid}
-      placeholder={options.length === 0 ? "No accounts yet — create one" : "Select an account…"}
-      footer={(close) => (
+      placeholder={
+        options.length === 0
+          ? canCreate ? "No accounts yet — create one" : "No accounts yet"
+          : "Select an account…"
+      }
+      footer={canCreate ? (close) => (
         <button
           type="button"
           onClick={() => {
@@ -62,7 +69,7 @@ export function AccountField({
           <Plus className="size-4 text-neutral-500" strokeWidth={2} />
           Create new account
         </button>
-      )}
+      ) : undefined}
     />
   )
 }

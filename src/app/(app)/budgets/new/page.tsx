@@ -6,7 +6,8 @@ import { loadBudgetPlan } from "@/features/budgets/plan"
 import { listAccounts } from "@/features/accounts/actions"
 import { listCategories } from "@/features/categories/actions"
 import { isKind, type TransactionKind } from "@/lib/finance"
-import { requireRole } from "@/features/auth/session"
+import { can } from "@/features/auth/permissions"
+import { requirePermission } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "Budget Plan",
@@ -17,7 +18,7 @@ export default async function NewBudgetPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireRole("manager")
+  const { permissions } = await requirePermission("budgets.manage")
   const params = await searchParams
   const selection = readBudgetPeriod(params)
   const kind: TransactionKind = isKind(params.kind) ? params.kind : "expense"
@@ -62,6 +63,7 @@ export default async function NewBudgetPage({
         warnOnOverrun={plan.warnOnOverrun}
         loadError={plan.ok ? undefined : plan.error}
         setupError={setupError}
+        canCreateAccounts={can(permissions, "accounts.manage")}
       />
     </div>
   )

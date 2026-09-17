@@ -40,12 +40,19 @@ const initialState: FormState = {}
 
 export function TransactionForm({
   today,
+  kinds,
+  canManageCategories,
+  canCreateAccounts,
   initialCategories,
   initialAccounts,
   defaultAccount,
   setupError,
 }: {
   today: string
+  /** The kinds this person may enter; never empty. */
+  kinds: TransactionKind[]
+  canManageCategories: boolean
+  canCreateAccounts: boolean
   initialCategories: Category[]
   initialAccounts: Account[]
   /** Pre-selected after returning from the New Account page. */
@@ -58,7 +65,7 @@ export function TransactionForm({
 
   const [categories, setCategories] = useState(initialCategories)
   const [date, setDate] = useState(today)
-  const [kind, setKind] = useState<TransactionKind>("income")
+  const [kind, setKind] = useState<TransactionKind>(kinds[0])
   const [section, setSection] = useState<SectionValue>("operations")
   const [category, setCategory] = useState("")
   const [account, setAccount] = useState(defaultAccount ?? "")
@@ -122,7 +129,7 @@ export function TransactionForm({
                 // Categories belong to one direction, so the old pick is gone.
                 setCategory("")
               }}
-              options={TRANSACTION_KINDS.map((entry) => ({ value: entry.value, label: entry.label }))}
+              options={TRANSACTION_KINDS.filter((entry) => kinds.includes(entry.value)).map((entry) => ({ value: entry.value, label: entry.label }))}
               invalid={Boolean(errors.kind)}
             />
           </Field>
@@ -158,6 +165,7 @@ export function TransactionForm({
               onValueChange={setCategory}
               categories={categories}
               onCategoriesChange={setCategories}
+              canManage={canManageCategories}
               invalid={Boolean(errors.category)}
             />
           </Field>
@@ -169,6 +177,7 @@ export function TransactionForm({
               value={account}
               onValueChange={setAccount}
               accounts={initialAccounts}
+              canCreate={canCreateAccounts}
               invalid={Boolean(errors.account)}
             />
           </Field>

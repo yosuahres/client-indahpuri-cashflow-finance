@@ -42,6 +42,8 @@ export function TransactionPanel({
   accounts,
   today,
   onClose,
+  canManageCategories,
+  canCreateAccounts,
 }: {
   transaction: TransactionDetail
   categories: Category[]
@@ -49,6 +51,8 @@ export function TransactionPanel({
   /** Caps the date picker, computed on the server so it survives hydration. */
   today: string
   onClose: () => void
+  canManageCategories: boolean
+  canCreateAccounts: boolean
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [state, formAction, saving] = useActionState(updateTransaction, initialState)
@@ -196,6 +200,7 @@ export function TransactionPanel({
               onValueChange={setCategory}
               categories={categoryList}
               onCategoriesChange={setCategoryList}
+              canManage={canManageCategories}
               invalid={Boolean(errors.category)}
             />
           </Field>
@@ -208,6 +213,7 @@ export function TransactionPanel({
               onValueChange={setAccount}
               accounts={accounts}
               invalid={Boolean(errors.account)}
+              canCreate={canCreateAccounts}
             />
           </Field>
 

@@ -1,22 +1,17 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
-import { getAccount } from "@/features/accounts/actions"
-import { AccountForm } from "@/features/accounts/components/account-form"
 import { requirePermission } from "@/features/auth/session"
+import { listRoles } from "@/features/roles/actions"
+import { RoleForm } from "@/features/roles/components/role-form"
 
 export const metadata: Metadata = {
-  title: "Edit Account",
+  title: "Edit Role · Settings",
 }
 
-export default async function EditAccountPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  await requirePermission("accounts.manage")
-  const { id } = await params
-  const result = await getAccount(id)
+export default async function EditRolePage({ params }: { params: Promise<{ key: string }> }) {
+  await requirePermission("users.manage")
+  const [{ key }, result] = await Promise.all([params, listRoles()])
 
   if (!result.ok) {
     return (
@@ -27,11 +22,13 @@ export default async function EditAccountPage({
       </div>
     )
   }
-  if (!result.account) notFound()
+
+  const role = result.roles.find((entry) => entry.key === key)
+  if (!role) notFound()
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
-      <AccountForm account={result.account} />
+      <RoleForm role={role} roles={result.roles} />
     </div>
   )
 }

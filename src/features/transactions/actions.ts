@@ -4,7 +4,8 @@ import { redirect } from "next/navigation"
 import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireRole } from "@/features/auth/session"
+import { requirePermission, requireUser } from "@/features/auth/session"
+import { entryKinds } from "@/features/auth/permissions"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { flash } from "@/lib/flash"
 import {
@@ -36,8 +37,17 @@ export async function createTransaction(
   const fieldErrors = validateTransaction(input)
   if (hasFieldErrors(fieldErrors)) return { fieldErrors }
 
+  const user = await requireUser()
+  // Row level security refuses the same insert (0024); asking first gives a
+  // sentence instead of a policy violation.
+  const kinds = entryKinds(user.permissions)
+  if (!kinds.some((kind) => kind === input.kind)) {
+    return kinds.length === 0
+      ? { error: "You do not have permission to enter transactions." }
+      : { fieldErrors: { kind: `You do not have permission to enter ${input.kind}.` } }
+  }
+
   const supabase = await createClient()
-  const user = await requireRole("manager")
 
   const { error } = await supabase.from("transactions").insert({
     user_id: user.id,
@@ -86,7 +96,7 @@ export async function updateTransaction(
 ): Promise<FormState> {
   const id = String(formData.get("id") ?? "").trim()
   if (!id) return { error: "That transaction is no longer open." }
-  await requireRole("manager")
+  await requirePermission("transactions.edit")
 
   const input = readTransaction(formData)
   const fieldErrors = validateTransaction(input)
@@ -130,7 +140,7 @@ export type PaidResult = { ok: boolean; error?: string }
  */
 export async function setTransactionPaid(id: string, paid: boolean): Promise<PaidResult> {
   if (!id) return { ok: false, error: "That transaction is no longer open." }
-  await requireRole("manager")
+  await requirePermission("transactions.edit")
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -162,7 +172,7 @@ export type DeleteResult = { ok: boolean; error?: string; deleted: number }
 export async function deleteTransactions(ids: string[]): Promise<DeleteResult> {
   const unique = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))]
   if (unique.length === 0) return { ok: false, error: "Nothing selected.", deleted: 0 }
-  await requireRole("manager")
+  await requirePermission("transactions.edit")
 
   const supabase = await createClient()
   const { data, error } = await supabase

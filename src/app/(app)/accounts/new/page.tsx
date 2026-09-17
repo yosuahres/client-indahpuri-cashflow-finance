@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 import { AccountForm } from "@/features/accounts/components/account-form"
 import { safeRedirectPath } from "@/lib/site-url"
-import { requireRole } from "@/features/auth/session"
+import { requirePermission } from "@/features/auth/session"
 
 export const metadata: Metadata = {
   title: "New Account",
@@ -13,7 +13,7 @@ export default async function NewAccountPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireRole("manager")
+  await requirePermission("accounts.manage")
   const params = await searchParams
   // Where to go back to once the account is saved.
   const next = safeRedirectPath(
