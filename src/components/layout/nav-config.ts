@@ -52,7 +52,7 @@ const FINANCE_NAV: ModuleNav = {
       defaultOpen: true,
       items: [
         { label: "Laporan Keuangan", href: "/reporting" },
-        { label: "Profit and Loss", href: "/profit-and-loss" },
+        { label: "Detail Transaction", href: "/profit-and-loss" },
         { label: "Anggaran", href: "/budgets" },
         { label: "Accounts", href: "/accounts" },
       ],

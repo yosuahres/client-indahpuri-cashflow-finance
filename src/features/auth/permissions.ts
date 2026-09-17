@@ -17,7 +17,7 @@ export const PERMISSION_GROUPS = [
     label: "Financial reports",
     permissions: [
       { key: "reports.view", label: "View Laporan Keuangan" },
-      { key: "profit_loss.view", label: "View Profit and Loss" },
+      { key: "profit_loss.view", label: "View Detail Transaction" },
       { key: "budgets.view", label: "View Anggaran" },
     ],
   },

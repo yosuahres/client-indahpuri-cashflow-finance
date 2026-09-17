@@ -13,7 +13,7 @@ import { can } from "@/features/auth/permissions"
 import { requirePermission, requireUser } from "@/features/auth/session"
 
 export const metadata: Metadata = {
-  title: "Profit and Loss",
+  title: "Detail Transaction",
 }
 
 /** Holds the table's shape while the ledger is on its way. */
@@ -87,7 +87,7 @@ export default async function ProfitAndLossPage({
 
   return (
     <>
-      <Topbar title="Profit and Loss" />
+      <Topbar title="Detail Transaction" />
 
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden">
         <ReportFilters

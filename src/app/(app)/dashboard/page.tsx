@@ -160,7 +160,7 @@ async function DashboardFigures({
           {/* The cards carry their own titles; the section name is for
               screen readers only. */}
           <h2 id="dashboard-profit-and-loss" className="sr-only">
-            Profit and Loss
+            Detail Transaction
           </h2>
 
           {/* Stacked rather than side by side: the facets then share an x
