@@ -36,12 +36,11 @@ function onStorage(event: StorageEvent) {
 
 /** The saved theme choice, and a setter that applies and persists it. */
 export function useTheme() {
-  const theme = useSyncExternalStore(subscribe, readTheme, () => "system" as Theme)
+  const theme = useSyncExternalStore(subscribe, readTheme, () => "light" as Theme)
 
   const setTheme = useCallback((next: Theme) => {
     try {
-      if (next === "system") localStorage.removeItem(THEME_STORAGE_KEY)
-      else localStorage.setItem(THEME_STORAGE_KEY, next)
+      localStorage.setItem(THEME_STORAGE_KEY, next)
     } catch {
       // Storage blocked: the choice still applies for this page.
     }

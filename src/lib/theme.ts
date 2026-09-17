@@ -10,19 +10,19 @@ const DARK_QUERY = "(prefers-color-scheme: dark)"
  * Runs in <head> before first paint, so a saved dark theme never flashes light.
  * Mirrors readTheme + applyTheme below; keep the two in step.
  */
-export const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});var d=t==="dark"||(t!=="light"&&matchMedia(${JSON.stringify(DARK_QUERY)}).matches);document.documentElement.setAttribute("data-theme",d?"dark":"light")}catch(e){}})()`
+export const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});var d=t==="dark"||(t==="system"&&matchMedia(${JSON.stringify(DARK_QUERY)}).matches);document.documentElement.setAttribute("data-theme",d?"dark":"light")}catch(e){}})()`
 
 function isTheme(value: string | null): value is Theme {
   return THEMES.includes(value as Theme)
 }
 
-/** The saved choice. Anything unset or unreadable follows the OS. */
+/** The saved choice. Anything unset or unreadable is light. */
 export function readTheme(): Theme {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY)
-    return isTheme(stored) ? stored : "system"
+    return isTheme(stored) ? stored : "light"
   } catch {
-    return "system"
+    return "light"
   }
 }
 
