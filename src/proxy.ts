@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     url.search = ""
-    // The root lands on the launcher after sign-in anyway; keep its URL clean.
+    // The root lands on the dashboard after sign-in anyway; keep its URL clean.
     if (pathname !== "/") url.searchParams.set("next", pathname)
     return withAuthCookies(NextResponse.redirect(url), response)
   }
