@@ -216,7 +216,7 @@ export function AppSidebar({
           aria-hidden
           onClick={() => setOpen(false)}
           className={cn(
-            "absolute inset-0 bg-black/40 transition-opacity duration-200",
+            "absolute inset-0 bg-scrim/40 transition-opacity duration-200",
             open ? "opacity-100" : "opacity-0",
           )}
         />

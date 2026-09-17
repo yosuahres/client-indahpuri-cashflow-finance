@@ -141,7 +141,7 @@ export function CategoryPie({
             return (
               <g
                 key={slice.label}
-                stroke="#ffffff"
+                style={{ stroke: "var(--color-white)" }}
                 strokeWidth={2}
                 opacity={dimmed ? 0.45 : 1}
                 onPointerEnter={() => setHovered(slice.label)}

@@ -19,8 +19,11 @@ const MAX_BAR_WIDTH = 24
 const BAR_GAP = 2
 const CORNER_RADIUS = 4
 
-const GRID = "#e8e8e6"
-const AXIS_TEXT = "#6b6a66"
+// CSS variables, so the chart follows the theme. They only resolve through
+// `style`, not SVG presentation attributes.
+const GRID = "var(--color-neutral-200)"
+const BASELINE = "var(--color-neutral-300)"
+const AXIS_TEXT = "var(--color-neutral-500)"
 
 /** Rounds a raw step up to the nearest 1 / 2 / 5 × 10ⁿ so ticks land on clean numbers. */
 function niceStep(raw: number) {
@@ -162,7 +165,7 @@ export function SeriesChart({
                     x2={chartWidth - margin.right}
                     y1={toY(tick)}
                     y2={toY(tick)}
-                    stroke={tick === 0 ? "#c9c8c4" : GRID}
+                    style={{ stroke: tick === 0 ? BASELINE : GRID }}
                     strokeWidth={1}
                     shapeRendering="crispEdges"
                   />
@@ -172,7 +175,7 @@ export function SeriesChart({
                     textAnchor="end"
                     dominantBaseline="middle"
                     fontSize={11}
-                    fill={AXIS_TEXT}
+                    style={{ fill: AXIS_TEXT }}
                   >
                     {formatCompact(tick)}
                   </text>
@@ -191,7 +194,7 @@ export function SeriesChart({
                         y={margin.top}
                         width={bandWidth}
                         height={plotHeight}
-                        fill="#000000"
+                        style={{ fill: "var(--color-black)" }}
                         opacity={0.03}
                       />
                     ) : null}
@@ -212,7 +215,7 @@ export function SeriesChart({
                       y={height - margin.bottom + 20}
                       textAnchor="middle"
                       fontSize={11}
-                      fill={AXIS_TEXT}
+                      style={{ fill: AXIS_TEXT }}
                     >
                       {period}
                     </text>

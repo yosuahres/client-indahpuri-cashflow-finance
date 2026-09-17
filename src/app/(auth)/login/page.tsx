@@ -23,8 +23,8 @@ export default async function LoginPage({
 
   return (
     <AuthCard
-      title="Sign in"
-      subtitle="Welcome back. Enter your details to continue."
+      title="Welcome back"
+      subtitle="Sign in to your account to continue"
       footer={{
         prompt: "Don't have an account?",
         href: "/signup",

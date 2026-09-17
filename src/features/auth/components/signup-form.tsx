@@ -5,6 +5,7 @@ import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Field } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 
 import { signup } from "../actions"
 import { MIN_PASSWORD_LENGTH, type AuthFormState } from "../validation"
@@ -22,7 +23,7 @@ export function SignupForm() {
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4" noValidate>
+    <form action={formAction} className="flex flex-col gap-5" noValidate>
       {state.error ? <FormError>{state.error}</FormError> : null}
 
       <Field label="Email" htmlFor="email" error={fieldErrors.email}>
@@ -38,10 +39,9 @@ export function SignupForm() {
       </Field>
 
       <Field label="Password" htmlFor="password" error={fieldErrors.password}>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
           aria-invalid={Boolean(fieldErrors.password)}
@@ -54,12 +54,11 @@ export function SignupForm() {
         htmlFor="confirmPassword"
         error={fieldErrors.confirmPassword}
       >
-        <Input
+        <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
-          type="password"
           autoComplete="new-password"
-          placeholder="••••••••"
+          placeholder="Repeat password"
           aria-invalid={Boolean(fieldErrors.confirmPassword)}
           aria-describedby={
             fieldErrors.confirmPassword ? "confirmPassword-error" : undefined

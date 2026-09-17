@@ -2,10 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { updateSession, withAuthCookies } from "@/lib/supabase/proxy"
 
-/** Reachable signed out. Everything else in the app requires a session. */
-const publicRoutes = ["/"]
-
-/** Reachable only while signed out. */
+/** Reachable only while signed out. Everything else requires a session. */
 const guestOnlyRoutes = ["/login", "/signup"]
 
 /** Token-exchange handlers manage their own auth and must never be redirected. */
@@ -26,15 +23,15 @@ export async function proxy(request: NextRequest) {
   }
 
   const isGuestOnly = matches(pathname, guestOnlyRoutes)
-  const isPublic = matches(pathname, publicRoutes) || isGuestOnly
 
   // Optimistic redirects only — every page re-verifies through the DAL in
   // src/features/auth/session.ts.
-  if (!claims && !isPublic) {
+  if (!claims && !isGuestOnly) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     url.search = ""
-    url.searchParams.set("next", pathname)
+    // The root lands on the launcher after sign-in anyway; keep its URL clean.
+    if (pathname !== "/") url.searchParams.set("next", pathname)
     return withAuthCookies(NextResponse.redirect(url), response)
   }
 

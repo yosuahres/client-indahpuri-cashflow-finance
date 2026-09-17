@@ -108,7 +108,7 @@ export function TransactionPanel({
       ref={dialogRef}
       onClose={onClose}
       aria-labelledby="transaction-panel-title"
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[42rem] max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto rounded-xl border border-black/10 bg-white p-0 shadow-xl backdrop:bg-black/40"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[42rem] max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto rounded-xl border border-black/10 bg-white p-0 shadow-xl backdrop:bg-scrim/40"
     >
       <form action={formAction} noValidate>
         <input type="hidden" name="id" value={transaction.id} />

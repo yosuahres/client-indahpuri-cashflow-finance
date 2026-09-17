@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 
 import { Toaster } from "@/components/ui/toast";
+import { ThemeSync } from "@/hooks/use-theme";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
 
@@ -29,8 +31,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full overflow-hidden antialiased`}
+      // The inline script below sets data-theme before React hydrates.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex h-full flex-col overflow-hidden bg-white text-black">
+        <ThemeSync />
         {children}
         {/* Reads the URL, so it may not hold up a static page's render. */}
         <Suspense>

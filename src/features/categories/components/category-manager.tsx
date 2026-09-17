@@ -78,7 +78,7 @@ export function CategoryManager({
       ref={dialogRef}
       onClose={onClose}
       aria-labelledby="category-manager-title"
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[32rem] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-black/10 bg-white p-0 shadow-xl backdrop:bg-black/40"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[32rem] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-black/10 bg-white p-0 shadow-xl backdrop:bg-scrim/40"
     >
       <div className="flex items-center gap-3 border-b border-black/8 px-4 py-3.5 sm:px-5">
         <h2 id="category-manager-title" className="flex-1 text-sm font-semibold text-neutral-900">

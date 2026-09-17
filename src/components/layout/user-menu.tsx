@@ -9,6 +9,8 @@ import { cn } from "@/lib/cn"
 import { can, type Permission } from "@/features/auth/permissions"
 import type { Role } from "@/features/auth/roles"
 
+import { ThemeDialog } from "./theme-dialog"
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -52,6 +54,7 @@ export function UserMenu({
   signOut: () => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
+  const [themeOpen, setThemeOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const userInitials = initials(user.name)
 
@@ -115,8 +118,11 @@ export function UserMenu({
             <button
               type="button"
               role="menuitem"
-              aria-disabled
-              title="Not built yet"
+              aria-haspopup="dialog"
+              onClick={() => {
+                setOpen(false)
+                setThemeOpen(true)
+              }}
               className={cn(row, "text-neutral-800 hover:bg-neutral-100")}
             >
               <Palette className="size-4 shrink-0 text-neutral-700" strokeWidth={1.75} />
@@ -149,6 +155,9 @@ export function UserMenu({
           {user.name}
         </span>
       </button>
+
+      {/* Outside the menu, which unmounts as the dialog opens. */}
+      <ThemeDialog open={themeOpen} onClose={() => setThemeOpen(false)} />
     </div>
   )
 }

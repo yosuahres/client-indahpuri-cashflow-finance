@@ -5,6 +5,7 @@ import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Field } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 
 import { login } from "../actions"
 import { FormError } from "./form-message"
@@ -17,7 +18,7 @@ export function LoginForm({ next }: { next: string }) {
   const fieldErrors = state.fieldErrors ?? {}
 
   return (
-    <form action={formAction} className="flex flex-col gap-4" noValidate>
+    <form action={formAction} className="flex flex-col gap-5" noValidate>
       <input type="hidden" name="next" value={next} />
 
       {state.error ? <FormError>{state.error}</FormError> : null}
@@ -35,19 +36,18 @@ export function LoginForm({ next }: { next: string }) {
       </Field>
 
       <Field label="Password" htmlFor="password" error={fieldErrors.password}>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
-          placeholder="••••••••"
+          placeholder="Password"
           aria-invalid={Boolean(fieldErrors.password)}
           aria-describedby={fieldErrors.password ? "password-error" : undefined}
         />
       </Field>
 
       <Button type="submit" disabled={pending} className="mt-2">
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? "Logging in…" : "Login"}
       </Button>
     </form>
   )

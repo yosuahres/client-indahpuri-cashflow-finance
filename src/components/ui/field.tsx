@@ -12,13 +12,13 @@ export function Field({
   children: ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium text-black">
+    <div className="flex flex-col gap-2">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-neutral-900">
         {label}
       </label>
       {children}
       {error ? (
-        <p id={`${htmlFor}-error`} className="text-xs text-black/70">
+        <p id={`${htmlFor}-error`} className="text-xs text-rose-600">
           {error}
         </p>
       ) : null}
