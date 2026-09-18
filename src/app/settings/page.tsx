@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation"
 
-import { requirePermission } from "@/features/auth/session"
+import { can } from "@/features/auth/permissions"
+import { requireUser } from "@/features/auth/session"
 
 export default async function SettingsPage() {
-  await requirePermission("users.manage")
-  redirect("/settings/users")
+  const { permissions } = await requireUser()
+  redirect(can(permissions, "users.manage") ? "/settings/users" : "/settings/account")
 }

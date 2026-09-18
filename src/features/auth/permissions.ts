@@ -101,6 +101,7 @@ const ROUTES: { prefix: string; allowed: (permissions: readonly Permission[]) =>
   { prefix: "/budgets/new", allowed: (p) => can(p, "budgets.manage") },
   { prefix: "/budgets", allowed: (p) => can(p, "budgets.view") },
   { prefix: "/accounts", allowed: (p) => can(p, "accounts.manage") },
+  { prefix: "/settings/account", allowed: () => true },
   { prefix: "/settings", allowed: (p) => can(p, "users.manage") },
 ]
 

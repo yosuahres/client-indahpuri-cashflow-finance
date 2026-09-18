@@ -1,4 +1,5 @@
 import {
+  CircleUserRound,
   KeyRound,
   LayoutDashboard,
   PlusCircle,
@@ -70,9 +71,10 @@ const FINANCE_NAV: ModuleNav = {
   ],
 }
 
-/** Account-wide settings, for whoever manages users. */
+/** Your own account, and for whoever manages users, the team's. */
 const SETTINGS_NAV: ModuleNav = {
   links: [
+    { label: "Account", href: "/settings/account", icon: CircleUserRound },
     { label: "Users", href: "/settings/users", icon: UsersRound },
     { label: "Roles", href: "/settings/roles", icon: ShieldCheck },
     { label: "Permissions", href: "/settings/permissions", icon: KeyRound },

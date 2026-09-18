@@ -3,11 +3,14 @@ import type { ReactNode } from "react"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { SidebarProvider } from "@/components/layout/sidebar-state"
 import { signOut } from "@/features/auth/actions"
-import { requirePermission } from "@/features/auth/session"
+import { requireUser } from "@/features/auth/session"
 
-/** Settings stands apart from the apps: its own sidebar, managers only. */
+/**
+ * Settings stands apart from the apps, with its own sidebar. Everyone may open
+ * their Account; each team page checks `users.manage` itself.
+ */
 export default async function SettingsLayout({ children }: { children: ReactNode }) {
-  const { name, email, role, roleName, permissions } = await requirePermission("users.manage")
+  const { name, email, role, roleName, permissions } = await requireUser()
 
   return (
     <SidebarProvider>

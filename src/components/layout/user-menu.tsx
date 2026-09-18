@@ -6,7 +6,7 @@ import { useFormStatus } from "react-dom"
 import { LogOut, Palette, Settings } from "lucide-react"
 
 import { cn } from "@/lib/cn"
-import { can, type Permission } from "@/features/auth/permissions"
+import type { Permission } from "@/features/auth/permissions"
 import type { Role } from "@/features/auth/roles"
 
 import { ThemeDialog } from "./theme-dialog"
@@ -104,9 +104,10 @@ export function UserMenu({
           </div>
 
           <div className="p-1">
-            {can(user.permissions, "users.manage") ? (
+            {/* Everyone has an Account page; managers land on Users instead. */}
+            {user.role ? (
               <Link
-                href="/settings/users"
+                href="/settings"
                 role="menuitem"
                 onClick={() => setOpen(false)}
                 className={cn(row, "text-neutral-800 hover:bg-neutral-100")}
