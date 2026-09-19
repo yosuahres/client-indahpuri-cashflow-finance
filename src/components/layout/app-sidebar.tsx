@@ -3,33 +3,31 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { ArrowLeft, ChevronDown, ChevronRight, ChevronsUpDown, X } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronRight, X } from "lucide-react"
 
 import { cn } from "@/lib/cn"
 import type { Permission } from "@/features/auth/permissions"
 import type { Role } from "@/features/auth/roles"
 
-import { navFor, type NavGroup, type NavLink, type SidebarArea } from "./nav-config"
+import { ModuleSwitcher } from "./module-switcher"
+import { activeHref, navFor, type NavGroup, type NavLink, type SidebarArea } from "./nav-config"
 import { useSidebar } from "./sidebar-state"
 import { UserMenu } from "./user-menu"
 
-function NavLinks({ links }: { links: NavLink[] }) {
-  const pathname = usePathname()
-
+function NavLinks({ links, active }: { links: NavLink[]; active: string | null }) {
   return (
     <ul className="mb-1">
       {links.map((link) => {
-        const active = pathname === link.href || pathname.startsWith(`${link.href}/`)
         const Icon = link.icon
 
         return (
           <li key={link.href}>
             <Link
               href={link.href}
-              aria-current={active ? "page" : undefined}
+              aria-current={active === link.href ? "page" : undefined}
               className={cn(
                 "flex items-center gap-2.5 rounded-md px-2 py-2 text-sm sm:py-1.5",
-                active
+                active === link.href
                   ? "bg-white font-medium text-neutral-900 shadow-sm ring-1 ring-black/5"
                   : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900",
               )}
@@ -44,9 +42,8 @@ function NavLinks({ links }: { links: NavLink[] }) {
   )
 }
 
-function NavGroupBlock({ group }: { group: NavGroup }) {
+function NavGroupBlock({ group, active }: { group: NavGroup; active: string | null }) {
   const [open, setOpen] = useState(group.defaultOpen)
-  const pathname = usePathname()
   const Icon = group.icon
   const Chevron = open ? ChevronDown : ChevronRight
 
@@ -66,17 +63,17 @@ function NavGroupBlock({ group }: { group: NavGroup }) {
       {open ? (
         <ul className="mt-0.5">
           {group.items.map((item) => {
-            const active = item.href ? pathname === item.href : false
+            const current = Boolean(item.href) && item.href === active
 
             return (
               <li key={item.label}>
                 {item.href ? (
                   <Link
                     href={item.href}
-                    aria-current={active ? "page" : undefined}
+                    aria-current={current ? "page" : undefined}
                     className={cn(
                       "block truncate rounded-md py-2 pr-2 pl-8 text-sm sm:py-1.5",
-                      active
+                      current
                         ? "bg-white font-medium text-neutral-900 shadow-sm ring-1 ring-black/5"
                         : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900",
                     )}
@@ -122,31 +119,23 @@ function SidebarBody({
   onClose?: () => void
 }) {
   const nav = navFor(module, user.role, user.permissions)
+  const active = activeHref(nav, usePathname())
 
   return (
     <>
-      {/* Workspace, or the Settings title */}
+      {/* App switcher, or the Settings title */}
       <div className="flex items-center gap-1 p-3">
         {module === "settings" ? (
           <p className="min-w-0 flex-1 truncate px-2 py-1.5 text-base font-semibold text-neutral-900">
             Settings
           </p>
         ) : (
-          <button
-            type="button"
-            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100"
-          >
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-600 text-sm font-bold text-white">
-              IP
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold text-neutral-900">
-                Indah Puri
-              </span>
-              <span className="block truncate text-xs text-neutral-500">Cash Flow</span>
-            </span>
-            <ChevronsUpDown className="size-4 shrink-0 text-neutral-400" strokeWidth={2} />
-          </button>
+          <ModuleSwitcher
+            current={module}
+            role={user.role}
+            permissions={user.permissions}
+            signOut={signOut}
+          />
         )}
 
         {onClose ? (
@@ -163,9 +152,9 @@ function SidebarBody({
 
       {/* Report navigation */}
       <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-        <NavLinks links={nav.links} />
+        <NavLinks links={nav.links} active={active} />
         {nav.groups.map((group) => (
-          <NavGroupBlock key={group.label} group={group} />
+          <NavGroupBlock key={group.label} group={group} active={active} />
         ))}
       </nav>
 
