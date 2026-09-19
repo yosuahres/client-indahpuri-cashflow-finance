@@ -17,6 +17,11 @@ const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 
 const pad = (value: number) => String(value).padStart(2, "0")
 
+/** Native `<select>` so the month and year wheels stay usable on a phone. */
+const selectClass =
+  "cursor-pointer rounded-md bg-transparent py-0.5 text-center text-sm font-semibold text-neutral-900 " +
+  "hover:bg-neutral-100 focus:outline-2 focus:outline-offset-0 focus:outline-neutral-800"
+
 export const toISO = (year: number, month: number, day: number) =>
   `${year}-${pad(month + 1)}-${pad(day)}`
 
@@ -55,6 +60,20 @@ function addMonths(value: string, delta: number) {
   const day = Math.min(parsed.day, daysInMonth(parsed.year, parsed.month + delta))
   const date = new Date(Date.UTC(parsed.year, parsed.month + delta, day))
   return toISO(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+}
+
+/** Jumps to a month and year, keeping the day where it fits. */
+function withMonthYear(value: string, month: number, year: number) {
+  const parsed = parseISO(value)
+  if (!parsed) return value
+  return toISO(year, month, Math.min(parsed.day, daysInMonth(year, month)))
+}
+
+/** Years offered in the picker: far enough back for a date of birth. */
+function yearRange(todayYear: number, cursorYear: number) {
+  const from = Math.min(todayYear - 100, cursorYear)
+  const to = Math.max(todayYear + 10, cursorYear)
+  return Array.from({ length: to - from + 1 }, (_, index) => from + index)
 }
 
 export function DatePicker({
@@ -115,6 +134,10 @@ export function DatePicker({
   // Moving focus is a DOM concern, so it stays in an effect.
   useEffect(() => {
     if (!open) return
+    // Leave the month and year dropdowns alone: jumping to a day after every
+    // change would yank focus out of the control being used.
+    const active = document.activeElement
+    if (active && popupRef.current?.contains(active) && !gridRef.current?.contains(active)) return
     gridRef.current?.querySelector<HTMLButtonElement>('[data-focused="true"]')?.focus()
   }, [open, focused])
 
@@ -147,6 +170,7 @@ export function DatePicker({
 
   const total = daysInMonth(cursor.year, cursor.month)
   const leading = firstWeekday(cursor.year, cursor.month)
+  const years = yearRange(parseISO(today)?.year ?? cursor.year, cursor.year)
 
   return (
     <div ref={rootRef} className="relative">
@@ -189,9 +213,36 @@ export function DatePicker({
             >
               <ChevronLeft className="size-4" strokeWidth={2} />
             </button>
-            <span aria-live="polite" className="flex-1 text-center text-sm font-semibold text-neutral-900">
-              {MONTHS[cursor.month]} {cursor.year}
-            </span>
+            <div className="flex flex-1 items-center justify-center gap-1">
+              <select
+                aria-label="Month"
+                value={cursor.month}
+                onChange={(event) =>
+                  setFocused((current) => withMonthYear(current, Number(event.target.value), cursor.year))
+                }
+                className={selectClass}
+              >
+                {MONTHS.map((month, index) => (
+                  <option key={month} value={index}>
+                    {month}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Year"
+                value={cursor.year}
+                onChange={(event) =>
+                  setFocused((current) => withMonthYear(current, cursor.month, Number(event.target.value)))
+                }
+                className={selectClass}
+              >
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
               aria-label="Next month"
