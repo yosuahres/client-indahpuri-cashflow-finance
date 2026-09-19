@@ -23,7 +23,7 @@ export async function getSiteUrl() {
  * Only allow redirects to paths inside this app — never to an attacker
  * supplied absolute URL.
  */
-export function safeRedirectPath(value: string | null | undefined, fallback = "/dashboard") {
+export function safeRedirectPath(value: string | null | undefined, fallback = "/") {
   if (!value) return fallback
   if (!value.startsWith("/") || value.startsWith("//")) return fallback
   // Browsers read `\` as `/`, so `/\evil.com` is `//evil.com` by the time it

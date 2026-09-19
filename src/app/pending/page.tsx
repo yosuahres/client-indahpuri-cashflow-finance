@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function PendingPage() {
   const user = await getUser()
   if (!user) redirect("/login")
-  if (user.role) redirect("/dashboard")
+  if (user.role) redirect("/")
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-white px-4 py-12">

@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
 
   if (claims && isGuestOnly) {
     const url = request.nextUrl.clone()
-    url.pathname = "/dashboard"
+    url.pathname = "/"
     url.search = ""
     return withAuthCookies(NextResponse.redirect(url), response)
   }

@@ -53,7 +53,7 @@ export async function signup(
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/dashboard` },
+    options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/` },
   })
 
   if (error) {
@@ -80,7 +80,7 @@ export async function signup(
 
   // Email confirmation is disabled on the project — the user is already signed in.
   refresh()
-  redirect("/dashboard")
+  redirect("/")
 }
 
 export async function signOut() {
