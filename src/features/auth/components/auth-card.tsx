@@ -14,23 +14,23 @@ export function AuthCard({
   footer: { prompt: string; href: string; label: string }
 }) {
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-6 flex items-center justify-center gap-3">
-        <span className="grid size-9 place-items-center rounded-lg bg-neutral-900 text-white">
-          <GalleryVerticalEnd className="size-5" strokeWidth={1.75} />
+    <div className="w-full max-w-sm">
+      <div className="mb-5 flex items-center justify-center gap-2.5">
+        <span className="grid size-8 place-items-center rounded-lg bg-neutral-900 text-white">
+          <GalleryVerticalEnd className="size-4.5" strokeWidth={1.75} />
         </span>
-        <span className="text-xl font-medium text-neutral-900">Indah Puri CashFlow</span>
+        <span className="text-base font-medium text-neutral-900">Indah Puri CashFlow</span>
       </div>
 
-      <div className="rounded-2xl border border-black/8 bg-white px-6 py-8 shadow-sm sm:px-8 sm:py-10">
+      <div className="rounded-2xl border border-black/8 bg-white px-6 py-7 shadow-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">{title}</h1>
-          <p className="mt-1.5 text-sm text-neutral-500 sm:text-base">{subtitle}</p>
+          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">{title}</h1>
+          <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>
         </div>
-        <div className="mt-8">{children}</div>
+        <div className="mt-6">{children}</div>
       </div>
 
-      <p className="mt-6 text-center text-sm text-neutral-500">
+      <p className="mt-5 text-center text-sm text-neutral-500">
         {footer.prompt}{" "}
         <Link
           href={footer.href}

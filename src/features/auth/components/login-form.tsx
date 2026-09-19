@@ -18,7 +18,7 @@ export function LoginForm({ next }: { next: string }) {
   const fieldErrors = state.fieldErrors ?? {}
 
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
+    <form action={formAction} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="next" value={next} />
 
       {state.error ? <FormError>{state.error}</FormError> : null}
@@ -46,7 +46,7 @@ export function LoginForm({ next }: { next: string }) {
         />
       </Field>
 
-      <Button type="submit" disabled={pending} className="mt-2">
+      <Button type="submit" disabled={pending} className="mt-1 h-10 sm:text-sm">
         {pending ? "Logging in…" : "Login"}
       </Button>
     </form>

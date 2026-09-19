@@ -23,7 +23,7 @@ export function SignupForm() {
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
+    <form action={formAction} className="flex flex-col gap-4" noValidate>
       {state.error ? <FormError>{state.error}</FormError> : null}
 
       <Field label="Email" htmlFor="email" error={fieldErrors.email}>
@@ -66,7 +66,7 @@ export function SignupForm() {
         />
       </Field>
 
-      <Button type="submit" disabled={pending} className="mt-2">
+      <Button type="submit" disabled={pending} className="mt-1 h-10 sm:text-sm">
         {pending ? "Creating account…" : "Create account"}
       </Button>
     </form>
