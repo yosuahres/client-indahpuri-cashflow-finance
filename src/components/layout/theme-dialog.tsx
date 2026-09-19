@@ -29,15 +29,15 @@ const DARK = {
 
 function WindowPreview({ tone }: { tone: typeof LIGHT }) {
   return (
-    <div className={cn("flex size-full flex-col gap-3 p-4", tone.surface)}>
-      <div className="flex items-center gap-1.5">
-        <span className={cn("h-2 w-6 rounded-full", tone.pill)} />
-        <span className={cn("h-2 w-3 rounded-full", tone.pill)} />
-        <span className={cn("ml-auto size-3.5 rounded-full", tone.dot)} />
+    <div className={cn("flex size-full flex-col gap-2 p-2.5", tone.surface)}>
+      <div className="flex items-center gap-1">
+        <span className={cn("h-1.5 w-4 rounded-full", tone.pill)} />
+        <span className={cn("h-1.5 w-2 rounded-full", tone.pill)} />
+        <span className={cn("ml-auto size-2.5 rounded-full", tone.dot)} />
       </div>
-      <div className={cn("flex flex-1 flex-col gap-1.5 rounded-lg p-2.5", tone.card)}>
-        <span className={cn("h-1.5 w-3/4 rounded-full", tone.line)} />
-        <span className={cn("h-1.5 w-1/2 rounded-full", tone.line)} />
+      <div className={cn("flex flex-1 flex-col gap-1 rounded-md p-1.5", tone.card)}>
+        <span className={cn("h-1 w-3/4 rounded-full", tone.line)} />
+        <span className={cn("h-1 w-1/2 rounded-full", tone.line)} />
       </div>
     </div>
   )
@@ -46,13 +46,13 @@ function WindowPreview({ tone }: { tone: typeof LIGHT }) {
 function SystemPreview() {
   return (
     <div className="grid size-full grid-cols-2">
-      <div className={cn("flex flex-col gap-3 py-4 pl-4 pr-3", LIGHT.surface)}>
-        <span className={cn("h-2 w-6 rounded-full", LIGHT.pill)} />
-        <span className={cn("flex-1 rounded-lg", LIGHT.card)} />
+      <div className={cn("flex flex-col gap-2 py-2.5 pl-2.5 pr-1.5", LIGHT.surface)}>
+        <span className={cn("h-1.5 w-4 rounded-full", LIGHT.pill)} />
+        <span className={cn("flex-1 rounded-md", LIGHT.card)} />
       </div>
-      <div className={cn("flex flex-col gap-3 py-4 pr-4 pl-3", DARK.surface)}>
-        <span className={cn("ml-auto h-2 w-6 rounded-full", DARK.pill)} />
-        <span className={cn("flex-1 rounded-lg", DARK.card)} />
+      <div className={cn("flex flex-col gap-2 py-2.5 pr-2.5 pl-1.5", DARK.surface)}>
+        <span className={cn("ml-auto h-1.5 w-4 rounded-full", DARK.pill)} />
+        <span className={cn("flex-1 rounded-md", DARK.card)} />
       </div>
     </div>
   )
@@ -92,24 +92,24 @@ export function ThemeDialog({ open, onClose }: { open: boolean; onClose: () => v
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
-      className="m-auto w-[40rem] max-w-[calc(100vw-2rem)] rounded-3xl border border-black/10 bg-white p-0 text-neutral-900 shadow-2xl backdrop:bg-scrim/40"
+      className="m-auto w-[25rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-black/10 bg-white p-0 text-neutral-900 shadow-2xl backdrop:bg-scrim/40"
     >
-      <div className="p-6 sm:p-8">
-        <div className="mb-6 flex items-center gap-3">
-          <h2 id="theme-dialog-title" className="flex-1 text-xl font-semibold sm:text-2xl">
+      <div className="p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <h2 id="theme-dialog-title" className="flex-1 text-base font-semibold">
             Switch Theme
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="grid size-9 cursor-pointer place-items-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+            className="grid size-8 cursor-pointer place-items-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
           >
-            <X className="size-5" strokeWidth={1.75} />
+            <X className="size-4" strokeWidth={1.75} />
           </button>
         </div>
 
-        <div role="radiogroup" aria-label="Theme" className="grid grid-cols-3 gap-3 sm:gap-6">
+        <div role="radiogroup" aria-label="Theme" className="grid grid-cols-3 gap-3">
           {OPTIONS.map(({ value, label, preview }) => {
             const selected = theme === value
             return (
@@ -119,11 +119,11 @@ export function ThemeDialog({ open, onClose }: { open: boolean; onClose: () => v
                 role="radio"
                 aria-checked={selected}
                 onClick={() => setTheme(value)}
-                className="group flex cursor-pointer flex-col items-center gap-3 outline-none"
+                className="group flex cursor-pointer flex-col items-center gap-2 outline-none"
               >
                 <span
                   className={cn(
-                    "block aspect-[4/3] w-full overflow-hidden rounded-xl border-4 transition-colors",
+                    "block aspect-[4/3] w-full overflow-hidden rounded-lg border-2 transition-colors",
                     selected
                       ? "border-neutral-900"
                       : "border-neutral-200 group-hover:border-neutral-300",
@@ -132,11 +132,11 @@ export function ThemeDialog({ open, onClose }: { open: boolean; onClose: () => v
                 >
                   {preview}
                 </span>
-                <span className="flex items-center gap-2 text-sm font-medium sm:text-base">
+                <span className="flex items-center gap-1.5 text-sm font-medium">
                   {label}
                   {selected ? (
-                    <span className="grid size-5 place-items-center rounded-full bg-neutral-900 text-white">
-                      <Check className="size-3" strokeWidth={3} />
+                    <span className="grid size-4 place-items-center rounded-full bg-neutral-900 text-white">
+                      <Check className="size-2.5" strokeWidth={3} />
                     </span>
                   ) : null}
                 </span>
