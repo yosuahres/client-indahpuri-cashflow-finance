@@ -42,6 +42,7 @@ export function TransactionPanel({
   accounts,
   today,
   onClose,
+  editableKinds,
   canManageCategories,
   canCreateAccounts,
 }: {
@@ -51,6 +52,8 @@ export function TransactionPanel({
   /** Caps the date picker, computed on the server so it survives hydration. */
   today: string
   onClose: () => void
+  /** The kinds this user may enter; the Type picker offers no others. */
+  editableKinds: readonly TransactionKind[]
   canManageCategories: boolean
   canCreateAccounts: boolean
 }) {
@@ -171,7 +174,9 @@ export function TransactionPanel({
                 // Categories belong to one direction, so the old pick is gone.
                 setCategory("")
               }}
-              options={TRANSACTION_KINDS.map((entry) => ({ value: entry.value, label: entry.label }))}
+              options={TRANSACTION_KINDS.filter((entry) =>
+                editableKinds.some((allowed) => allowed === entry.value),
+              ).map((entry) => ({ value: entry.value, label: entry.label }))}
               invalid={Boolean(errors.kind)}
             />
           </Field>

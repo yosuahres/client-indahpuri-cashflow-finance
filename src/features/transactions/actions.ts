@@ -5,7 +5,7 @@ import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
 import { requirePermission, requireUser } from "@/features/auth/session"
-import { entryKinds } from "@/features/auth/permissions"
+import { editableKinds, entryKinds } from "@/features/auth/permissions"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { flash } from "@/lib/flash"
 import {
@@ -85,6 +85,17 @@ export async function createTransaction(
   redirect("/dashboard")
 }
 
+const NOT_YOURS = "You may only change transactions of a kind you can enter."
+
+/**
+ * The kinds the caller may change, and the rows they are about to change. A
+ * row of the other kind is not theirs to touch, whichever way the edit goes.
+ */
+async function allowedKinds() {
+  const user = await requirePermission("transactions.edit")
+  return editableKinds(user.permissions)
+}
+
 /**
  * Saves an edit made in the detail panel. Row level security lets only managers
  * change a row, so for anyone else the id matches nothing and comes back as
@@ -96,13 +107,28 @@ export async function updateTransaction(
 ): Promise<FormState> {
   const id = String(formData.get("id") ?? "").trim()
   if (!id) return { error: "That transaction is no longer open." }
-  await requirePermission("transactions.edit")
+  const kinds = await allowedKinds()
 
   const input = readTransaction(formData)
   const fieldErrors = validateTransaction(input)
   if (hasFieldErrors(fieldErrors)) return { fieldErrors }
 
   const supabase = await createClient()
+
+  // Both ends of the edit: the row as it stands, and what it would become.
+  const { data: current } = await supabase
+    .from("transactions")
+    .select("kind")
+    .eq("id", id)
+    .maybeSingle()
+  if (!current) {
+    return { error: "That transaction no longer exists — it may have been deleted." }
+  }
+  if (!kinds.some((kind) => kind === current.kind) ||
+    !kinds.some((kind) => kind === input.kind)) {
+    return { error: NOT_YOURS }
+  }
+
   const { data, error } = await supabase
     .from("transactions")
     .update({
@@ -140,9 +166,17 @@ export type PaidResult = { ok: boolean; error?: string }
  */
 export async function setTransactionPaid(id: string, paid: boolean): Promise<PaidResult> {
   if (!id) return { ok: false, error: "That transaction is no longer open." }
-  await requirePermission("transactions.edit")
+  const kinds = await allowedKinds()
 
   const supabase = await createClient()
+
+  const { data: current } = await supabase
+    .from("transactions")
+    .select("kind")
+    .eq("id", id)
+    .maybeSingle()
+  if (!current) return { ok: false, error: "That transaction no longer exists." }
+  if (!kinds.some((kind) => kind === current.kind)) return { ok: false, error: NOT_YOURS }
   const { data, error } = await supabase
     .from("transactions")
     .update({ paid })
@@ -172,9 +206,16 @@ export type DeleteResult = { ok: boolean; error?: string; deleted: number }
 export async function deleteTransactions(ids: string[]): Promise<DeleteResult> {
   const unique = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))]
   if (unique.length === 0) return { ok: false, error: "Nothing selected.", deleted: 0 }
-  await requirePermission("transactions.edit")
+  const kinds = await allowedKinds()
 
   const supabase = await createClient()
+
+  // All or nothing: a selection reaching across kinds is a mistake, not a
+  // request to delete half of it.
+  const { data: rows } = await supabase.from("transactions").select("kind").in("id", unique)
+  if (rows?.some((row) => !kinds.some((kind) => kind === row.kind))) {
+    return { ok: false, error: NOT_YOURS, deleted: 0 }
+  }
   const { data, error } = await supabase
     .from("transactions")
     .delete()

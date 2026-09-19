@@ -9,7 +9,7 @@ import { ReportFilters } from "@/components/report/report-filters"
 import { TransactionTable } from "@/components/report/transaction-table"
 import { readReportRange } from "@/features/reports/range"
 import { loadProfitAndLossReport } from "@/features/profit-and-loss/report"
-import { can } from "@/features/auth/permissions"
+import { can, editableKinds } from "@/features/auth/permissions"
 import { requirePermission, requireUser } from "@/features/auth/session"
 
 export const metadata: Metadata = {
@@ -68,7 +68,7 @@ async function Ledger({ range }: { range: ReturnType<typeof readReportRange> }) 
           categories={categories.categories}
           accounts={accounts.accounts}
           today={range.today}
-          canEdit={can(permissions, "transactions.edit")}
+          editableKinds={editableKinds(permissions)}
           canManageCategories={can(permissions, "categories.manage")}
           canCreateAccounts={can(permissions, "accounts.manage")}
         />

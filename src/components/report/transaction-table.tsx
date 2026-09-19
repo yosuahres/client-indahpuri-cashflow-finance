@@ -12,7 +12,7 @@ import { TransactionPanel } from "@/features/transactions/components/transaction
 import { useWindowedRows } from "@/hooks/use-windowed-rows"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
-import { INCOME_PAYMENT_STATUSES, PAYMENT_STATUSES } from "@/lib/finance"
+import { INCOME_PAYMENT_STATUSES, PAYMENT_STATUSES, type TransactionKind } from "@/lib/finance"
 import { formatCurrency, formatDate } from "@/lib/format"
 import type { TransactionDetail } from "./types"
 
@@ -50,7 +50,7 @@ export function TransactionTable({
   categories,
   accounts,
   today,
-  canEdit,
+  editableKinds,
   canManageCategories,
   canCreateAccounts,
 }: {
@@ -61,8 +61,11 @@ export function TransactionTable({
   categories: Category[]
   accounts: Account[]
   today: string
-  /** Opening, settling, ticking and deleting rows; without it the ledger only reads. */
-  canEdit: boolean
+  /**
+   * The kinds this user may open, settle, tick and delete. Rows of any other
+   * kind only read — an income clerk leaves the expenses alone.
+   */
+  editableKinds: readonly TransactionKind[]
   canManageCategories: boolean
   canCreateAccounts: boolean
 }) {
@@ -115,15 +118,24 @@ export function TransactionTable({
 
   // A delete or a filter change can retire an id while it is still ticked, so
   // the live selection is derived from what the table actually holds.
-  const picked = useMemo(
-    () => transactions.filter((entry) => selected.has(entry.id)).map((entry) => entry.id),
-    [transactions, selected],
+  const canChange = useCallback(
+    (entry: TransactionDetail) => editableKinds.some((kind) => kind === entry.kind),
+    [editableKinds],
   )
-  const allPicked = picked.length > 0 && picked.length === transactions.length
+
+  const picked = useMemo(
+    () =>
+      transactions
+        .filter((entry) => selected.has(entry.id) && canChange(entry))
+        .map((entry) => entry.id),
+    [transactions, selected, canChange],
+  )
+  const editable = useMemo(() => transactions.filter(canChange), [transactions, canChange])
+  const allPicked = picked.length > 0 && picked.length === editable.length
 
   // Looked up rather than held: a refresh replaces every row object, and a
   // deleted row must take its own panel down with it.
-  const open = transactions.find((entry) => entry.id === openId) ?? null
+  const open = transactions.find((entry) => entry.id === openId && canChange(entry)) ?? null
 
   // Only a long ledger is windowed; below the threshold this stays null and
   // every row is rendered. Note what is *not* windowed: the net total, the
@@ -211,103 +223,108 @@ export function TransactionTable({
               </tr>
             ) : null}
 
-            {rows.map((entry) => (
-              <tr
-                key={entry.id}
-                onClick={canEdit ? () => setOpenId(entry.id) : undefined}
-                style={windowed ? { height: ROW_HEIGHT } : undefined}
-                className={cn(
-                  "border-t border-black/5",
-                  canEdit && "cursor-pointer",
-                  // A windowed row must be exactly the height the spacers
-                  // assume, so its cells may not wrap onto a second line.
-                  windowed && "[&>td]:truncate [&>td]:whitespace-nowrap",
-                  selected.has(entry.id) ? "bg-neutral-100" : "hover:bg-neutral-50/70",
-                )}
-              >
-                {/* Ticking a row is not opening it, so the box keeps the click. */}
-                <td
-                  onClick={(event) => event.stopPropagation()}
+            {rows.map((entry) => {
+              const canEdit = canChange(entry)
+
+              return (
+                <tr
+                  key={entry.id}
+                  onClick={canEdit ? () => setOpenId(entry.id) : undefined}
+                  style={windowed ? { height: ROW_HEIGHT } : undefined}
                   className={cn(
-                    stickyGutter,
-                    "px-2 py-2.5 text-center sm:px-3",
-                    selected.has(entry.id) ? "bg-neutral-100" : "bg-white",
+                    "border-t border-black/5",
+                    canEdit && "cursor-pointer",
+                    // A windowed row must be exactly the height the spacers
+                    // assume, so its cells may not wrap onto a second line.
+                    windowed && "[&>td]:truncate [&>td]:whitespace-nowrap",
+                    selected.has(entry.id) ? "bg-neutral-100" : "hover:bg-neutral-50/70",
                   )}
                 >
-                  {canEdit ? (
-                    <input
-                      type="checkbox"
-                      className={checkbox}
-                      checked={selected.has(entry.id)}
-                      disabled={pending}
-                      onChange={() => toggle(entry.id)}
-                      aria-label={`Select ${formatDate(entry.occurredOn)}, ${entry.category}, ${formatCurrency(entry.amount)}`}
-                    />
-                  ) : null}
-                </td>
-                <td
-                  className={cn(
-                    stickyDate,
-                    "px-3 py-2.5 whitespace-nowrap text-neutral-700",
-                    selected.has(entry.id) ? "bg-neutral-100" : "bg-white",
-                  )}
-                >
-                  {/* A row is not focusable, so the real control lives here —
-                      the same panel, reachable by keyboard. */}
-                  {canEdit ? (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        setOpenId(entry.id)
-                      }}
-                      className="rounded-sm underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-neutral-800"
-                    >
-                      {formatDate(entry.occurredOn)}
-                      <span className="sr-only">
-                        {` — open ${entry.category}, ${formatCurrency(entry.amount)}`}
-                      </span>
-                    </button>
-                  ) : (
-                    formatDate(entry.occurredOn)
-                  )}
-                </td>
-                <td className="px-3 py-2.5 text-neutral-900">{entry.category}</td>
-                {/* The name alone repeats across banks, so the bank behind it
-                    rides along in the muted half of the cell. */}
-                <td className="px-3 py-2.5 text-neutral-700">
-                  {entry.account}
-                  {entry.accountIssuer ? (
-                    <span className="text-neutral-500"> · {entry.accountIssuer}</span>
-                  ) : null}
-                </td>
-                <td className="px-3 py-2.5 text-neutral-700">
-                  {entry.party || <span className="text-neutral-400">—</span>}
-                </td>
-                <td className="px-3 py-2.5 capitalize text-neutral-700">{entry.kind}</td>
-                <StatusCell
-                  entry={
-                    paidOverrides.has(entry.id)
-                      ? { ...entry, paid: paidOverrides.get(entry.id)! }
-                      : entry
-                  }
-                  onChange={(paid) => flipPaid(entry.id, paid)}
-                  disabled={pending}
-                  readOnly={!canEdit}
-                />
-                <td
-                  className={cn(
-                    amountCell,
-                    "tabular-nums",
-                    entry.kind === "expense" ? "text-rose-600" : "text-neutral-900",
-                  )}
-                >
-                  {formatCurrency(entry.amount)}
-                </td>
-              </tr>
-            ))}
+                  {/* Ticking a row is not opening it, so the box keeps the click. */}
+                  <td
+                    onClick={(event) => event.stopPropagation()}
+                    className={cn(
+                      stickyGutter,
+                      "px-2 py-2.5 text-center sm:px-3",
+                      selected.has(entry.id) ? "bg-neutral-100" : "bg-white",
+                    )}
+                  >
+                    {canEdit ? (
+                      <input
+                        type="checkbox"
+                        className={checkbox}
+                        checked={selected.has(entry.id)}
+                        disabled={pending}
+                        onChange={() => toggle(entry.id)}
+                        aria-label={`Select ${formatDate(entry.occurredOn)}, ${entry.category}, ${formatCurrency(entry.amount)}`}
+                      />
+                    ) : null}
+                  </td>
+                  <td
+                    className={cn(
+                      stickyDate,
+                      "px-3 py-2.5 whitespace-nowrap text-neutral-700",
+                      selected.has(entry.id) ? "bg-neutral-100" : "bg-white",
+                    )}
+                  >
+                    {/* A row is not focusable, so the real control lives here —
+                        the same panel, reachable by keyboard. */}
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setOpenId(entry.id)
+                        }}
+                        className="rounded-sm underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-neutral-800"
+                      >
+                        {formatDate(entry.occurredOn)}
+                        <span className="sr-only">
+                          {` — open ${entry.category}, ${formatCurrency(entry.amount)}`}
+                        </span>
+                      </button>
+                    ) : (
+                      formatDate(entry.occurredOn)
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-neutral-900">{entry.category}</td>
+                  {/* The name alone repeats across banks, so the bank behind it
+                      rides along in the muted half of the cell. */}
+                  <td className="px-3 py-2.5 text-neutral-700">
+                    {entry.account}
+                    {entry.accountIssuer ? (
+                      <span className="text-neutral-500"> · {entry.accountIssuer}</span>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2.5 text-neutral-700">
+                    {entry.party || <span className="text-neutral-400">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 capitalize text-neutral-700">{entry.kind}</td>
+                  <StatusCell
+                    entry={
+                      paidOverrides.has(entry.id)
+                        ? { ...entry, paid: paidOverrides.get(entry.id)! }
+                        : entry
+                    }
+                    onChange={(paid) => flipPaid(entry.id, paid)}
+                    disabled={pending}
+                    readOnly={!canEdit}
+                  />
+                  <td
+                    className={cn(
+                      amountCell,
+                      "tabular-nums",
+                      entry.kind === "expense" ? "text-rose-600" : "text-neutral-900",
+                    )}
+                  >
+                    {formatCurrency(entry.amount)}
+                  </td>
+                </tr>
+              )
+            })}
 
             {windowed && windowed.padBottom > 0 ? (
+
               <tr aria-hidden>
                 <td colSpan={8} className="p-0" style={{ height: windowed.padBottom }} />
               </tr>
@@ -386,7 +403,7 @@ export function TransactionTable({
                 <span aria-hidden className="mx-1 h-4 w-px bg-white/25" />
                 <button
                   type="button"
-                  onClick={() => setSelected(new Set(transactions.map((entry) => entry.id)))}
+                  onClick={() => setSelected(new Set(editable.map((entry) => entry.id)))}
                   disabled={pending || allPicked}
                   className={pillButton}
                 >
@@ -425,6 +442,7 @@ export function TransactionTable({
           accounts={accounts}
           today={today}
           onClose={closePanel}
+          editableKinds={editableKinds}
           canManageCategories={canManageCategories}
           canCreateAccounts={canCreateAccounts}
         />
