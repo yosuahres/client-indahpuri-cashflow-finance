@@ -40,6 +40,23 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    key: "hris",
+    label: "HRIS",
+    permissions: [
+      { key: "employees.manage", label: "Manage employees" },
+      { key: "departments.manage", label: "Manage departments" },
+    ],
+  },
+  {
+    key: "shift",
+    label: "Shift & Attendance",
+    permissions: [
+      // Shifts are set up by whoever takes the roll, so they ride on this one.
+      { key: "attendance.manage", label: "Record attendance and set up shifts" },
+      { key: "leave.manage", label: "Record and decide leave" },
+    ],
+  },
+  {
     key: "users",
     label: "User management",
     permissions: [{ key: "users.manage", label: "Manage users, roles and permissions" }],
@@ -83,6 +100,15 @@ export function can(permissions: readonly Permission[], permission: Permission):
 }
 
 /** The kinds of transaction someone may enter, in the order the form offers them. */
+/**
+ * The kinds someone may change on the ledger. Editing, settling and deleting
+ * follow what they may enter: income-only staff leave expenses alone, and the
+ * other way round.
+ */
+export function editableKinds(permissions: readonly Permission[]): TransactionKind[] {
+  return can(permissions, "transactions.edit") ? entryKinds(permissions) : []
+}
+
 export function entryKinds(permissions: readonly Permission[]): TransactionKind[] {
   const kinds: TransactionKind[] = []
   if (can(permissions, "transactions.income")) kinds.push("income")
@@ -101,9 +127,24 @@ const ROUTES: { prefix: string; allowed: (permissions: readonly Permission[]) =>
   { prefix: "/budgets/new", allowed: (p) => can(p, "budgets.manage") },
   { prefix: "/budgets", allowed: (p) => can(p, "budgets.view") },
   { prefix: "/accounts", allowed: (p) => can(p, "accounts.manage") },
+  { prefix: "/hris/dashboard", allowed: (p) => can(p, "employees.manage") },
+  { prefix: "/hris/employees", allowed: (p) => can(p, "employees.manage") },
+  { prefix: "/hris/departments", allowed: (p) => can(p, "departments.manage") },
+  { prefix: "/hris/attendance", allowed: (p) => can(p, "attendance.manage") },
+  { prefix: "/hris/leave", allowed: (p) => can(p, "leave.manage") },
   { prefix: "/settings/account", allowed: () => true },
   { prefix: "/settings", allowed: (p) => can(p, "users.manage") },
 ]
+
+/**
+ * Does this page ask for a permission at all? A dashboard does not — it is open
+ * to anyone with a role — which is why having nothing but a dashboard in an app
+ * counts as having no business in it.
+ */
+export function isGated(href: string): boolean {
+  const path = href.split("?")[0]
+  return ROUTES.some(({ prefix }) => path === prefix || path.startsWith(`${prefix}/`))
+}
 
 export function canVisit(role: Role | null, permissions: readonly Permission[], href: string): boolean {
   if (!role) return false

@@ -3,15 +3,15 @@
 --
 -- Until now a manager could do everything and an admin could only read the
 -- Dashboard and the Laporan Keuangan. That split is now the starting grid; a
--- user manager changes it from the app. Every write the books accept is
--- checked against this grid, so the app hiding a button is never the
+-- user manager changes it from the app. Every write the books and HR tables
+-- accept is checked against this grid, so the app hiding a button is never the
 -- only thing standing in the way.
 --
 -- A dashboard is open to anyone with a role; everything past it is a
 -- permission. Managers can never lose "Manage users, roles and permissions",
 -- so there is always someone who can put the grid right.
 --
--- Run after 0021_security_hardening.sql. Safe to re-run: the starting grid is
+-- Run after 0023_employee_data_fields.sql. Safe to re-run: the starting grid is
 -- only written into an empty table, so choices made in the app stay.
 
 
@@ -39,6 +39,7 @@ alter table public.role_permissions
     'reports.view', 'profit_loss.view', 'budgets.view',
     'transactions.income', 'transactions.expense', 'transactions.edit',
     'budgets.manage', 'accounts.manage', 'categories.manage',
+    'employees.manage', 'departments.manage',
     'users.manage'
   ));
 
@@ -48,6 +49,7 @@ from (values
   ('manager', 'reports.view'), ('manager', 'profit_loss.view'), ('manager', 'budgets.view'),
   ('manager', 'transactions.income'), ('manager', 'transactions.expense'), ('manager', 'transactions.edit'),
   ('manager', 'budgets.manage'), ('manager', 'accounts.manage'), ('manager', 'categories.manage'),
+  ('manager', 'employees.manage'), ('manager', 'departments.manage'),
   ('manager', 'users.manage'),
   ('admin', 'reports.view')
 ) as g (role, permission)
@@ -188,10 +190,12 @@ declare
   t text;
   p text;
 begin
-  foreach t in array array['budgets', 'accounts', 'categories'] loop
+  foreach t in array array['budgets', 'accounts', 'categories', 'employees', 'departments'] loop
     p := case t when 'budgets' then 'budgets.manage'
                 when 'accounts' then 'accounts.manage'
-                else 'categories.manage' end;
+                when 'categories' then 'categories.manage'
+                when 'employees' then 'employees.manage'
+                else 'departments.manage' end;
 
     execute format('drop policy if exists "managers add %1$s" on public.%1$I', t);
     execute format('drop policy if exists "managers change %1$s" on public.%1$I', t);
@@ -213,3 +217,63 @@ begin
   end loop;
 end
 $$;
+
+
+-- 7. HR records are private, so reading them asks the grid too (was: managers,
+-- 0017 and 0020). The employee form picks a department, so managing employees
+-- reads departments as well.
+
+drop policy if exists "managers read employees" on public.employees;
+drop policy if exists "permitted read employees" on public.employees;
+create policy "permitted read employees" on public.employees
+  for select to authenticated
+  using ((select public.has_permission('employees.manage')));
+
+drop policy if exists "managers read departments" on public.departments;
+drop policy if exists "permitted read departments" on public.departments;
+create policy "permitted read departments" on public.departments
+  for select to authenticated
+  using ((select public.has_permission('departments.manage'))
+         or (select public.has_permission('employees.manage')));
+
+
+-- 8. Employee photos follow the employee records (0019, 0022).
+
+drop policy if exists "managers read employee photos" on storage.objects;
+drop policy if exists "permitted read employee photos" on storage.objects;
+create policy "permitted read employee photos" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'employee-photos' and (select public.has_permission('employees.manage')));
+
+drop policy if exists "managers add employee photos" on storage.objects;
+drop policy if exists "permitted add employee photos" on storage.objects;
+create policy "permitted add employee photos" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'employee-photos'
+    and (select public.has_permission('employees.manage'))
+    and exists (
+      select 1 from public.employees e
+      where e.id::text = (storage.foldername(name))[1]
+    )
+  );
+
+drop policy if exists "managers change employee photos" on storage.objects;
+drop policy if exists "permitted change employee photos" on storage.objects;
+create policy "permitted change employee photos" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'employee-photos' and (select public.has_permission('employees.manage')))
+  with check (
+    bucket_id = 'employee-photos'
+    and (select public.has_permission('employees.manage'))
+    and exists (
+      select 1 from public.employees e
+      where e.id::text = (storage.foldername(name))[1]
+    )
+  );
+
+drop policy if exists "managers remove employee photos" on storage.objects;
+drop policy if exists "permitted remove employee photos" on storage.objects;
+create policy "permitted remove employee photos" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'employee-photos' and (select public.has_permission('employees.manage')));

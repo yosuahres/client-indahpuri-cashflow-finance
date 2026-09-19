@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react"
 import {
+  CalendarClock,
   Check,
   ReceiptText,
   ScanEye,
   Settings2,
   UserCog,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react"
 
@@ -26,6 +28,8 @@ const GROUP_ICONS: Record<PermissionGroupKey, LucideIcon> = {
   reports: ScanEye,
   transactions: ReceiptText,
   setup: Settings2,
+  hris: UsersRound,
+  shift: CalendarClock,
   users: UserCog,
 }
 
