@@ -25,11 +25,6 @@ export default async function LoginPage({
     <AuthCard
       title="Welcome back"
       subtitle="Sign in to your account to continue"
-      footer={{
-        prompt: "Don't have an account?",
-        href: "/signup",
-        label: "Sign up",
-      }}
     >
       {linkError ? (
         <div className="mb-4">

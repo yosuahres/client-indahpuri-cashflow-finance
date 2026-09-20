@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { updateSession, withAuthCookies } from "@/lib/supabase/proxy"
 
 /** Reachable only while signed out. Everything else requires a session. */
-const guestOnlyRoutes = ["/login", "/signup"]
+const guestOnlyRoutes = ["/login"]
 
 /** Token-exchange handlers manage their own auth and must never be redirected. */
 const authRoutePrefix = "/auth/"

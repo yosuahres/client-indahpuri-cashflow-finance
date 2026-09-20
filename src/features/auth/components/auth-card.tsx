@@ -11,7 +11,7 @@ export function AuthCard({
   title: string
   subtitle: string
   children: ReactNode
-  footer: { prompt: string; href: string; label: string }
+  footer?: { prompt: string; href: string; label: string }
 }) {
   return (
     <div className="w-full max-w-sm">
@@ -30,15 +30,17 @@ export function AuthCard({
         <div className="mt-6">{children}</div>
       </div>
 
-      <p className="mt-5 text-center text-sm text-neutral-500">
-        {footer.prompt}{" "}
-        <Link
-          href={footer.href}
-          className="font-medium text-neutral-900 underline underline-offset-4 hover:opacity-70"
-        >
-          {footer.label}
-        </Link>
-      </p>
+      {footer ? (
+        <p className="mt-5 text-center text-sm text-neutral-500">
+          {footer.prompt}{" "}
+          <Link
+            href={footer.href}
+            className="font-medium text-neutral-900 underline underline-offset-4 hover:opacity-70"
+          >
+            {footer.label}
+          </Link>
+        </p>
+      ) : null}
     </div>
   )
 }
