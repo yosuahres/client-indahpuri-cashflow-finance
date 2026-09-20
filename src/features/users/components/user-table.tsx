@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, type ReactNode } from "react"
 import { Trash2, UserX } from "lucide-react"
 
 import { Select } from "@/components/form/select"
@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 
 import { deleteMember, setMemberRole, type TeamMember } from "../actions"
+import { DEFAULT_USER_COLUMNS, USER_COLUMNS, type UserColumnKey } from "../columns"
 
 const headCell = "px-2 py-2.5 text-left font-medium text-neutral-700 sm:px-3"
 const cell = "px-2 py-2.5 sm:px-3"
@@ -21,6 +22,14 @@ const iconButton = cn(
 )
 
 const joined = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" })
+
+const WIDTHS = Object.fromEntries(
+  USER_COLUMNS.map((column) => [column.key, column.width]),
+) as Record<UserColumnKey, string>
+
+const LABELS = Object.fromEntries(
+  USER_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<UserColumnKey, string>
 
 /** The select's value for "no role"; a Select option cannot carry null. */
 const NO_ACCESS = ""
@@ -36,10 +45,13 @@ export function UserTable({
   members,
   roles: roleList,
   meId,
+  columns = DEFAULT_USER_COLUMNS,
 }: {
   members: TeamMember[]
   roles: RoleSummary[]
   meId: string
+  /** Which optional columns to show, in the order they appear. */
+  columns?: UserColumnKey[]
 }) {
   const [confirming, setConfirming] = useState<{ id: string; action: "revoke" | "delete" } | null>(
     null,
@@ -102,6 +114,49 @@ export function UserTable({
     { value: NO_ACCESS, label: "No access" },
   ]
 
+  /** How each optional column renders for one member. */
+  function cells(
+    member: TeamMember,
+    role: Role | null,
+    me: boolean,
+  ): Record<UserColumnKey, { className: string; render: ReactNode }> {
+    return {
+      email: {
+        className: cn(cell, "text-neutral-700"),
+        render: member.email,
+      },
+      role: {
+        className: "px-2 py-1.5 sm:px-3",
+        render: (
+          <>
+            {me ? (
+              <span className="text-neutral-700">
+                {roleList.find((entry) => entry.key === role)?.name ?? role}
+              </span>
+            ) : (
+              <div className="w-40">
+                <Select
+                  id={`role-${member.id}`}
+                  value={role ?? NO_ACCESS}
+                  onValueChange={(value) => change(member, value === NO_ACCESS ? null : value)}
+                  options={options}
+                  disabled={pending}
+                />
+              </div>
+            )}
+            {!role ? (
+              <span className="mt-1 block text-xs text-amber-700">Waiting for access</span>
+            ) : null}
+          </>
+        ),
+      },
+      joined: {
+        className: cn(cell, "whitespace-nowrap text-neutral-600"),
+        render: joined.format(new Date(member.joinedAt)),
+      },
+    }
+  }
+
   return (
     <>
       <div className="overflow-x-auto">
@@ -112,12 +167,11 @@ export function UserTable({
               <th scope="col" className={cn("min-w-[220px]", headCell)}>
                 User
               </th>
-              <th scope="col" className={cn("min-w-[170px]", headCell)}>
-                Role
-              </th>
-              <th scope="col" className={cn("min-w-[110px]", headCell)}>
-                Joined
-              </th>
+              {columns.map((key) => (
+                <th key={key} scope="col" className={cn(WIDTHS[key], headCell)}>
+                  {LABELS[key]}
+                </th>
+              ))}
               <th scope="col" className="w-44 px-2 py-2.5">
                 <span className="sr-only">Row actions</span>
               </th>
@@ -129,6 +183,8 @@ export function UserTable({
               const role = roleOf(member)
               const me = member.id === meId
               const pendingAction = confirming?.id === member.id ? confirming.action : null
+              // Built once per row rather than once per column.
+              const rowCells = cells(member, role, me)
 
               return (
                 <tr
@@ -145,32 +201,11 @@ export function UserTable({
                     <span className="mt-0.5 block text-xs text-neutral-500">{member.email}</span>
                   </td>
 
-                  <td className="px-2 py-1.5 sm:px-3">
-                    {me ? (
-                      <span className="text-neutral-700">
-                        {roleList.find((entry) => entry.key === role)?.name ?? role}
-                      </span>
-                    ) : (
-                      <div className="w-40">
-                        <Select
-                          id={`role-${member.id}`}
-                          value={role ?? NO_ACCESS}
-                          onValueChange={(value) =>
-                            change(member, value === NO_ACCESS ? null : value)
-                          }
-                          options={options}
-                          disabled={pending}
-                        />
-                      </div>
-                    )}
-                    {!role ? (
-                      <span className="mt-1 block text-xs text-amber-700">Waiting for access</span>
-                    ) : null}
-                  </td>
-
-                  <td className={cn(cell, "whitespace-nowrap text-neutral-600")}>
-                    {joined.format(new Date(member.joinedAt))}
-                  </td>
+                  {columns.map((key) => (
+                    <td key={key} className={rowCells[key].className}>
+                      {rowCells[key].render}
+                    </td>
+                  ))}
 
                   <td className="w-44 px-2 py-1.5 text-right">
                     {me ? null : pendingAction ? (
@@ -226,7 +261,7 @@ export function UserTable({
 
             {visible.length === 0 ? (
               <tr className="border-t border-black/5">
-                <td colSpan={4} className="px-3 py-6 text-center text-neutral-500">
+                <td colSpan={columns.length + 2} className="px-3 py-6 text-center text-neutral-500">
                   Nobody has signed up yet.
                 </td>
               </tr>

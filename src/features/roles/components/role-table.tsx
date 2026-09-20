@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useTransition } from "react"
+import { useState, useTransition, type ReactNode } from "react"
 import { KeyRound, Pencil, Trash2 } from "lucide-react"
 
 import type { RoleSummary } from "@/features/auth/roles"
@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 
 import { deleteRole } from "../actions"
+import { DEFAULT_ROLE_COLUMNS, ROLE_COLUMNS, type RoleColumnKey } from "../columns"
 
 const headCell = "px-2 py-2.5 text-left font-medium text-neutral-700 sm:px-3"
 const cell = "px-2 py-2.5 sm:px-3"
@@ -22,6 +23,23 @@ const iconButton = cn(
 
 type RoleRow = RoleSummary & { members: number; permissions: number }
 
+const WIDTHS = Object.fromEntries(
+  ROLE_COLUMNS.map((column) => [column.key, column.width]),
+) as Record<RoleColumnKey, string>
+
+const LABELS = Object.fromEntries(
+  ROLE_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<RoleColumnKey, string>
+
+/** How each optional column reads. */
+const CELLS: Record<RoleColumnKey, (role: RoleRow, total: number) => ReactNode> = {
+  key: (role) => role.key,
+  description: (role) => role.description || <span className="text-neutral-400">—</span>,
+  builtIn: (role) => (role.builtIn ? "Yes" : "No"),
+  members: (role) => role.members,
+  permissions: (role, total) => `${role.permissions} of ${total}`,
+}
+
 /**
  * Every role, with who holds it and how much it may do. Deleting takes two
  * clicks, and is only offered for a role nobody holds.
@@ -30,11 +48,14 @@ export function RoleTable({
   roles,
   totalPermissions,
   editable,
+  columns = DEFAULT_ROLE_COLUMNS,
 }: {
   roles: RoleRow[]
   totalPermissions: number
   /** Off before the roles table exists — the list shown is the fixed one. */
   editable: boolean
+  /** Which optional columns to show, in the order they appear. */
+  columns?: RoleColumnKey[]
 }) {
   const [confirmingKey, setConfirmingKey] = useState<string | null>(null)
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set())
@@ -76,12 +97,11 @@ export function RoleTable({
             <th scope="col" className={cn("min-w-[240px]", headCell)}>
               Role
             </th>
-            <th scope="col" className={cn("min-w-[90px]", headCell)}>
-              Users
-            </th>
-            <th scope="col" className={cn("min-w-[130px]", headCell)}>
-              Permissions
-            </th>
+            {columns.map((key) => (
+              <th key={key} scope="col" className={cn(WIDTHS[key], headCell)}>
+                {LABELS[key]}
+              </th>
+            ))}
             <th scope="col" className="w-40 px-2 py-2.5">
               <span className="sr-only">Row actions</span>
             </th>
@@ -111,11 +131,11 @@ export function RoleTable({
                   ) : null}
                 </td>
 
-                <td className={cn(cell, "tabular-nums text-neutral-700")}>{role.members}</td>
-
-                <td className={cn(cell, "tabular-nums text-neutral-700")}>
-                  {role.permissions} of {totalPermissions}
-                </td>
+                {columns.map((key) => (
+                  <td key={key} className={cn(cell, "tabular-nums text-neutral-700")}>
+                    {CELLS[key](role, totalPermissions)}
+                  </td>
+                ))}
 
                 <td className="w-40 px-2 py-1.5">
                   {confirming ? (
@@ -177,7 +197,7 @@ export function RoleTable({
 
           {live.length === 0 ? (
             <tr className="border-t border-black/5">
-              <td colSpan={4} className="px-3 py-6 text-center text-neutral-500">
+              <td colSpan={columns.length + 2} className="px-3 py-6 text-center text-neutral-500">
                 No roles yet.
               </td>
             </tr>

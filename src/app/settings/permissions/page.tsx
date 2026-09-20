@@ -1,11 +1,10 @@
 import type { Metadata } from "next"
 
 import { Topbar } from "@/components/layout/topbar"
-import { Card, CardHeader } from "@/components/ui/card"
 import { requirePermission } from "@/features/auth/session"
 import { listGrants } from "@/features/permissions/actions"
-import { listRoles } from "@/features/roles/actions"
 import { PermissionMatrix } from "@/features/permissions/components/permission-matrix"
+import { listRoles } from "@/features/roles/actions"
 
 export const metadata: Metadata = {
   title: "Permissions · Settings",
@@ -19,7 +18,7 @@ export default async function SettingsPermissionsPage() {
     <>
       <Topbar title="Permissions" section="Settings" />
 
-      <main className="min-h-0 flex-1 overflow-y-auto bg-neutral-50">
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {!result.ok ? (
           <p
             role="alert"
@@ -29,16 +28,12 @@ export default async function SettingsPermissionsPage() {
           </p>
         ) : null}
 
-        <div className="p-4 sm:p-6">
-          <Card className="overflow-hidden">
-            <CardHeader
-              title="Role permissions"
-              caption="Tick what each role may do. Changes apply straight away, from everyone's next click."
-            />
-            <div className="mt-4 border-t border-black/8">
-              <PermissionMatrix roles={roles} grants={result.grants} disabled={!result.ok} />
-            </div>
-          </Card>
+        <p className="px-4 py-3 text-sm text-neutral-500 sm:px-6 sm:py-4">
+          Tick what each role may do. Changes apply straight away, from everyone&apos;s next click.
+        </p>
+
+        <div className="min-h-0 flex-1 overflow-auto border-t border-black/8">
+          <PermissionMatrix roles={roles} grants={result.grants} disabled={!result.ok} />
         </div>
       </main>
     </>

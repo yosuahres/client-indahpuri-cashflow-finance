@@ -2,55 +2,47 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
-import { Topbar } from "@/components/layout/topbar"
-import { Card, CardHeader } from "@/components/ui/card"
+import { Topbar, TOPBAR_ACTION_CLASS } from "@/components/layout/topbar"
 import { requirePermission } from "@/features/auth/session"
 import { listRoles } from "@/features/roles/actions"
 import { listTeam } from "@/features/users/actions"
-import { UserTable } from "@/features/users/components/user-table"
+import { UserList } from "@/features/users/components/user-list"
+import { applyUserQuery, readUserQuery } from "@/features/users/query"
 
 export const metadata: Metadata = {
   title: "Users · Settings",
 }
 
-export default async function SettingsUsersPage() {
+export default async function SettingsUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const me = await requirePermission("users.manage")
-  const [result, { roles }] = await Promise.all([listTeam(), listRoles()])
+  const [params, result, { roles }] = await Promise.all([searchParams, listTeam(), listRoles()])
+  const query = readUserQuery(params, roles)
 
   return (
     <>
-      <Topbar title="Users" section="Settings" />
+      <Topbar
+        title="Users"
+        section="Settings"
+        actions={
+          <Link href="/settings/users/new" className={TOPBAR_ACTION_CLASS}>
+            <Plus className="size-4 shrink-0" strokeWidth={2} />
+            <span className="hidden sm:inline">New User</span>
+          </Link>
+        }
+      />
 
-      <main className="min-h-0 flex-1 overflow-y-auto bg-neutral-50">
-        {!result.ok ? (
-          <p
-            role="alert"
-            className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6"
-          >
-            {result.error}
-          </p>
-        ) : null}
-
-        <div className="p-4 sm:p-6">
-          <Card className="overflow-hidden">
-            <CardHeader
-              title="Team"
-              caption="Everyone who has signed up, and the role they have."
-              action={
-                <Link
-                  href="/settings/users/new"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900"
-                >
-                  <Plus className="size-4 shrink-0" strokeWidth={1.75} />
-                  New User
-                </Link>
-              }
-            />
-            <div className="mt-4">
-              <UserTable members={result.members} roles={roles} meId={me.id} />
-            </div>
-          </Card>
-        </div>
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <UserList
+          members={applyUserQuery(result.members, query, roles)}
+          roles={roles}
+          meId={me.id}
+          query={query}
+          notice={result.ok ? undefined : result.error}
+        />
       </main>
     </>
   )
