@@ -1,5 +1,5 @@
 import { Card, type CardVariant } from "@/components/ui/card"
-import { formatCurrencyWhole } from "@/lib/format"
+import { formatCurrency } from "@/lib/format"
 import { cn } from "@/lib/cn"
 
 /** Tailwind needs whole class names, so the column count maps to a literal. */
@@ -51,7 +51,7 @@ export function SummaryTiles({
                   : "text-neutral-900",
             )}
           >
-            {formatCurrencyWhole(tile.value)}
+            {formatCurrency(tile.value)}
             {tile.description ? (
               <span className="mt-1 block text-xs font-normal text-neutral-400">
                 {tile.description}
