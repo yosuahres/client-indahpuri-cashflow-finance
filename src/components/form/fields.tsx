@@ -2,10 +2,13 @@ import type { ComponentProps, ReactNode } from "react"
 
 import { cn } from "@/lib/cn"
 
-const controlBase =
-  "h-10 w-full rounded-md bg-neutral-100 px-3 text-base text-neutral-900 placeholder:text-neutral-400 sm:text-sm " +
+/** How a control looks, minus its height — see `TextInput` for the usual one. */
+export const CONTROL_SURFACE =
+  "w-full rounded-md bg-neutral-100 px-3 text-base text-neutral-900 placeholder:text-neutral-400 sm:text-sm " +
   "focus:outline-2 focus:outline-offset-0 focus:outline-neutral-800 " +
   "aria-[invalid=true]:outline-2 aria-[invalid=true]:outline-rose-500 disabled:opacity-50"
+
+const controlBase = `h-10 ${CONTROL_SURFACE}`
 
 export function Field({
   label,
