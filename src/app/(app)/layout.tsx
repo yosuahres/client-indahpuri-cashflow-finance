@@ -1,23 +1,8 @@
 import type { ReactNode } from "react"
 
-import { AppSidebar } from "@/components/layout/app-sidebar"
-import { SidebarProvider } from "@/components/layout/sidebar-state"
-import { signOut } from "@/features/auth/actions"
-import { requireUser } from "@/features/auth/session"
+import { ModuleShell } from "@/components/layout/module-shell"
 
-export default async function AppLayout({ children }: { children: ReactNode }) {
-  const { name, email, role, roleName, permissions } = await requireUser()
-
-  return (
-    <SidebarProvider>
-      <div className="flex h-dvh overflow-hidden bg-white">
-        <AppSidebar
-          module="finance"
-          user={{ name, email, role, roleName, permissions }}
-          signOut={signOut}
-        />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
-      </div>
-    </SidebarProvider>
-  )
+/** Finance: the ledger, the accounts behind it, and what was planned. */
+export default function AppLayout({ children }: { children: ReactNode }) {
+  return <ModuleShell module="finance">{children}</ModuleShell>
 }

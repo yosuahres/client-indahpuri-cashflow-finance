@@ -5,6 +5,13 @@ import type { ReactNode } from "react"
 import { RefreshButton } from "./refresh-button"
 import { SidebarTrigger } from "./sidebar-state"
 
+/**
+ * The primary control in the bar — "Add Employee", "New Account". One class so
+ * every app's bar offers its action in the same shape.
+ */
+export const TOPBAR_ACTION_CLASS =
+  "inline-flex h-9 items-center gap-1.5 rounded-md bg-neutral-900 px-2.5 text-sm font-medium text-white transition-opacity hover:opacity-85 sm:h-8"
+
 export function Topbar({
   title,
   section = "Financial Reports",

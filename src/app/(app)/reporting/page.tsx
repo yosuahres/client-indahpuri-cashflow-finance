@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react"
 
-import { Topbar } from "@/components/layout/topbar"
+import { Topbar, TOPBAR_ACTION_CLASS } from "@/components/layout/topbar"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
 import { listAccounts } from "@/features/accounts/actions"
 import { AccountPicker } from "@/features/reporting/components/account-picker"
@@ -121,9 +121,9 @@ export default async function ReportingPage({
           <a
             href={`/reporting/export?year=${year}&month=${month}${carried}`}
             aria-label="Export Excel"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900 sm:h-8"
+            className={TOPBAR_ACTION_CLASS}
           >
-            <Download className="size-4 shrink-0" strokeWidth={1.75} />
+            <Download className="size-4 shrink-0" strokeWidth={2} />
             <span className="hidden sm:inline">Export Excel</span>
           </a>
         }
