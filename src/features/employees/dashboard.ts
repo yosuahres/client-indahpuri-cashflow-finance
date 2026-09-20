@@ -130,7 +130,9 @@ const TENURE_BANDS = [
   { label: "Under 1 year", under: 1 },
   { label: "1–2 years", under: 3 },
   { label: "3–4 years", under: 5 },
-  { label: "5+ years", under: Infinity },
+  { label: "5–6 years", under: 7 },
+  { label: "7–9 years", under: 10 },
+  { label: "10+ years", under: Infinity },
 ]
 
 /** How many years of hiring the trend goes back. */
@@ -140,7 +142,9 @@ const AGE_BANDS = [
   { label: "Under 25", under: 25 },
   { label: "25–34", under: 35 },
   { label: "35–44", under: 45 },
-  { label: "45+", under: Infinity },
+  { label: "45–50", under: 51 },
+  { label: "51–55", under: 56 },
+  { label: "56+", under: Infinity },
 ]
 
 function summarize(rows: Row[], today: Date): HrStats {
