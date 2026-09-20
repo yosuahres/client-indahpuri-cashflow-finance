@@ -5,6 +5,7 @@ import { Trash2, X } from "lucide-react"
 
 import { DatePicker } from "@/components/form/date-picker"
 import { Field, MoneyInput, TextArea, TextInput } from "@/components/form/fields"
+import { FormGrid, SaveButton } from "@/components/form/form-shell"
 import { Select } from "@/components/form/select"
 import type { TransactionDetail } from "@/components/report/types"
 import { AccountField } from "@/features/accounts/components/account-field"
@@ -116,7 +117,7 @@ export function TransactionPanel({
       <form action={formAction} noValidate>
         <input type="hidden" name="id" value={transaction.id} />
 
-        <div className="sticky top-0 flex items-center gap-3 border-b border-black/8 bg-white px-4 py-3.5 sm:px-5">
+        <div className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-black/8 bg-white px-4 sm:px-5">
           <div className="min-w-0 flex-1">
             <h2 id="transaction-panel-title" className="text-sm font-semibold text-neutral-900">
               Transaction
@@ -140,142 +141,144 @@ export function TransactionPanel({
           </button>
         </div>
 
+        <section className="border-b border-black/8 px-4 py-6 sm:px-6">
+          <h3 className="mb-4 text-sm font-semibold text-neutral-900 sm:mb-6">Entry</h3>
+          <FormGrid>
+            <Field label="Date" htmlFor="panel-occurredOn" required error={errors.occurredOn}>
+              <DatePicker
+                id="panel-occurredOn"
+                name="occurredOn"
+                value={date}
+                onValueChange={setDate}
+                today={today}
+                invalid={Boolean(errors.occurredOn)}
+              />
+            </Field>
 
+            <Field label="Amount" htmlFor="panel-amount" required error={errors.amount}>
+              <MoneyInput
+                id="panel-amount"
+                name="amount"
+                value={amount}
+                onValueChange={setAmount}
+                invalid={Boolean(errors.amount)}
+              />
+            </Field>
 
-        <div className="grid grid-cols-1 gap-4 px-4 py-4 sm:grid-cols-2 sm:px-5 sm:py-5">
-          <Field label="Date" htmlFor="panel-occurredOn" required error={errors.occurredOn}>
-            <DatePicker
-              id="panel-occurredOn"
-              name="occurredOn"
-              value={date}
-              onValueChange={setDate}
-              today={today}
-              invalid={Boolean(errors.occurredOn)}
-            />
-          </Field>
+            <Field label="Type" htmlFor="panel-kind" required error={errors.kind}>
+              <Select
+                id="panel-kind"
+                name="kind"
+                value={kind}
+                onValueChange={(value) => {
+                  setKind(value as TransactionKind)
+                  // Categories belong to one direction, so the old pick is gone.
+                  setCategory("")
+                }}
+                options={TRANSACTION_KINDS.filter((entry) =>
+                  editableKinds.some((allowed) => allowed === entry.value),
+                ).map((entry) => ({ value: entry.value, label: entry.label }))}
+                invalid={Boolean(errors.kind)}
+              />
+            </Field>
 
-          <Field label="Amount" htmlFor="panel-amount" required error={errors.amount}>
-            <MoneyInput
-              id="panel-amount"
-              name="amount"
-              value={amount}
-              onValueChange={setAmount}
-              invalid={Boolean(errors.amount)}
-            />
-          </Field>
+            <Field label="Cash Flow Section" htmlFor="panel-section" required error={errors.section}>
+              <Select
+                id="panel-section"
+                name="section"
+                value={section}
+                onValueChange={(value) => {
+                  setSection(value as SectionValue)
+                  setCategory("")
+                }}
+                options={SECTIONS.map((entry) => ({ value: entry.value, label: entry.label }))}
+                invalid={Boolean(errors.section)}
+              />
+            </Field>
 
-          <Field label="Type" htmlFor="panel-kind" required error={errors.kind}>
-            <Select
-              id="panel-kind"
-              name="kind"
-              value={kind}
-              onValueChange={(value) => {
-                setKind(value as TransactionKind)
-                // Categories belong to one direction, so the old pick is gone.
-                setCategory("")
-              }}
-              options={TRANSACTION_KINDS.filter((entry) =>
-                editableKinds.some((allowed) => allowed === entry.value),
-              ).map((entry) => ({ value: entry.value, label: entry.label }))}
-              invalid={Boolean(errors.kind)}
-            />
-          </Field>
+            <Field label="Category" htmlFor="panel-category" required error={errors.category}>
+              <CategoryField
+                id="panel-category"
+                name="category"
+                kind={kind}
+                section={section}
+                value={category}
+                onValueChange={setCategory}
+                categories={categoryList}
+                onCategoriesChange={setCategoryList}
+                canManage={canManageCategories}
+                invalid={Boolean(errors.category)}
+              />
+            </Field>
 
-          <Field label="Cash Flow Section" htmlFor="panel-section" required error={errors.section}>
-            <Select
-              id="panel-section"
-              name="section"
-              value={section}
-              onValueChange={(value) => {
-                setSection(value as SectionValue)
-                setCategory("")
-              }}
-              options={SECTIONS.map((entry) => ({ value: entry.value, label: entry.label }))}
-              invalid={Boolean(errors.section)}
-            />
-          </Field>
+            <Field label="Account" htmlFor="panel-account" required error={errors.account}>
+              <AccountField
+                id="panel-account"
+                name="account"
+                value={account}
+                onValueChange={setAccount}
+                accounts={accounts}
+                invalid={Boolean(errors.account)}
+                canCreate={canCreateAccounts}
+              />
+            </Field>
 
-          <Field label="Category" htmlFor="panel-category" required error={errors.category}>
-            <CategoryField
-              id="panel-category"
-              name="category"
-              kind={kind}
-              section={section}
-              value={category}
-              onValueChange={setCategory}
-              categories={categoryList}
-              onCategoriesChange={setCategoryList}
-              canManage={canManageCategories}
-              invalid={Boolean(errors.category)}
-            />
-          </Field>
+            <Field
+              label="Payment Status"
+              htmlFor="panel-paid"
+              required
+              error={errors.paid}
+            >
+              <Select
+                id="panel-paid"
+                name="paid"
+                value={paid}
+                onValueChange={(value) => setPaid(value as PaymentStatus)}
+                options={(kind === "income" ? INCOME_PAYMENT_STATUSES : PAYMENT_STATUSES).map((entry) => ({
+                  value: entry.value,
+                  label: entry.label,
+                }))}
+                invalid={Boolean(errors.paid)}
+              />
+            </Field>
+          </FormGrid>
+        </section>
 
-          <Field label="Account" htmlFor="panel-account" required error={errors.account}>
-            <AccountField
-              id="panel-account"
-              name="account"
-              value={account}
-              onValueChange={setAccount}
-              accounts={accounts}
-              invalid={Boolean(errors.account)}
-              canCreate={canCreateAccounts}
-            />
-          </Field>
+        <section className="px-4 py-6 sm:px-6">
+          <h3 className="mb-4 text-sm font-semibold text-neutral-900 sm:mb-6">Details</h3>
+          <FormGrid>
+            <Field label="Party" htmlFor="panel-party" hint="Customer or supplier, if this involves one.">
+              <TextInput
+                id="panel-party"
+                name="party"
+                value={party}
+                onChange={(event) => setParty(event.target.value)}
+                placeholder="Optional"
+              />
+            </Field>
 
-          <Field
-            label="Payment Status"
-            htmlFor="panel-paid"
-            required
-            error={errors.paid}
-          >
-            <Select
-              id="panel-paid"
-              name="paid"
-              value={paid}
-              onValueChange={(value) => setPaid(value as PaymentStatus)}
-              options={(kind === "income" ? INCOME_PAYMENT_STATUSES : PAYMENT_STATUSES).map((entry) => ({
-                value: entry.value,
-                label: entry.label,
-              }))}
-              invalid={Boolean(errors.paid)}
-            />
-          </Field>
+            <Field label="Reference No." htmlFor="panel-reference">
+              <TextInput
+                id="panel-reference"
+                name="reference"
+                value={reference}
+                onChange={(event) => setReference(event.target.value)}
+                placeholder="Invoice or receipt number"
+              />
+            </Field>
 
-          <Field label="Party" htmlFor="panel-party" hint="Customer or supplier, if this involves one.">
-            <TextInput
-              id="panel-party"
-              name="party"
-              value={party}
-              onChange={(event) => setParty(event.target.value)}
-              placeholder="Optional"
-            />
-          </Field>
-
-          <Field label="Reference No." htmlFor="panel-reference">
-            <TextInput
-              id="panel-reference"
-              name="reference"
-              value={reference}
-              onChange={(event) => setReference(event.target.value)}
-              placeholder="Invoice or receipt number"
-            />
-          </Field>
-
-          <Field
-            label="Description"
-            htmlFor="panel-notes"
-            className="sm:col-span-2"
-          >
-            <TextArea
-              id="panel-notes"
-              name="notes"
-              rows={3}
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="What was this for?"
-            />
-          </Field>
-        </div>
+            <Field label="Description" htmlFor="panel-notes" className="md:col-span-2">
+              <TextArea
+                id="panel-notes"
+                name="notes"
+                rows={3}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="What was this for?"
+              />
+            </Field>
+          </FormGrid>
+        </section>
 
         {/* Delete sits apart from Save, at the opposite end of the footer. */}
         <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-black/8 bg-white px-4 py-3 sm:px-5">
@@ -286,7 +289,7 @@ export function TransactionPanel({
                 type="button"
                 onClick={() => setConfirming(false)}
                 disabled={busy}
-                className="rounded-md px-2.5 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+                className="inline-flex h-9 cursor-pointer items-center rounded-md px-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 sm:h-8"
               >
                 Cancel
               </button>
@@ -294,7 +297,7 @@ export function TransactionPanel({
                 type="button"
                 onClick={remove}
                 disabled={busy}
-                className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-500 disabled:opacity-50"
+                className="inline-flex h-9 cursor-pointer items-center rounded-md bg-rose-600 px-3 text-sm font-medium text-white hover:bg-rose-500 disabled:opacity-50 sm:h-8"
               >
                 {deleting ? "Deleting…" : "Delete"}
               </button>
@@ -306,7 +309,7 @@ export function TransactionPanel({
                 setConfirming(true)
               }}
               disabled={busy}
-              className="mr-auto inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+              className="mr-auto inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50 sm:h-8"
             >
               <Trash2 className="size-4" strokeWidth={1.75} />
               Delete
@@ -317,17 +320,11 @@ export function TransactionPanel({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="shrink-0 rounded-md border border-black/10 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:border-black/20 disabled:opacity-50"
+            className="inline-flex h-9 shrink-0 cursor-pointer items-center rounded-md border border-black/10 px-3 text-sm font-medium text-neutral-700 hover:border-black/20 disabled:opacity-50 sm:h-8"
           >
             Close
           </button>
-          <button
-            type="submit"
-            disabled={busy}
-            className="shrink-0 rounded-md bg-neutral-900 px-3.5 py-1.5 text-sm font-medium text-white hover:opacity-85 disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save changes"}
-          </button>
+          <SaveButton pending={busy}>Save changes</SaveButton>
         </div>
       </form>
     </dialog>
