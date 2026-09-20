@@ -5,8 +5,9 @@ import { Topbar } from "@/components/layout/topbar"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
 import { listAccounts } from "@/features/accounts/actions"
 import { listCategories } from "@/features/categories/actions"
-import { ReportFilters } from "@/components/report/report-filters"
-import { TransactionTable } from "@/components/report/transaction-table"
+import { LedgerColumnMenu, LedgerTable } from "@/components/report/ledger-columns"
+import { ReportToolbar } from "@/components/report/report-toolbar"
+import { matchesTerm, param } from "@/components/table/query"
 import { readReportRange } from "@/features/reports/range"
 import { loadProfitAndLossReport } from "@/features/profit-and-loss/report"
 import { can, editableKinds } from "@/features/auth/permissions"
@@ -34,7 +35,14 @@ function LedgerFallback() {
  * The ledger, and the pickers the detail panel edits it with. Kept apart from
  * the page so the bar and the filters can be sent before any of it is ready.
  */
-async function Ledger({ range }: { range: ReturnType<typeof readReportRange> }) {
+async function Ledger({
+  range,
+  search,
+}: {
+  range: ReturnType<typeof readReportRange>
+  /** Matches a category, an account, the bank behind it, or a party. */
+  search: string
+}) {
   // The detail panel edits a row in place, so it needs the same pickers the
   // New Transaction form uses. All three go out together: they share the one
   // request-scoped Supabase client, which serializes its own token refresh, so
@@ -53,6 +61,20 @@ async function Ledger({ range }: { range: ReturnType<typeof readReportRange> }) 
     requireUser(),
   ])
 
+  const term = search.toLowerCase()
+  const transactions = report.transactions.filter((entry) =>
+    // Every field is searched, not just the ones on show.
+    matchesTerm(term, [
+      entry.category,
+      entry.section,
+      entry.account,
+      entry.accountIssuer,
+      entry.party,
+      entry.reference,
+      entry.notes,
+    ]),
+  )
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       {!ok ? (
@@ -62,8 +84,8 @@ async function Ledger({ range }: { range: ReturnType<typeof readReportRange> }) 
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <TransactionTable
-          transactions={report.transactions}
+        <LedgerTable
+          transactions={transactions}
           caption="Every transaction recorded in the range, newest first."
           categories={categories.categories}
           accounts={accounts.accounts}
@@ -83,14 +105,16 @@ export default async function ProfitAndLossPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   await requirePermission("profit_loss.view")
-  const range = readReportRange(await searchParams)
+  const params = await searchParams
+  const range = readReportRange(params)
+  const search = param(params.q).trim()
 
   return (
     <>
       <Topbar title="Detail Transaction" />
 
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden">
-        <ReportFilters
+        <ReportToolbar
           company={range.company}
           mode={range.mode}
           fromYear={range.fromYear}
@@ -102,14 +126,17 @@ export default async function ProfitAndLossPage({
           incomeStatus={range.incomeStatus}
           expenseStatus={range.expenseStatus}
           today={range.today}
-        />
+          search={search}
+        >
+          <LedgerColumnMenu />
+        </ReportToolbar>
 
         <div className="min-h-0 flex-1 lg:overflow-hidden">
           <Suspense
-            key={`${range.from}:${range.to}:${range.periodicity}:${range.kind}:${range.incomeStatus}:${range.expenseStatus}`}
+            key={`${range.from}:${range.to}:${range.periodicity}:${range.kind}:${range.incomeStatus}:${range.expenseStatus}:${search}`}
             fallback={<LedgerFallback />}
           >
-            <Ledger range={range} />
+            <Ledger range={range} search={search} />
           </Suspense>
         </div>
       </main>

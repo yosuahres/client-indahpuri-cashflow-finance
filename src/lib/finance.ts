@@ -8,6 +8,11 @@ export const SECTIONS = [
 
 export type SectionValue = (typeof SECTIONS)[number]["value"]
 
+/** A cash flow section's name, as every sheet and filter prints it. */
+export function sectionLabel(value: string) {
+  return SECTIONS.find((section) => section.value === value)?.label ?? value
+}
+
 export const TRANSACTION_KINDS = [
   // `short` is for group headings and tight selects, where the gloss does not fit.
   { value: "income", label: "Income — money in", short: "Income" },

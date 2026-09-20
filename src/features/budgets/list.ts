@@ -29,6 +29,8 @@ export type BudgetEntry = {
   /** 1-12, or null when the plan covers the whole year. */
   month: number | null
   warnOnOverrun: boolean
+  /** When the plan was entered, as an ISO timestamp. */
+  createdAt: string
 }
 
 export type BudgetListResult = {
@@ -49,6 +51,7 @@ type Row = {
   period_year: number
   period_month: number | null
   warn_on_overrun: boolean
+  created_at: string
 }
 
 /**
@@ -64,7 +67,7 @@ export async function listBudgets(year: number): Promise<BudgetListResult> {
   const { data, error } = await supabase
     .from("budgets")
     .select(
-      "id, name, kind, section, category, cost_center, account, amount, period_year, period_month, warn_on_overrun",
+      "id, name, kind, section, category, cost_center, account, amount, period_year, period_month, warn_on_overrun, created_at",
     )
     .eq("period_year", year)
     // Yearly plans lead, then the months in order: the same order the page
@@ -100,6 +103,7 @@ export async function listBudgets(year: number): Promise<BudgetListResult> {
       year: row.period_year,
       month: row.period_month,
       warnOnOverrun: row.warn_on_overrun,
+      createdAt: row.created_at,
     })),
   }
 }

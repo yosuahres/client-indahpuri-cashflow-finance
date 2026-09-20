@@ -35,8 +35,9 @@ export type TransactionDetail = {
   amount: number
   /** Whether the money has settled. */
   paid: boolean
-  // Only the detail panel shows section, reference and notes; the table shows party.
   party: string
   reference: string
   notes: string
+  /** When the entry was recorded, as an ISO timestamp. */
+  createdAt: string
 }

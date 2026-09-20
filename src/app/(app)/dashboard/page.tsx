@@ -4,7 +4,7 @@ import Link from "next/link"
 
 import { Topbar } from "@/components/layout/topbar"
 import { CategoryPie } from "@/components/report/category-pie"
-import { ReportFilters } from "@/components/report/report-filters"
+import { ReportToolbar } from "@/components/report/report-toolbar"
 import { SeriesChart } from "@/components/report/series-chart"
 import { SummaryTiles } from "@/components/report/summary-tiles"
 import type { ChartSeries } from "@/components/report/types"
@@ -271,10 +271,10 @@ export default async function DashboardPage({
       <Topbar title="Dashboard" section={null} />
 
       <main className="min-h-0 flex-1 overflow-y-auto bg-white">
-        {/* One filter row above everything it scopes, held on white so it
-            reads as the page's toolbar rather than another card. */}
+        {/* The toolbar sits above everything it scopes, held on white so it
+            reads as the page's own bar rather than another card. */}
         <div className="border-b border-black/8 bg-white">
-          <ReportFilters
+          <ReportToolbar
             company={range.company}
             mode={range.mode}
             fromYear={range.fromYear}

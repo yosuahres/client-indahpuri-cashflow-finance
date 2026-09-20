@@ -1,13 +1,15 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, type ReactNode } from "react"
 import Link from "next/link"
 import { Pencil, Trash2 } from "lucide-react"
 
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
+import { formatDate } from "@/lib/format"
 
 import { deleteAccount, type Account } from "../actions"
+import { ACCOUNT_COLUMNS, DEFAULT_ACCOUNT_COLUMNS, type AccountColumnKey } from "../columns"
 import { accountIssuer, accountTypeSpec } from "../constants"
 
 const headCell = "px-2 py-2.5 text-left font-medium text-neutral-700 sm:px-3"
@@ -19,6 +21,67 @@ const iconButton = cn(
   "disabled:pointer-events-none disabled:opacity-40",
 )
 
+function Empty() {
+  return <span className="text-neutral-400">—</span>
+}
+
+/** How each optional column renders, so its header and its cells stay in step. */
+const CELLS: Record<
+  AccountColumnKey,
+  { className?: string; render: (account: Account) => ReactNode }
+> = {
+  type: {
+    className: "text-neutral-700",
+    render: (account) => accountTypeSpec(account.type).label,
+  },
+  issuer: {
+    className: "text-neutral-700",
+    render: (account) => accountIssuer(account) ?? <Empty />,
+  },
+  provider: {
+    className: "text-neutral-700",
+    render: (account) => account.provider ?? <Empty />,
+  },
+  holder: {
+    className: "text-neutral-700",
+    render: (account) => account.holder ?? <Empty />,
+  },
+  accountNo: {
+    className: "tabular-nums text-neutral-700",
+    render: (account) => account.accountNo ?? <Empty />,
+  },
+  notes: {
+    className: "text-neutral-700",
+    render: (account) => account.notes ?? <Empty />,
+  },
+  createdAt: {
+    className: "whitespace-nowrap text-neutral-700",
+    render: (account) => formatDate(account.createdAt.slice(0, 10)),
+  },
+  ownership: {
+    render: (account) => (
+      <span
+        className={cn(
+          "rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+          account.isCompanyAccount
+            ? "bg-neutral-100 text-neutral-700"
+            : "bg-amber-50 text-amber-700",
+        )}
+      >
+        {account.isCompanyAccount ? "Company" : "Personal"}
+      </span>
+    ),
+  },
+}
+
+const WIDTHS = Object.fromEntries(
+  ACCOUNT_COLUMNS.map((column) => [column.key, column.width]),
+) as Record<AccountColumnKey, string>
+
+const LABELS = Object.fromEntries(
+  ACCOUNT_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<AccountColumnKey, string>
+
 /**
  * Every account, with a way into each one and a way to remove it.
  *
@@ -26,7 +89,14 @@ const iconButton = cn(
  * budgets keep the name they were filed under, so removing an account never
  * takes history with it.
  */
-export function AccountTable({ accounts }: { accounts: Account[] }) {
+export function AccountTable({
+  accounts,
+  columns = DEFAULT_ACCOUNT_COLUMNS,
+}: {
+  accounts: Account[]
+  /** Which optional columns to show, in the order they appear. */
+  columns?: AccountColumnKey[]
+}) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -68,18 +138,11 @@ export function AccountTable({ accounts }: { accounts: Account[] }) {
               <th scope="col" className={cn("min-w-[200px]", headCell)}>
                 Name
               </th>
-              <th scope="col" className={cn("min-w-[110px]", headCell)}>
-                Type
-              </th>
-              <th scope="col" className={cn("min-w-[160px]", headCell)}>
-                Bank / Provider / Holder
-              </th>
-              <th scope="col" className={cn("min-w-[140px]", headCell)}>
-                Account No.
-              </th>
-              <th scope="col" className={cn("min-w-[100px]", headCell)}>
-                Ownership
-              </th>
+              {columns.map((key) => (
+                <th key={key} scope="col" className={cn(WIDTHS[key], headCell)}>
+                  {LABELS[key]}
+                </th>
+              ))}
               <th scope="col" className="w-28 px-2 py-2.5">
                 <span className="sr-only">Row actions</span>
               </th>
@@ -88,40 +151,16 @@ export function AccountTable({ accounts }: { accounts: Account[] }) {
 
           <tbody>
             {live.map((account) => {
-              const spec = accountTypeSpec(account.type)
-              const issuer = accountIssuer(account)
               const confirming = confirmingId === account.id
 
               return (
                 <tr key={account.id} className="border-t border-black/5">
                   <td className={cn(cell, "font-medium text-neutral-900")}>{account.name}</td>
-                  <td className={cn(cell, "text-neutral-700")}>{spec.label}</td>
-                  <td className={cell}>
-                    {issuer ? (
-                      <span className="text-neutral-700">{issuer}</span>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </td>
-                  <td className={cn(cell, "tabular-nums")}>
-                    {account.accountNo ? (
-                      <span className="text-neutral-700">{account.accountNo}</span>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </td>
-                  <td className={cell}>
-                    <span
-                      className={cn(
-                        "rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap",
-                        account.isCompanyAccount
-                          ? "bg-neutral-100 text-neutral-700"
-                          : "bg-amber-50 text-amber-700",
-                      )}
-                    >
-                      {account.isCompanyAccount ? "Company" : "Personal"}
-                    </span>
-                  </td>
+                  {columns.map((key) => (
+                    <td key={key} className={cn(cell, CELLS[key].className)}>
+                      {CELLS[key].render(account)}
+                    </td>
+                  ))}
                   <td className="w-28 px-2 py-1.5 text-right">
                     {confirming ? (
                       <span className="inline-flex items-center gap-1">
@@ -168,7 +207,7 @@ export function AccountTable({ accounts }: { accounts: Account[] }) {
 
             {live.length === 0 ? (
               <tr className="border-t border-black/5">
-                <td colSpan={6} className="px-3 py-6 text-center text-neutral-500">
+                <td colSpan={columns.length + 2} className="px-3 py-6 text-center text-neutral-500">
                   No accounts yet.
                 </td>
               </tr>

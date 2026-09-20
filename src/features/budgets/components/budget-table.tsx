@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { Fragment, useState, useTransition } from "react"
 import { Trash2 } from "lucide-react"
 
 import type { Account } from "@/features/accounts/actions"
@@ -8,10 +8,11 @@ import { accountDetail } from "@/features/accounts/constants"
 import { longMonthName } from "@/features/reporting/months"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
-import { kindLabel, SECTIONS, type TransactionKind } from "@/lib/finance"
-import { formatCurrency } from "@/lib/format"
+import { kindLabel, sectionLabel, type TransactionKind } from "@/lib/finance"
+import { formatCurrency, formatDate } from "@/lib/format"
 
 import { deleteBudget, setBudgetAmount } from "../actions"
+import { BUDGET_COLUMNS, DEFAULT_BUDGET_COLUMNS, type BudgetColumnKey } from "../columns"
 import type { BudgetEntry } from "../list"
 
 const headCell = "px-2 py-2.5 text-left font-medium text-neutral-700 sm:px-3"
@@ -20,8 +21,16 @@ const amountCell = "min-w-[150px] px-2 py-2.5 text-right sm:min-w-[170px] sm:px-
 
 const money = new Intl.NumberFormat("id-ID")
 
-const sectionLabel = (value: string) =>
-  SECTIONS.find((section) => section.value === value)?.label ?? value
+const WIDTHS = Object.fromEntries(
+  BUDGET_COLUMNS.map((column) => [column.key, column.width]),
+) as Record<BudgetColumnKey, string>
+
+const LABELS = Object.fromEntries(
+  BUDGET_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<BudgetColumnKey, string>
+
+/** Income above expense, as every block here is drawn. */
+const TRANSACTION_KIND_ORDER = ["income", "expense"] as const satisfies TransactionKind[]
 
 /**
  * A plan's figure, editable where it stands. Opening a form to change one
@@ -199,11 +208,9 @@ function KindBlock({
   kind,
   entries,
   emptyLabel,
-  dataColumns,
   columns,
-  showPeriod,
+  shown,
   showPerMonth,
-  showAccount,
   amountOf,
   detailOf,
   onAmount,
@@ -216,11 +223,10 @@ function KindBlock({
   kind: TransactionKind
   entries: BudgetEntry[]
   emptyLabel: string
-  dataColumns: number
   columns: number
-  showPeriod: boolean
+  /** The leading columns, in the order they appear. */
+  shown: BudgetColumnKey[]
   showPerMonth: boolean
-  showAccount: boolean
   amountOf: (entry: BudgetEntry) => number
   detailOf: (name: string) => string | null
   onAmount: (id: string, amount: number) => void
@@ -251,28 +257,53 @@ function KindBlock({
         const amount = amountOf(entry)
         return (
           <tr key={entry.id} className="border-t border-black/5">
-            {showPeriod ? (
-              <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
-                {entry.month === null ? (
-                  <span className="text-neutral-500">Whole year</span>
+            {shown.map((key) => (
+              <Fragment key={key}>
+                {key === "name" ? (
+                  <td className={cn(cell, "text-neutral-700")}>{entry.name}</td>
+                ) : key === "costCenter" ? (
+                  <td className={cn(cell, "text-neutral-700")}>
+                    {entry.costCenter || <span className="text-neutral-400">—</span>}
+                  </td>
+                ) : key === "warnOnOverrun" ? (
+                  <td className={cn(cell, "text-neutral-700")}>
+                    {entry.warnOnOverrun ? "Yes" : "No"}
+                  </td>
+                ) : key === "createdAt" ? (
+                  <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
+                    {formatDate(entry.createdAt.slice(0, 10))}
+                  </td>
+                ) : key === "period" ? (
+                  <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
+                    {entry.month === null ? (
+                      <span className="text-neutral-500">Whole year</span>
+                    ) : (
+                      longMonthName(entry.month)
+                    )}
+                  </td>
+                ) : key === "account" ? (
+                  // A plan from before accounts were named counts on all of them.
+                  <AccountCell account={entry.account} detailOf={detailOf} />
+                ) : key === "section" ? (
+                  <td className={cn(cell, "text-neutral-700")}>{sectionLabel(entry.section)}</td>
                 ) : (
-                  longMonthName(entry.month)
+                  // A plan with no category covers its whole section.
+                  <td className={cell}>
+                    <span
+                      className={entry.category?.trim() ? "text-neutral-900" : "text-neutral-500"}
+                    >
+                      {entry.category?.trim() || "Whole section"}
+                    </span>
+                    {/* What tells two otherwise identical plans apart. */}
+                    {entry.costCenter ? (
+                      <span className="mt-0.5 block text-xs text-neutral-500">
+                        {entry.costCenter}
+                      </span>
+                    ) : null}
+                  </td>
                 )}
-              </td>
-            ) : null}
-            {/* A plan from before accounts were named counts on all of them. */}
-            {showAccount ? <AccountCell account={entry.account} detailOf={detailOf} /> : null}
-            <td className={cn(cell, "text-neutral-700")}>{sectionLabel(entry.section)}</td>
-            {/* A plan with no category covers its whole section. */}
-            <td className={cell}>
-              <span className={entry.category?.trim() ? "text-neutral-900" : "text-neutral-500"}>
-                {entry.category?.trim() || "Whole section"}
-              </span>
-              {/* What tells two otherwise identical plans apart. */}
-              {entry.costCenter ? (
-                <span className="mt-0.5 block text-xs text-neutral-500">{entry.costCenter}</span>
-              ) : null}
-            </td>
+              </Fragment>
+            ))}
             {showPerMonth ? (
               <td className={cn(amountCell, "tabular-nums text-neutral-500")}>
                 {formatCurrency(amount / 12)}
@@ -327,12 +358,14 @@ function KindBlock({
       {entries.length > 0 ? (
         <tr className="border-t border-black/10 bg-neutral-50 font-semibold text-neutral-900">
           <td className={cell}>Total {kindLabel(kind)}</td>
-          <td
-            colSpan={dataColumns - 2 - (showPerMonth ? 1 : 0)}
-            className={cn(cell, "font-normal text-neutral-500")}
-          >
-            {entries.length} budget{entries.length === 1 ? "" : "s"}
-          </td>
+          {shown.length > 1 ? (
+            <td
+              colSpan={shown.length - 1}
+              className={cn(cell, "font-normal text-neutral-500")}
+            >
+              {entries.length} budget{entries.length === 1 ? "" : "s"}
+            </td>
+          ) : null}
           {showPerMonth ? (
             <td className={cn(amountCell, "tabular-nums font-normal text-neutral-500")}>
               {formatCurrency(total / 12)}
@@ -371,6 +404,8 @@ export function BudgetSheet({
   showPerMonth = false,
   showAccount = true,
   canEdit = true,
+  columns: picked = DEFAULT_BUDGET_COLUMNS,
+  kinds = TRANSACTION_KIND_ORDER,
 }: {
   entries: BudgetEntry[]
   /** Resolves each plan's account name to what that account actually is. */
@@ -385,6 +420,10 @@ export function BudgetSheet({
   showAccount?: boolean
   /** Off for someone who may read the plans but not change them. */
   canEdit?: boolean
+  /** The leading columns this browser has chosen, in order. */
+  columns?: BudgetColumnKey[]
+  /** Which directions to draw a block for — one, when the list is filtered. */
+  kinds?: readonly TransactionKind[]
 }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -441,9 +480,17 @@ export function BudgetSheet({
     })
   }
 
-  // Section, Category, Amount, whichever extras are asked for, and the actions.
-  const dataColumns = 3 + (showPeriod ? 1 : 0) + (showAccount ? 1 : 0) + (showPerMonth ? 1 : 0)
-  const columns = dataColumns + 1
+  // Period and Account only mean anything on the views that offer them, so a
+  // stored choice is narrowed to what this view actually has.
+  const available = BUDGET_COLUMNS.filter(
+    (column) =>
+      (column.key !== "period" || showPeriod) && (column.key !== "account" || showAccount),
+  ).map((column) => column.key)
+  const shown = picked.filter((key) => available.includes(key))
+
+  // The leading columns, Amount, the levelled figure where there is one, and
+  // the actions — what an empty row or a banner has to span.
+  const columns = shown.length + 2 + (showPerMonth ? 1 : 0)
 
   return (
     <>
@@ -454,22 +501,11 @@ export function BudgetSheet({
           </caption>
           <thead>
             <tr className="bg-neutral-50">
-              {showPeriod ? (
-                <th scope="col" className={cn("min-w-[120px]", headCell)}>
-                  Period
+              {shown.map((key) => (
+                <th key={key} scope="col" className={cn(WIDTHS[key], headCell)}>
+                  {LABELS[key]}
                 </th>
-              ) : null}
-              {showAccount ? (
-                <th scope="col" className={cn("min-w-[160px]", headCell)}>
-                  Account
-                </th>
-              ) : null}
-              <th scope="col" className={cn("min-w-[120px]", headCell)}>
-                Section
-              </th>
-              <th scope="col" className={cn("min-w-[180px]", headCell)}>
-                Category
-              </th>
+              ))}
               {showPerMonth ? (
                 <th scope="col" className={cn(amountCell, "font-medium text-neutral-700")}>
                   Per Month
@@ -484,17 +520,15 @@ export function BudgetSheet({
             </tr>
           </thead>
 
-          {(["income", "expense"] as const).map((kind) => (
+          {kinds.map((kind) => (
             <KindBlock
               key={kind}
               kind={kind}
               entries={live.filter((entry) => entry.kind === kind)}
               emptyLabel={`No ${kind} budgets for ${label} yet.`}
-              dataColumns={dataColumns}
               columns={columns}
-              showPeriod={showPeriod}
+              shown={shown}
               showPerMonth={showPerMonth}
-              showAccount={showAccount}
               amountOf={amountOf}
               detailOf={detailOf}
               onAmount={commitAmount}

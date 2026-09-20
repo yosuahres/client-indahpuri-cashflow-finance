@@ -86,6 +86,7 @@ type TransactionRow = {
   party: string | null
   reference: string | null
   notes: string | null
+  created_at: string
 }
 
 type AccountRow = {
@@ -296,7 +297,7 @@ export async function loadProfitAndLossReport({
     let query = supabase
       .from("transactions")
       .select(
-        "id, occurred_on, kind, section, category, account, amount, paid, party, reference, notes",
+        "id, occurred_on, kind, section, category, account, amount, paid, party, reference, notes, created_at",
       )
       .gte("occurred_on", from)
       .lte("occurred_on", to)
@@ -360,6 +361,7 @@ export async function loadProfitAndLossReport({
       accountIssuer: accountIssuers.get(row.account) ?? null,
       amount: Number(row.amount) || 0,
       paid: row.paid ?? true,
+      createdAt: row.created_at,
       party: row.party ?? "",
       reference: row.reference ?? "",
       notes: row.notes ?? "",

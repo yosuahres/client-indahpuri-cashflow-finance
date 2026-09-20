@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { createPortal } from "react-dom"
 import { Check, ChevronDown, Trash2, X } from "lucide-react"
 
@@ -12,8 +12,18 @@ import { TransactionPanel } from "@/features/transactions/components/transaction
 import { useWindowedRows } from "@/hooks/use-windowed-rows"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
-import { INCOME_PAYMENT_STATUSES, PAYMENT_STATUSES, type TransactionKind } from "@/lib/finance"
+import {
+  INCOME_PAYMENT_STATUSES,
+  PAYMENT_STATUSES,
+  sectionLabel,
+  type TransactionKind,
+} from "@/lib/finance"
 import { formatCurrency, formatDate } from "@/lib/format"
+import {
+  DEFAULT_TRANSACTION_COLUMNS,
+  TRANSACTION_COLUMNS,
+  type TransactionColumnKey,
+} from "./transaction-columns"
 import type { TransactionDetail } from "./types"
 
 /** Sticky columns need an opaque background of their own or rows show through. */
@@ -44,6 +54,14 @@ const WINDOW_THRESHOLD = 200
 const pillButton =
   "rounded-full px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15 disabled:pointer-events-none disabled:opacity-50"
 
+const WIDTHS = Object.fromEntries(
+  TRANSACTION_COLUMNS.map((column) => [column.key, column.width ?? ""]),
+) as Record<TransactionColumnKey, string>
+
+const LABELS = Object.fromEntries(
+  TRANSACTION_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<TransactionColumnKey, string>
+
 export function TransactionTable({
   transactions,
   caption,
@@ -53,8 +71,11 @@ export function TransactionTable({
   editableKinds,
   canManageCategories,
   canCreateAccounts,
+  columns = DEFAULT_TRANSACTION_COLUMNS,
 }: {
   transactions: TransactionDetail[]
+  /** Which optional columns to show, in the order they appear. */
+  columns?: TransactionColumnKey[]
   /** Screen-reader description of what the table holds. */
   caption: string
   /** Offered by the detail panel's category and account pickers. */
@@ -180,6 +201,84 @@ export function TransactionTable({
     })
   }
 
+  // The total row carries two labels; these say which cells they fall in.
+  const amountIndex = columns.indexOf("amount")
+  const countIndex = columns.findIndex(
+    (key, index) => key !== "amount" && index !== amountIndex - 1,
+  )
+
+  /** How each optional column renders for one entry. */
+  function cell(key: TransactionColumnKey, entry: TransactionDetail, canEdit: boolean) {
+    switch (key) {
+      case "category":
+        return <td className="px-3 py-2.5 text-neutral-900">{entry.category}</td>
+      case "account":
+        // The name alone repeats across banks, so the bank behind it rides
+        // along in the muted half of the cell.
+        return (
+          <td className="px-3 py-2.5 text-neutral-700">
+            {entry.account}
+            {entry.accountIssuer ? (
+              <span className="text-neutral-500"> · {entry.accountIssuer}</span>
+            ) : null}
+          </td>
+        )
+      case "party":
+        return (
+          <td className="px-3 py-2.5 text-neutral-700">
+            {entry.party || <span className="text-neutral-400">—</span>}
+          </td>
+        )
+      case "kind":
+        return <td className="px-3 py-2.5 capitalize text-neutral-700">{entry.kind}</td>
+      case "section":
+        return <td className="px-3 py-2.5 text-neutral-700">{sectionLabel(entry.section)}</td>
+      case "reference":
+        return (
+          <td className="px-3 py-2.5 text-neutral-700">
+            {entry.reference || <span className="text-neutral-400">—</span>}
+          </td>
+        )
+      case "notes":
+        return (
+          <td className="px-3 py-2.5 text-neutral-700">
+            {entry.notes || <span className="text-neutral-400">—</span>}
+          </td>
+        )
+      case "createdAt":
+        return (
+          <td className="px-3 py-2.5 whitespace-nowrap text-neutral-700">
+            {formatDate(entry.createdAt.slice(0, 10))}
+          </td>
+        )
+      case "status":
+        return (
+          <StatusCell
+            entry={
+              paidOverrides.has(entry.id)
+                ? { ...entry, paid: paidOverrides.get(entry.id)! }
+                : entry
+            }
+            onChange={(paid) => flipPaid(entry.id, paid)}
+            disabled={pending}
+            readOnly={!canEdit}
+          />
+        )
+      case "amount":
+        return (
+          <td
+            className={cn(
+              amountCell,
+              "tabular-nums",
+              entry.kind === "expense" ? "text-rose-600" : "text-neutral-900",
+            )}
+          >
+            {formatCurrency(entry.amount)}
+          </td>
+        )
+    }
+  }
+
   return (
     <>
       <div className="overflow-x-auto border-t border-black/8">
@@ -193,24 +292,19 @@ export function TransactionTable({
               <th scope="col" className={cn(stickyDate, "bg-neutral-50", headCell)}>
                 Date
               </th>
-              <th scope="col" className={cn("min-w-[200px]", headCell)}>
-                Category
-              </th>
-              <th scope="col" className={cn("min-w-[200px]", headCell)}>
-                Account
-              </th>
-              <th scope="col" className={cn("min-w-[160px]", headCell)}>
-                Party
-              </th>
-              <th scope="col" className={cn("min-w-[120px]", headCell)}>
-                Type
-              </th>
-              <th scope="col" className={cn("min-w-[100px]", headCell)}>
-                Status
-              </th>
-              <th scope="col" className={cn(amountCell, "font-medium text-neutral-700")}>
-                Amount
-              </th>
+              {columns.map((key) => (
+                <th
+                  key={key}
+                  scope="col"
+                  className={
+                    key === "amount"
+                      ? cn(amountCell, "font-medium text-neutral-700")
+                      : cn(WIDTHS[key], headCell)
+                  }
+                >
+                  {LABELS[key]}
+                </th>
+              ))}
             </tr>
           </thead>
 
@@ -219,7 +313,7 @@ export function TransactionTable({
                 it collapses, so each spacer carries one. */}
             {windowed && windowed.padTop > 0 ? (
               <tr aria-hidden>
-                <td colSpan={8} className="p-0" style={{ height: windowed.padTop }} />
+                <td colSpan={columns.length + 2} className="p-0" style={{ height: windowed.padTop }} />
               </tr>
             ) : null}
 
@@ -287,38 +381,9 @@ export function TransactionTable({
                       formatDate(entry.occurredOn)
                     )}
                   </td>
-                  <td className="px-3 py-2.5 text-neutral-900">{entry.category}</td>
-                  {/* The name alone repeats across banks, so the bank behind it
-                      rides along in the muted half of the cell. */}
-                  <td className="px-3 py-2.5 text-neutral-700">
-                    {entry.account}
-                    {entry.accountIssuer ? (
-                      <span className="text-neutral-500"> · {entry.accountIssuer}</span>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2.5 text-neutral-700">
-                    {entry.party || <span className="text-neutral-400">—</span>}
-                  </td>
-                  <td className="px-3 py-2.5 capitalize text-neutral-700">{entry.kind}</td>
-                  <StatusCell
-                    entry={
-                      paidOverrides.has(entry.id)
-                        ? { ...entry, paid: paidOverrides.get(entry.id)! }
-                        : entry
-                    }
-                    onChange={(paid) => flipPaid(entry.id, paid)}
-                    disabled={pending}
-                    readOnly={!canEdit}
-                  />
-                  <td
-                    className={cn(
-                      amountCell,
-                      "tabular-nums",
-                      entry.kind === "expense" ? "text-rose-600" : "text-neutral-900",
-                    )}
-                  >
-                    {formatCurrency(entry.amount)}
-                  </td>
+                  {columns.map((key) => (
+                    <Fragment key={key}>{cell(key, entry, canEdit)}</Fragment>
+                  ))}
                 </tr>
               )
             })}
@@ -326,14 +391,17 @@ export function TransactionTable({
             {windowed && windowed.padBottom > 0 ? (
 
               <tr aria-hidden>
-                <td colSpan={8} className="p-0" style={{ height: windowed.padBottom }} />
+                <td colSpan={columns.length + 2} className="p-0" style={{ height: windowed.padBottom }} />
               </tr>
             ) : null}
 
             {transactions.length === 0 ? (
               <tr className="border-t border-black/5">
                 <td className={cn(stickyGutter, "bg-white")} />
-                <td colSpan={7} className="px-3 py-8 text-center text-neutral-500">
+                <td
+                  colSpan={columns.length + 1}
+                  className="px-3 py-8 text-center text-neutral-500"
+                >
                   No transactions recorded in this range.
                 </td>
               </tr>
@@ -345,20 +413,41 @@ export function TransactionTable({
               <tr className="border-t border-black/15 bg-neutral-50 font-semibold text-neutral-900">
                 <td className={cn(stickyGutter, "bg-neutral-50")} />
                 <td className={cn(stickyDate, "bg-neutral-50 px-3 py-2.5")}>Total</td>
-                <td colSpan={4} className="px-3 py-2.5 font-normal text-neutral-500">
-                  {transactions.length} transaction{transactions.length === 1 ? "" : "s"}
-                </td>
-                {/* Sits directly beside the figure, naming what it is. */}
-                <td className="px-3 py-2.5">Net</td>
-                <td
-                  className={cn(
-                    amountCell,
-                    "tabular-nums",
-                    net < 0 ? "text-rose-600" : "text-neutral-900",
-                  )}
-                >
-                  {formatCurrency(net)}
-                </td>
+                {columns.map((key, index) => {
+                  if (key === "amount") {
+                    return (
+                      <td
+                        key={key}
+                        className={cn(
+                          amountCell,
+                          "tabular-nums",
+                          net < 0 ? "text-rose-600" : "text-neutral-900",
+                        )}
+                      >
+                        {formatCurrency(net)}
+                      </td>
+                    )
+                  }
+                  // "Net" sits directly beside the figure, naming what it is;
+                  // the count takes the first cell that is neither.
+                  const label =
+                    index === amountIndex - 1
+                      ? "Net"
+                      : index === countIndex
+                        ? `${transactions.length} transaction${transactions.length === 1 ? "" : "s"}`
+                        : null
+                  return (
+                    <td
+                      key={key}
+                      className={cn(
+                        "px-3 py-2.5",
+                        label !== "Net" && "font-normal text-neutral-500",
+                      )}
+                    >
+                      {label}
+                    </td>
+                  )
+                })}
               </tr>
             </tfoot>
           ) : null}

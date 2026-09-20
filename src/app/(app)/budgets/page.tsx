@@ -3,14 +3,15 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
-import { Topbar } from "@/components/layout/topbar"
+import { Topbar, TOPBAR_ACTION_CLASS } from "@/components/layout/topbar"
 import { listAccounts, type Account } from "@/features/accounts/actions"
 import { SummaryTiles } from "@/components/report/summary-tiles"
 import { Card, CardHeader } from "@/components/ui/card"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
-import { BudgetFilters } from "@/features/budgets/components/budget-filters"
-import { BudgetSheet } from "@/features/budgets/components/budget-table"
+import { BudgetSheetColumns } from "@/features/budgets/components/budget-sheet-columns"
+import { BudgetToolbar } from "@/features/budgets/components/budget-toolbar"
 import { listBudgets } from "@/features/budgets/list"
+import { applyBudgetQuery, readBudgetQuery, type BudgetQuery } from "@/features/budgets/query"
 import {
   periodLabel,
   periodQuery,
@@ -55,19 +56,26 @@ async function BudgetList({
   account,
   accounts,
   canEdit,
+  query,
 }: {
   selection: BudgetPeriodSelection
   account: string
   accounts: Account[]
   canEdit: boolean
+  query: BudgetQuery
 }) {
   const { ok, error, entries: all } = await listBudgets(selection.year)
 
   // A plan naming no account was entered before accounts were, and the only
   // honest reading of it is "every account" — so it survives the filter.
-  const entries = account
+  const scoped = account
     ? all.filter((entry) => entry.account === null || entry.account === account)
     : all
+  const entries = applyBudgetQuery(scoped, query)
+  // With one direction asked for, the other's block is not drawn at all.
+  const kinds = query.kind
+    ? ([query.kind] as ("income" | "expense")[])
+    : (["income", "expense"] as const)
 
   const monthly = selection.period === "monthly"
   const yearPlans = entries.filter((entry) => entry.month === null)
@@ -119,12 +127,13 @@ async function BudgetList({
                 caption="Entered against this month, and counted in it whole. Click a figure to change it."
               />
               <div className="mt-4">
-                <BudgetSheet
+                <BudgetSheetColumns
                   entries={monthPlans}
                   accounts={accounts}
                   label={label}
                   showAccount={!account}
                   canEdit={canEdit}
+                  kinds={kinds}
                 />
               </div>
             </Card>
@@ -138,13 +147,14 @@ async function BudgetList({
                   caption={`Levelled across the twelve months, so a twelfth of each lands in ${longMonthName(selection.month)}.`}
                 />
                 <div className="mt-4">
-                  <BudgetSheet
+                  <BudgetSheetColumns
                     entries={yearPlans}
                     accounts={accounts}
                     label={String(selection.year)}
                     showPerMonth
                     showAccount={!account}
-                  canEdit={canEdit}
+                    canEdit={canEdit}
+                    kinds={kinds}
                   />
                 </div>
               </Card>
@@ -157,13 +167,14 @@ async function BudgetList({
               caption="Every plan filed against this year, whole-year plans first. Click a figure to change it."
             />
             <div className="mt-4">
-              <BudgetSheet
+              <BudgetSheetColumns
                 entries={entries}
                 accounts={accounts}
                 label={label}
                 showPeriod
                 showAccount={!account}
                 canEdit={canEdit}
+                kinds={kinds}
               />
             </div>
           </Card>
@@ -183,6 +194,7 @@ export default async function BudgetsPage({
   const [params, accounts] = await Promise.all([searchParams, listAccounts()])
   const selection = readBudgetPeriod(params)
   const account = typeof params.account === "string" ? params.account.trim() : ""
+  const query = readBudgetQuery(params)
   const carried = account ? `&account=${encodeURIComponent(account)}` : ""
 
   return (
@@ -196,9 +208,9 @@ export default async function BudgetsPage({
           canEdit ? (
             <Link
               href={`/budgets/new${periodQuery(selection)}${carried}`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-black/10 px-2.5 text-sm text-neutral-700 hover:border-black/20 hover:text-neutral-900 sm:h-8"
+              className={TOPBAR_ACTION_CLASS}
             >
-              <Plus className="size-4 shrink-0" strokeWidth={1.75} />
+              <Plus className="size-4 shrink-0" strokeWidth={2} />
               <span className="hidden sm:inline">New Budget</span>
             </Link>
           ) : null
@@ -209,18 +221,19 @@ export default async function BudgetsPage({
         {/* The period row sits above everything it scopes, on white, so it
             reads as the page's toolbar rather than another card. */}
         <div className="border-b border-black/8 bg-white">
-          <BudgetFilters
+          <BudgetToolbar
             selection={selection}
             thisYear={new Date().getUTCFullYear()}
             accounts={accounts.accounts}
             account={account}
+            query={query}
           />
         </div>
 
         {/* Keyed on the period so changing it shows the skeleton again rather
             than leaving the old plans up while the new ones load. */}
         <Suspense
-          key={`${selection.period}:${selection.year}:${selection.month}:${account}`}
+          key={`${selection.period}:${selection.year}:${selection.month}:${account}:${query.q}:${query.kind}:${query.sort}:${query.direction}`}
           fallback={<ListFallback />}
         >
           <BudgetList
@@ -228,6 +241,7 @@ export default async function BudgetsPage({
             account={account}
             accounts={accounts.accounts}
             canEdit={canEdit}
+            query={query}
           />
         </Suspense>
       </main>

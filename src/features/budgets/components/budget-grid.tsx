@@ -20,7 +20,7 @@ import { cn } from "@/lib/cn"
 import { useActionToast } from "@/components/ui/toast"
 import {
   BUDGET_PERIODS,
-  SECTIONS,
+  sectionLabel,
   TRANSACTION_KINDS,
   type BudgetPeriod,
   type SectionValue,
@@ -39,9 +39,6 @@ const YEAR_SLOT = [0]
 
 /** A section is a fixed enum value, so it can never contain the separator. */
 const optionValue = (section: string, category: string) => `${section}|${category}`
-
-const sectionLabel = (value: string) =>
-  SECTIONS.find((section) => section.value === value)?.label ?? value
 
 type Row = {
   /** Stable across re-renders; never sent to the server. */

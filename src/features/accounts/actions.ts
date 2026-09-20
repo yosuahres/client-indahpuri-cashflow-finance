@@ -18,7 +18,10 @@ export type Account = {
   provider: string | null
   accountNo: string | null
   holder: string | null
+  notes: string | null
   isCompanyAccount: boolean
+  /** When the account was added, as an ISO timestamp. */
+  createdAt: string
 }
 
 const UNDEFINED_TABLE = "42P01"
@@ -38,7 +41,7 @@ export async function listAccounts(): Promise<AccountsResult> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("accounts")
-    .select("id, name, type, provider, account_no, holder, is_company_account")
+    .select("id, name, type, provider, account_no, holder, notes, is_company_account, created_at")
     .order("name")
 
   if (error) {
@@ -58,13 +61,15 @@ export async function listAccounts(): Promise<AccountsResult> {
       provider: row.provider as string | null,
       accountNo: row.account_no as string | null,
       holder: row.holder as string | null,
+      notes: row.notes as string | null,
       isCompanyAccount: row.is_company_account as boolean,
+      createdAt: row.created_at as string,
     })),
   }
 }
 
 /** One account with every field the edit form shows, notes included. */
-export type AccountDetails = Account & { notes: string | null }
+export type AccountDetails = Account
 
 export type AccountResult =
   | { ok: true; account: AccountDetails | null }
@@ -75,7 +80,7 @@ export async function getAccount(id: string): Promise<AccountResult> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("accounts")
-    .select("id, name, type, provider, account_no, holder, notes, is_company_account")
+    .select("id, name, type, provider, account_no, holder, notes, is_company_account, created_at")
     .eq("id", id)
     .maybeSingle()
 
@@ -99,6 +104,7 @@ export async function getAccount(id: string): Promise<AccountResult> {
       holder: data.holder as string | null,
       notes: data.notes as string | null,
       isCompanyAccount: data.is_company_account as boolean,
+      createdAt: data.created_at as string,
     },
   }
 }
