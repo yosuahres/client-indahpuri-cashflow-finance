@@ -2,10 +2,11 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
-import { Topbar } from "@/components/layout/topbar"
+import { Topbar, TOPBAR_ACTION_CLASS } from "@/components/layout/topbar"
 import { requirePermission } from "@/features/auth/session"
 import { listLeave } from "@/features/leave/actions"
-import { LeaveFilter, LeaveTable } from "@/features/leave/components/leave-table"
+import { LeaveList } from "@/features/leave/components/leave-list"
+import { applyLeaveQuery, readLeaveQuery } from "@/features/leave/query"
 import { LEAVE_STATUSES, type LeaveStatusValue } from "@/features/leave/constants"
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default async function LeavePage({
     : undefined
 
   const result = await listLeave(status)
+  const query = readLeaveQuery(params)
 
   return (
     <>
@@ -36,7 +38,7 @@ export default async function LeavePage({
         actions={
           <Link
             href="/hris/leave/new"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-neutral-900 px-2.5 text-sm font-medium text-white transition-opacity hover:opacity-85 sm:h-8"
+            className={TOPBAR_ACTION_CLASS}
           >
             <Plus className="size-4 shrink-0" strokeWidth={2} />
             <span className="hidden sm:inline">Record Leave</span>
@@ -45,20 +47,12 @@ export default async function LeavePage({
       />
 
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <LeaveFilter status={status ?? ""} />
-
-        {!result.ok ? (
-          <p
-            role="alert"
-            className="border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6"
-          >
-            {result.error}
-          </p>
-        ) : null}
-
-        <div className="min-h-0 flex-1 overflow-auto border-t border-black/8">
-          <LeaveTable entries={result.entries} />
-        </div>
+        <LeaveList
+          entries={applyLeaveQuery(result.entries, query)}
+          status={status ?? ""}
+          query={query}
+          notice={result.ok ? undefined : result.error}
+        />
       </main>
     </>
   )

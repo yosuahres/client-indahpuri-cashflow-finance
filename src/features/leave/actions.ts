@@ -26,6 +26,8 @@ export type LeaveEntry = {
   endDate: string
   status: LeaveStatusValue
   reason: string | null
+  /** When the leave was filed, as an ISO timestamp. */
+  createdAt: string
 }
 
 const UNDEFINED_TABLE = "42P01"
@@ -60,7 +62,7 @@ export async function listLeave(status?: LeaveStatusValue): Promise<LeaveResult>
   const supabase = await createClient()
   let query = supabase
     .from("leave_requests")
-    .select("id, employee_id, leave_type, start_date, end_date, status, reason, employees(full_name, employee_no)")
+    .select("id, employee_id, leave_type, start_date, end_date, status, reason, created_at, employees(full_name, employee_no)")
     .order("start_date", { ascending: false })
 
   if (status) query = query.eq("status", status)
@@ -90,6 +92,7 @@ export async function listLeave(status?: LeaveStatusValue): Promise<LeaveResult>
         endDate: row.end_date as string,
         status: row.status as LeaveStatusValue,
         reason: (row.reason as string | null) || null,
+        createdAt: row.created_at as string,
       }
     }),
   }

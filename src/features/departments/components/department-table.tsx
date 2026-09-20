@@ -5,11 +5,25 @@ import { Trash2 } from "lucide-react"
 
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
+import { formatDate } from "@/lib/format"
 
 import { deleteDepartment, type Department } from "../actions"
+import {
+  DEFAULT_DEPARTMENT_COLUMNS,
+  DEPARTMENT_COLUMNS,
+  type DepartmentColumnKey,
+} from "../columns"
 
 const headCell = "px-2 py-2.5 text-left font-medium text-neutral-700 sm:px-3"
 const cell = "px-3 py-2.5"
+
+const WIDTHS = Object.fromEntries(
+  DEPARTMENT_COLUMNS.map((column) => [column.key, column.width]),
+) as Record<DepartmentColumnKey, string>
+
+const LABELS = Object.fromEntries(
+  DEPARTMENT_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<DepartmentColumnKey, string>
 
 /**
  * Every department, with how many employees are filed under it. Deleting
@@ -18,10 +32,13 @@ const cell = "px-3 py-2.5"
 export function DepartmentTable({
   departments,
   headcount,
+  columns = DEFAULT_DEPARTMENT_COLUMNS,
 }: {
   departments: Department[]
   /** Employees per department name. */
   headcount: Record<string, number>
+  /** Which optional columns to show, in the order they appear. */
+  columns?: DepartmentColumnKey[]
 }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -45,9 +62,11 @@ export function DepartmentTable({
               <th scope="col" className={cn("min-w-[200px]", headCell)}>
                 Department
               </th>
-              <th scope="col" className={cn("min-w-[120px]", headCell)}>
-                Employees
-              </th>
+              {columns.map((key) => (
+                <th key={key} scope="col" className={cn(WIDTHS[key], headCell)}>
+                  {LABELS[key]}
+                </th>
+              ))}
               <th scope="col" className="w-28 px-2 py-2.5">
                 <span className="sr-only">Row actions</span>
               </th>
@@ -58,9 +77,21 @@ export function DepartmentTable({
             {departments.map((department) => (
               <tr key={department.id} className="border-t border-black/5 hover:bg-neutral-50/70">
                 <td className={cn(cell, "text-neutral-900")}>{department.name}</td>
-                <td className={cn(cell, "text-neutral-700 tabular-nums")}>
-                  {headcount[department.name] ?? 0}
-                </td>
+                {columns.map((key) => (
+                  <td
+                    key={key}
+                    className={cn(
+                      cell,
+                      key === "headcount"
+                        ? "text-neutral-700 tabular-nums"
+                        : "whitespace-nowrap text-neutral-700",
+                    )}
+                  >
+                    {key === "headcount"
+                      ? (headcount[department.name] ?? 0)
+                      : formatDate(department.createdAt.slice(0, 10))}
+                  </td>
+                ))}
                 <td className="w-28 px-2 py-1.5 text-right">
                   {confirmingId === department.id ? (
                     <span className="inline-flex items-center gap-1">
@@ -97,7 +128,7 @@ export function DepartmentTable({
 
             {departments.length === 0 ? (
               <tr className="border-t border-black/5">
-                <td colSpan={3} className="px-3 py-8 text-center text-neutral-500">
+                <td colSpan={columns.length + 2} className="px-3 py-8 text-center text-neutral-500">
                   No departments yet.
                 </td>
               </tr>

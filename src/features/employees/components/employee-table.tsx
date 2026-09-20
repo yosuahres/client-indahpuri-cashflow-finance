@@ -7,9 +7,15 @@ import { Trash2, X } from "lucide-react"
 
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
-import { formatDate } from "@/lib/format"
+import { formatCurrency, formatDate } from "@/lib/format"
 
 import { deleteEmployees, type Employee } from "../actions"
+import {
+  DEFAULT_EMPLOYEE_COLUMNS,
+  EMPLOYEE_COLUMN_TYPES,
+  EMPLOYEE_COLUMNS,
+  type EmployeeColumnKey,
+} from "../columns"
 import { employeeStatusLabel, employmentTypeLabel } from "../constants"
 
 // The tick and the name stay put while the rest of the row scrolls sideways on a phone.
@@ -29,12 +35,83 @@ function Empty() {
   return <span className="text-neutral-400">—</span>
 }
 
+function StatusPill({ status }: { status: Employee["status"] }) {
+  return (
+    <span
+      className={cn(
+        "rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+        status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-600",
+      )}
+    >
+      {employeeStatusLabel(status)}
+    </span>
+  )
+}
+
+/** A timestamp as the list prints it: the day it fell on. */
+function formatStamp(value: string) {
+  return formatDate(value.slice(0, 10))
+}
+
+/**
+ * One cell, read straight off the record and formatted by the field's own
+ * type. Every field is a possible column, so this is one function rather than
+ * an entry per field.
+ */
+function Cell({ employee, column }: { employee: Employee; column: EmployeeColumnKey }) {
+  if (column === "status") return <StatusPill status={employee.status} />
+  if (column === "createdAt") {
+    return <span className="whitespace-nowrap text-neutral-700">{formatStamp(employee.createdAt)}</span>
+  }
+
+  const raw = employee.fields[column]
+  if (!raw) return <Empty />
+
+  switch (EMPLOYEE_COLUMN_TYPES[column]) {
+    case "date":
+      return <span className="whitespace-nowrap text-neutral-700">{formatDate(raw)}</span>
+    case "money":
+      return <span className="whitespace-nowrap text-neutral-700 tabular-nums">{formatCurrency(Number(raw))}</span>
+    case "choice":
+      return (
+        <span className="text-neutral-700">
+          {column === "employmentType"
+            ? employmentTypeLabel(employee.employmentType)
+            : raw}
+        </span>
+      )
+    default:
+      return (
+        <span
+          className={cn("text-neutral-700", column === "employeeNo" && "tabular-nums whitespace-nowrap")}
+        >
+          {raw}
+        </span>
+      )
+  }
+}
+
+const WIDTHS = Object.fromEntries(
+  EMPLOYEE_COLUMNS.map((column) => [column.key, column.width ?? ""]),
+) as Record<EmployeeColumnKey, string>
+
+const LABELS = Object.fromEntries(
+  EMPLOYEE_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<EmployeeColumnKey, string>
+
 /**
  * Every employee on file, laid out like the Profit and Loss ledger. Clicking a
  * row opens that employee's details, ready to edit; ticking rows offers to
  * delete them.
  */
-export function EmployeeTable({ employees }: { employees: Employee[] }) {
+export function EmployeeTable({
+  employees,
+  columns = DEFAULT_EMPLOYEE_COLUMNS,
+}: {
+  employees: Employee[]
+  /** Which optional columns to show, in the order they appear. */
+  columns?: EmployeeColumnKey[]
+}) {
   const router = useRouter()
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
@@ -88,24 +165,11 @@ export function EmployeeTable({ employees }: { employees: Employee[] }) {
               <th scope="col" className={cn(stickyName, "bg-neutral-50", headCell)}>
                 Name
               </th>
-              <th scope="col" className={cn("min-w-[120px]", headCell)}>
-                Employee ID
-              </th>
-              <th scope="col" className={cn("min-w-[160px]", headCell)}>
-                Position
-              </th>
-              <th scope="col" className={cn("min-w-[160px]", headCell)}>
-                Department
-              </th>
-              <th scope="col" className={cn("min-w-[120px]", headCell)}>
-                Employment
-              </th>
-              <th scope="col" className={cn("min-w-[120px]", headCell)}>
-                Join Date
-              </th>
-              <th scope="col" className={cn("min-w-[100px]", headCell)}>
-                Status
-              </th>
+              {columns.map((key) => (
+                <th key={key} scope="col" className={cn(WIDTHS[key], headCell)}>
+                  {LABELS[key]}
+                </th>
+              ))}
             </tr>
           </thead>
 
@@ -156,36 +220,18 @@ export function EmployeeTable({ employees }: { employees: Employee[] }) {
                       {employee.fullName}
                     </Link>
                   </td>
-                  <td className={cn(cell, "whitespace-nowrap text-neutral-700 tabular-nums")}>
-                    {employee.employeeNo}
-                  </td>
-                  <td className={cn(cell, "text-neutral-700")}>{employee.position ?? <Empty />}</td>
-                  <td className={cn(cell, "text-neutral-700")}>{employee.department ?? <Empty />}</td>
-                  <td className={cn(cell, "text-neutral-700")}>
-                    {employmentTypeLabel(employee.employmentType)}
-                  </td>
-                  <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
-                    {employee.joinDate ? formatDate(employee.joinDate) : <Empty />}
-                  </td>
-                  <td className={cell}>
-                    <span
-                      className={cn(
-                        "rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap",
-                        employee.status === "active"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-neutral-100 text-neutral-600",
-                      )}
-                    >
-                      {employeeStatusLabel(employee.status)}
-                    </span>
-                  </td>
+                  {columns.map((key) => (
+                    <td key={key} className={cell}>
+                      <Cell employee={employee} column={key} />
+                    </td>
+                  ))}
                 </tr>
               )
             })}
 
             {employees.length === 0 ? (
               <tr className="border-t border-black/5">
-                <td colSpan={8} className="px-3 py-8 text-center text-neutral-500">
+                <td colSpan={columns.length + 2} className="px-3 py-8 text-center text-neutral-500">
                   No employees found.
                 </td>
               </tr>

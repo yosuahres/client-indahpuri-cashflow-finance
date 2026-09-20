@@ -19,6 +19,8 @@ export type Shift = {
   startsAt: string
   endsAt: string
   color: ShiftColorValue
+  /** When the shift was added, as an ISO timestamp. */
+  createdAt: string
 }
 
 const UNDEFINED_TABLE = "42P01"
@@ -46,7 +48,7 @@ export async function listShifts(): Promise<ShiftsResult> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("shifts")
-    .select("id, name, starts_at, ends_at, color")
+    .select("id, name, starts_at, ends_at, color, created_at")
     .order("starts_at")
 
   if (error) return { ok: false, error: errorMessage(error), shifts: [] }
@@ -59,6 +61,7 @@ export async function listShifts(): Promise<ShiftsResult> {
       startsAt: toClock(row.starts_at as string),
       endsAt: toClock(row.ends_at as string),
       color: row.color as ShiftColorValue,
+      createdAt: row.created_at as string,
     })),
   }
 }

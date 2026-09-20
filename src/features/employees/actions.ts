@@ -22,6 +22,14 @@ export type Employee = {
   /** ISO `YYYY-MM-DD`. */
   joinDate: string | null
   status: EmployeeStatusValue
+  /** When the record was entered, as an ISO timestamp. */
+  createdAt: string
+  /**
+   * Every field on the person, keyed as `EMPLOYEE_FIELDS` names it. The list
+   * shows a handful by default and offers the rest as columns, so it reads
+   * them from here rather than growing a property each time one is added.
+   */
+  fields: Record<string, string | null>
 }
 
 const UNDEFINED_TABLE = "42P01"
@@ -42,8 +50,11 @@ function errorMessage(error: { code?: string; message: string }) {
   return error.message
 }
 
-const LIST_COLUMNS =
-  "id, employee_no, full_name, position, department, employment_type, join_date, status"
+const LIST_COLUMNS = [
+  "id",
+  "created_at",
+  ...EMPLOYEE_FIELDS.map((field) => field.column),
+].join(", ")
 
 const DETAIL_COLUMNS = [
   "id",
@@ -79,7 +90,9 @@ export async function listEmployees(): Promise<EmployeesResult> {
 
   return {
     ok: true,
-    employees: (data ?? []).map((row) => ({
+    // The column list is built from the field registry, so it is not a literal
+    // the client can infer a row type from — the same cast `getEmployee` uses.
+    employees: ((data ?? []) as unknown as Record<string, unknown>[]).map((row) => ({
       id: row.id as string,
       employeeNo: row.employee_no as string,
       fullName: row.full_name as string,
@@ -88,6 +101,13 @@ export async function listEmployees(): Promise<EmployeesResult> {
       employmentType: row.employment_type as EmploymentTypeValue,
       joinDate: row.join_date as string | null,
       status: row.status as EmployeeStatusValue,
+      createdAt: row.created_at as string,
+      fields: Object.fromEntries(
+        EMPLOYEE_FIELDS.map((field) => {
+          const value = row[field.column]
+          return [field.name, value === null || value === undefined ? null : String(value)]
+        }),
+      ),
     })),
   }
 }

@@ -1,23 +1,29 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useState, useTransition } from "react"
+import { Fragment, useState, useTransition } from "react"
 import { Trash2 } from "lucide-react"
 
-import { Select } from "@/components/form/select"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 import { formatDate } from "@/lib/format"
 
 import { deleteLeave, setLeaveStatus, type LeaveEntry } from "../actions"
+import { DEFAULT_LEAVE_COLUMNS, LEAVE_COLUMNS, type LeaveColumnKey } from "../columns"
 import {
-  LEAVE_STATUSES,
   leaveDays,
   leaveStatusLabel,
   leaveTypeLabel,
   type LeaveStatusValue,
 } from "../constants"
+
+const WIDTHS = Object.fromEntries(
+  LEAVE_COLUMNS.map((column) => [column.key, column.width]),
+) as Record<LeaveColumnKey, string>
+
+const LABELS = Object.fromEntries(
+  LEAVE_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<LeaveColumnKey, string>
 
 const headCell = "px-3 py-2.5 text-left font-medium text-neutral-700"
 const cell = "px-3 py-2.5"
@@ -30,41 +36,73 @@ const TONES: Record<LeaveStatusValue, string> = {
 }
 
 /** Narrows the list by status. The choice sits in the URL, so the view is shareable. */
-export function LeaveFilter({ status }: { status: string }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [pending, startTransition] = useTransition()
-
-  function setStatus(value: string) {
-    const params = new URLSearchParams(searchParams)
-    if (value) params.set("status", value)
-    else params.delete("status")
-    const query = params.toString()
-    startTransition(() => {
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
-    })
+/** How each optional column renders for one spell of leave. */
+function leaveCell(key: LeaveColumnKey, entry: LeaveEntry) {
+  switch (key) {
+    case "leaveType":
+      return (
+        <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
+          {leaveTypeLabel(entry.leaveType)}
+        </td>
+      )
+    case "days":
+      return (
+        <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
+          {entry.startDate === entry.endDate
+            ? formatDate(entry.startDate)
+            : `${formatDate(entry.startDate)} – ${formatDate(entry.endDate)}`}
+        </td>
+      )
+    case "startDate":
+      return (
+        <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
+          {formatDate(entry.startDate)}
+        </td>
+      )
+    case "endDate":
+      return (
+        <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
+          {formatDate(entry.endDate)}
+        </td>
+      )
+    case "length":
+      return (
+        <td className={cn(cell, "text-neutral-700 tabular-nums")}>
+          {leaveDays(entry.startDate, entry.endDate)}
+        </td>
+      )
+    case "status":
+      return (
+        <td className={cell}>
+          <span
+            className={cn(
+              "inline-block rounded px-1.5 py-0.5 text-xs font-medium",
+              TONES[entry.status],
+            )}
+          >
+            {leaveStatusLabel(entry.status)}
+          </span>
+        </td>
+      )
+    case "reason":
+      return <td className={cn(cell, "text-neutral-600")}>{entry.reason ?? "—"}</td>
+    case "createdAt":
+      return (
+        <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
+          {formatDate(entry.createdAt.slice(0, 10))}
+        </td>
+      )
   }
-
-  return (
-    <div className={cn("px-4 py-3 sm:px-6 sm:py-4", pending && "opacity-60")}>
-      <div className="w-full sm:w-56">
-        <label htmlFor="leave-status" className="sr-only">
-          Status
-        </label>
-        <Select
-          id="leave-status"
-          value={status}
-          onValueChange={setStatus}
-          options={[{ value: "", label: "All leave" }, ...LEAVE_STATUSES]}
-        />
-      </div>
-    </div>
-  )
 }
 
-/** Every spell of leave, each approvable, rejectable or removable in place. */
-export function LeaveTable({ entries }: { entries: LeaveEntry[] }) {
+export function LeaveTable({
+  entries,
+  columns = DEFAULT_LEAVE_COLUMNS,
+}: {
+  entries: LeaveEntry[]
+  /** Which optional columns to show, in the order they appear. */
+  columns?: LeaveColumnKey[]
+}) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [busy, startBusy] = useTransition()
 
@@ -92,11 +130,11 @@ export function LeaveTable({ entries }: { entries: LeaveEntry[] }) {
         <thead>
           <tr className="bg-neutral-50">
             <th scope="col" className={cn("min-w-[200px]", headCell)}>Employee</th>
-            <th scope="col" className={cn("min-w-[110px]", headCell)}>Type</th>
-            <th scope="col" className={cn("min-w-[200px]", headCell)}>Days</th>
-            <th scope="col" className={cn("min-w-[70px]", headCell)}>Length</th>
-            <th scope="col" className={cn("min-w-[100px]", headCell)}>Status</th>
-            <th scope="col" className={cn("min-w-[160px]", headCell)}>Reason</th>
+            {columns.map((key) => (
+              <th key={key} scope="col" className={cn(WIDTHS[key], headCell)}>
+                {LABELS[key]}
+              </th>
+            ))}
             <th scope="col" className="w-48 px-2 py-2.5">
               <span className="sr-only">Row actions</span>
             </th>
@@ -117,23 +155,9 @@ export function LeaveTable({ entries }: { entries: LeaveEntry[] }) {
                   <span className="block text-xs text-neutral-500">{entry.employeeNo}</span>
                 ) : null}
               </td>
-              <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
-                {leaveTypeLabel(entry.leaveType)}
-              </td>
-              <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
-                {entry.startDate === entry.endDate
-                  ? formatDate(entry.startDate)
-                  : `${formatDate(entry.startDate)} – ${formatDate(entry.endDate)}`}
-              </td>
-              <td className={cn(cell, "text-neutral-700 tabular-nums")}>
-                {leaveDays(entry.startDate, entry.endDate)}
-              </td>
-              <td className={cell}>
-                <span className={cn("inline-block rounded px-1.5 py-0.5 text-xs font-medium", TONES[entry.status])}>
-                  {leaveStatusLabel(entry.status)}
-                </span>
-              </td>
-              <td className={cn(cell, "text-neutral-600")}>{entry.reason ?? "—"}</td>
+              {columns.map((key) => (
+                <Fragment key={key}>{leaveCell(key, entry)}</Fragment>
+              ))}
               <td className="w-48 px-2 py-1.5">
                 <div className="flex items-center justify-end gap-1">
                   {confirmingId === entry.id ? (
@@ -194,7 +218,7 @@ export function LeaveTable({ entries }: { entries: LeaveEntry[] }) {
 
           {entries.length === 0 ? (
             <tr className="border-t border-black/5">
-              <td colSpan={7} className="px-3 py-8 text-center text-neutral-500">
+              <td colSpan={columns.length + 2} className="px-3 py-8 text-center text-neutral-500">
                 No leave on the record yet.
               </td>
             </tr>

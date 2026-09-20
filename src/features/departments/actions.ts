@@ -9,7 +9,12 @@ import { hasFieldErrors, type FormState } from "@/lib/form-state"
 import { flash } from "@/lib/flash"
 import { safeRedirectPath } from "@/lib/site-url"
 
-export type Department = { id: string; name: string }
+export type Department = {
+  id: string
+  name: string
+  /** When the department was added, as an ISO timestamp. */
+  createdAt: string
+}
 
 const UNDEFINED_TABLE = "42P01"
 const UNIQUE_VIOLATION = "23505"
@@ -25,7 +30,10 @@ export async function listDepartments(): Promise<DepartmentsResult> {
   await requireUser()
 
   const supabase = await createClient()
-  const { data, error } = await supabase.from("departments").select("id, name").order("name")
+  const { data, error } = await supabase
+    .from("departments")
+    .select("id, name, created_at")
+    .order("name")
 
   if (error) {
     return {
@@ -37,7 +45,11 @@ export async function listDepartments(): Promise<DepartmentsResult> {
 
   return {
     ok: true,
-    departments: (data ?? []).map((row) => ({ id: row.id as string, name: row.name as string })),
+    departments: (data ?? []).map((row) => ({
+      id: row.id as string,
+      name: row.name as string,
+      createdAt: row.created_at as string,
+    })),
   }
 }
 

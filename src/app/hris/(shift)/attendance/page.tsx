@@ -3,7 +3,8 @@ import type { Metadata } from "next"
 import { Topbar } from "@/components/layout/topbar"
 import { requirePermission } from "@/features/auth/session"
 import { loadAttendanceDay } from "@/features/attendance/actions"
-import { AttendanceSheet } from "@/features/attendance/components/attendance-sheet"
+import { AttendanceList } from "@/features/attendance/components/attendance-list"
+import { applyAttendanceQuery, readAttendanceQuery } from "@/features/attendance/query"
 import { DayPicker } from "@/features/attendance/components/day-picker"
 import {
   ATTENDANCE_STATUSES,
@@ -31,6 +32,12 @@ export default async function AttendancePage({
   const date = ISO_DATE.test(asked) ? asked : today
 
   const [roster, day] = await Promise.all([loadRoster(), loadAttendanceDay(date)])
+
+  const departments = [
+    ...new Set(roster.employees.flatMap((employee) => employee.department ?? [])),
+  ].sort((a, b) => a.localeCompare(b))
+  const query = readAttendanceQuery(params, departments)
+  const shown = applyAttendanceQuery(roster.employees, query, day.entries)
 
   // What the sheet already says, counted for the line above it.
   const tally = new Map<AttendanceStatusValue, number>()
@@ -67,9 +74,13 @@ export default async function AttendancePage({
             : `${recorded} of ${roster.employees.length} recorded — ${summary}.`}
         </p>
 
-        <div className="min-h-0 flex-1 overflow-auto">
-          <AttendanceSheet date={date} roster={roster.employees} entries={day.entries} />
-        </div>
+        <AttendanceList
+          date={date}
+          roster={shown}
+          entries={day.entries}
+          departments={departments}
+          query={query}
+        />
       </main>
     </>
   )

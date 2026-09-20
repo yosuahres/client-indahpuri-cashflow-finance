@@ -5,9 +5,19 @@ import { Trash2 } from "lucide-react"
 
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
+import { formatDate } from "@/lib/format"
 
 import { deleteShift, type Shift } from "../actions"
+import { DEFAULT_SHIFT_COLUMNS, SHIFT_COLUMNS, type ShiftColumnKey } from "../columns"
 import { crossesMidnight, shiftColor, shiftHours } from "../constants"
+
+const WIDTHS = Object.fromEntries(
+  SHIFT_COLUMNS.map((column) => [column.key, column.width]),
+) as Record<ShiftColumnKey, string>
+
+const LABELS = Object.fromEntries(
+  SHIFT_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<ShiftColumnKey, string>
 
 const headCell = "px-3 py-2.5 text-left font-medium text-neutral-700"
 const cell = "px-3 py-2.5"
@@ -20,10 +30,13 @@ const cell = "px-3 py-2.5"
 export function ShiftTable({
   shifts,
   headcount,
+  columns = DEFAULT_SHIFT_COLUMNS,
 }: {
   shifts: Shift[]
   /** Employees per shift id. */
   headcount: Record<string, number>
+  /** Which optional columns to show, in the order they appear. */
+  columns?: ShiftColumnKey[]
 }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -44,9 +57,11 @@ export function ShiftTable({
         <thead>
           <tr className="bg-neutral-50">
             <th scope="col" className={cn("min-w-[220px]", headCell)}>Shift</th>
-            <th scope="col" className={cn("min-w-[180px]", headCell)}>Hours</th>
-            <th scope="col" className={cn("min-w-[90px]", headCell)}>Length</th>
-            <th scope="col" className={cn("min-w-[110px]", headCell)}>Employees</th>
+            {columns.map((key) => (
+              <th key={key} scope="col" className={cn(WIDTHS[key], headCell)}>
+                {LABELS[key]}
+              </th>
+            ))}
             <th scope="col" className="w-28 px-2 py-2.5">
               <span className="sr-only">Row actions</span>
             </th>
@@ -71,18 +86,36 @@ export function ShiftTable({
                     {shift.name}
                   </span>
                 </td>
-                <td className={cn(cell, "whitespace-nowrap text-neutral-700 tabular-nums")}>
-                  {shift.startsAt} – {shift.endsAt}
-                  {overnight ? (
-                    <span className="ml-2 text-xs text-neutral-500">next day</span>
-                  ) : null}
-                </td>
-                <td className={cn(cell, "text-neutral-700 tabular-nums")}>
-                  {shiftHours(shift.startsAt, shift.endsAt)}
-                </td>
-                <td className={cn(cell, "text-neutral-700 tabular-nums")}>
-                  {headcount[shift.id] ?? 0}
-                </td>
+                {columns.map((key) => (
+                  <td
+                    key={key}
+                    className={cn(cell, "whitespace-nowrap text-neutral-700 tabular-nums")}
+                  >
+                    {key === "hours" ? (
+                      <>
+                        {shift.startsAt} – {shift.endsAt}
+                        {overnight ? (
+                          <span className="ml-2 text-xs text-neutral-500">next day</span>
+                        ) : null}
+                      </>
+                    ) : key === "startsAt" ? (
+                      shift.startsAt
+                    ) : key === "endsAt" ? (
+                      <>
+                        {shift.endsAt}
+                        {overnight ? (
+                          <span className="ml-2 text-xs text-neutral-500">next day</span>
+                        ) : null}
+                      </>
+                    ) : key === "length" ? (
+                      shiftHours(shift.startsAt, shift.endsAt)
+                    ) : key === "headcount" ? (
+                      (headcount[shift.id] ?? 0)
+                    ) : (
+                      formatDate(shift.createdAt.slice(0, 10))
+                    )}
+                  </td>
+                ))}
                 <td className="w-28 px-2 py-1.5 text-right">
                   {confirmingId === shift.id ? (
                     <span className="inline-flex items-center gap-1">
@@ -120,7 +153,7 @@ export function ShiftTable({
 
           {shifts.length === 0 ? (
             <tr className="border-t border-black/5">
-              <td colSpan={5} className="px-3 py-8 text-center text-neutral-500">
+              <td colSpan={columns.length + 2} className="px-3 py-8 text-center text-neutral-500">
                 No shifts yet.
               </td>
             </tr>
