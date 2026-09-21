@@ -1,9 +1,15 @@
-import { EMPLOYEE_FIELDS, type EmployeeField, type EmployeeValues } from "./fields"
+import { EMPLOYEE_FIELDS, isFieldShown, type EmployeeField, type EmployeeValues } from "./fields"
 
 export function readEmployee(formData: FormData): EmployeeValues {
-  return Object.fromEntries(
+  const values: EmployeeValues = Object.fromEntries(
     EMPLOYEE_FIELDS.map((field) => [field.name, String(formData.get(field.name) ?? "").trim()]),
   )
+  // A field that no longer applies is cleared, so switching a PKWT to PKWTT
+  // does not leave a contract end date behind.
+  for (const field of EMPLOYEE_FIELDS) {
+    if (!isFieldShown(field, values)) values[field.name] = ""
+  }
+  return values
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -36,8 +42,14 @@ export function validateEmployee(values: EmployeeValues) {
   const errors: Record<string, string> = {}
 
   for (const field of EMPLOYEE_FIELDS) {
+    if (!isFieldShown(field, values)) continue
     const error = checkField(field, values[field.name] ?? "")
     if (error) errors[field.name] = error
+  }
+
+  const { joinDate, contractEndDate } = values
+  if (!errors.contractEndDate && joinDate && contractEndDate && contractEndDate <= joinDate) {
+    errors.contractEndDate = "The contract has to end after the date of joining."
   }
 
   return errors

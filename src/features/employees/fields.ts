@@ -31,6 +31,11 @@ export type EmployeeField = {
   options?: Option[]
   placeholder?: string
   hint?: string
+  /**
+   * Only asked for while another field holds this value — hidden otherwise,
+   * and saved as nothing. `required` applies only while it shows.
+   */
+  showWhen?: { field: string; equals: string }
 }
 
 export type EmployeeSection = { title: string; fields: EmployeeField[] }
@@ -63,6 +68,15 @@ export const EMPLOYEE_TABS: EmployeeTab[] = [
           { name: "grade", column: "grade", label: "Level", type: "text", placeholder: "e.g. Staff, Supervisor" },
           { name: "joinDate", column: "join_date", label: "Date of Joining", type: "date" },
           { name: "employmentType", column: "employment_type", label: "Employment Status", type: "choice", required: true, options: EMPLOYMENT_TYPES },
+          {
+            name: "contractEndDate",
+            column: "contract_end_date",
+            label: "Contract End Date",
+            type: "date",
+            required: true,
+            showWhen: { field: "employmentType", equals: "pkwt" },
+            hint: "When the fixed-term contract expires.",
+          },
         ],
       },
     ],
@@ -133,6 +147,11 @@ export const EMPLOYEE_TABS: EmployeeTab[] = [
 export const EMPLOYEE_FIELDS: EmployeeField[] = EMPLOYEE_TABS.flatMap((tab) =>
   tab.sections.flatMap((section) => section.fields),
 )
+
+/** Whether a field is asked for, given the rest of the record's values. */
+export function isFieldShown(field: EmployeeField, values: Record<string, string>) {
+  return !field.showWhen || values[field.showWhen.field] === field.showWhen.equals
+}
 
 /** Every field's value as the form holds it: text, empty for nothing on file. */
 export type EmployeeValues = Record<string, string>

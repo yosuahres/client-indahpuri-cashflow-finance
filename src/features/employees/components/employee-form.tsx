@@ -22,7 +22,13 @@ import type { Shift } from "@/features/shifts/actions"
 import { shiftHours } from "@/features/shifts/constants"
 
 import { createEmployee, updateEmployee } from "../actions"
-import { EMPLOYEE_TABS, type EmployeeField, type EmployeeRecord } from "../fields"
+import {
+  EMPLOYEE_FIELDS,
+  EMPLOYEE_TABS,
+  isFieldShown,
+  type EmployeeField,
+  type EmployeeRecord,
+} from "../fields"
 import { EmployeeProfile } from "./employee-profile"
 
 const initialState: FormState = {}
@@ -64,6 +70,21 @@ export function EmployeeForm({
   useActionToast(state)
 
   const [activeTab, setActiveTab] = useState(EMPLOYEE_TABS[0].key)
+
+  const initialFor = (field: EmployeeField) =>
+    preset[field.name] ??
+    (employee ? (employee.values[field.name] ?? "") : defaultFor(field, today))
+
+  // The values other fields depend on — Employment Status deciding whether a
+  // contract end date is asked for — kept here so the form can react to them.
+  const [watched, setWatched] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      EMPLOYEE_FIELDS.flatMap((field) => field.showWhen ?? []).map(({ field: name }) => {
+        const field = EMPLOYEE_FIELDS.find((candidate) => candidate.name === name)
+        return [name, field ? initialFor(field) : ""]
+      }),
+    ),
+  )
 
   const tabHasError = (key: string) =>
     EMPLOYEE_TABS.find((tab) => tab.key === key)?.sections.some((section) =>
@@ -142,7 +163,7 @@ export function EmployeeForm({
                   className={cn(index === tab.sections.length - 1 && "border-b-0")}
                 >
                   <FormGrid>
-                    {section.fields.map((field) => (
+                    {section.fields.filter((field) => isFieldShown(field, watched)).map((field) => (
                       <Field
                         key={field.name}
                         label={field.label}
@@ -153,9 +174,11 @@ export function EmployeeForm({
                       >
                         <FieldControl
                           field={field}
-                          initial={
-                            preset[field.name] ??
-                            (employee ? (employee.values[field.name] ?? "") : defaultFor(field, today))
+                          initial={initialFor(field)}
+                          onChange={
+                            field.name in watched
+                              ? (value) => setWatched((prev) => ({ ...prev, [field.name]: value }))
+                              : undefined
                           }
                           invalid={Boolean(errors[field.name])}
                           today={today}
@@ -197,15 +220,22 @@ function FieldControl({
   today,
   departments,
   shifts,
+  onChange,
 }: {
   field: EmployeeField
   initial: string
+  /** Told of every new value, for a field other fields depend on. */
+  onChange?: (value: string) => void
   invalid: boolean
   today: string
   departments: string[]
   shifts: Shift[]
 }) {
-  const [value, setValue] = useState(initial)
+  const [value, setOwnValue] = useState(initial)
+  const setValue = (next: string) => {
+    setOwnValue(next)
+    onChange?.(next)
+  }
   const router = useRouter()
   const pathname = usePathname()
 
