@@ -1,9 +1,10 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { Check, ChevronDown, ChevronUp, GripVertical, Plus, Settings2, X } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronUp, GripVertical, Plus, Settings2, X } from "lucide-react"
 
+import { CONTROL_SURFACE } from "@/components/form/fields"
 import { popoverContainer, usePopoverPosition } from "@/components/form/use-popover"
 import { cn } from "@/lib/cn"
 
@@ -42,14 +43,38 @@ export function ColumnMenu<Key extends string>({
   const [container, setContainer] = useState<HTMLElement | null>(null)
   const popoverStyle = usePopoverPosition(triggerRef, open, 360, MENU_WIDTH)
 
+  const [term, setTerm] = useState("")
+  const searchRef = useRef<HTMLInputElement>(null)
+  const searchId = useId()
+
   const label = (key: Key) => all.find((column) => column.key === key)?.label ?? key
   const hidden = all.filter((column) => !columns.includes(column.key))
+  const needle = term.trim().toLowerCase()
+  const matches = needle
+    ? hidden.filter((column) => column.label.toLowerCase().includes(needle))
+    : hidden
+
+  // Opening the add view puts the cursor straight in its search box.
+  useEffect(() => {
+    if (adding) searchRef.current?.focus()
+  }, [adding])
+
+  function leaveAdding() {
+    setAdding(false)
+    setTerm("")
+  }
+
+  /** Puts a column on the end of the table, then shows the list it joined. */
+  function add(key: Key) {
+    onChange([...columns, key])
+    leaveAdding()
+  }
   const isDefault =
     columns.length === defaults.length && columns.every((key, index) => key === defaults[index])
 
   function close() {
     setOpen(false)
-    setAdding(false)
+    leaveAdding()
     setDragging(null)
   }
 
@@ -91,131 +116,174 @@ export function ColumnMenu<Key extends string>({
                 style={popoverStyle}
                 className="z-[100] flex flex-col overflow-hidden rounded-lg border border-black/10 bg-white shadow-lg"
               >
-                <ul className="min-h-0 flex-1 overflow-y-auto py-1">
-                  {columns.map((key, index) => (
-                    <li
-                      key={key}
-                      // The row is only the target: a drag has to start on the
-                      // handle, so the label and the × stay ordinary controls.
-                      onDragOver={(event) => {
-                        event.preventDefault()
-                        if (dragging === null || dragging === index) return
-                        onChange(reorderColumns(columns, dragging, index))
-                        setDragging(index)
-                      }}
-                      className={cn(
-                        "flex items-center gap-1 px-2 py-2 text-sm sm:gap-2 sm:py-1.5",
-                        dragging === index && "bg-neutral-100",
-                      )}
-                    >
-                      <span
-                        draggable
-                        tabIndex={0}
-                        role="button"
-                        aria-label={`Reorder ${label(key)}`}
-                        onDragStart={(event) => {
-                          setDragging(index)
-                          event.dataTransfer.effectAllowed = "move"
-                        }}
-                        onDragEnd={() => setDragging(null)}
-                        onKeyDown={(event) => {
-                          if (event.key === "ArrowUp") {
-                            event.preventDefault()
-                            move(index, index - 1)
-                          }
-                          if (event.key === "ArrowDown") {
-                            event.preventDefault()
-                            move(index, index + 1)
-                          }
-                        }}
-                        className="hidden shrink-0 cursor-grab rounded text-neutral-400 hover:text-neutral-600 focus-visible:outline-2 focus-visible:outline-neutral-800 sm:block"
-                      >
-                        <GripVertical className="size-4" strokeWidth={1.75} />
-                      </span>
-                      <span className="flex shrink-0 items-center sm:hidden">
-                        <button
-                          type="button"
-                          disabled={index === 0}
-                          onClick={() => move(index, index - 1)}
-                          aria-label={`Move ${label(key)} up`}
-                          className={iconButton}
-                        >
-                          <ChevronUp className="size-4" strokeWidth={2} />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={index === columns.length - 1}
-                          onClick={() => move(index, index + 1)}
-                          aria-label={`Move ${label(key)} down`}
-                          className={iconButton}
-                        >
-                          <ChevronDown className="size-4" strokeWidth={2} />
-                        </button>
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-neutral-900">
-                        {label(key)}
-                      </span>
+                {adding ? (
+                  <>
+                    {/* Replaces the list rather than stacking under it, so a
+                        long registry has the whole panel to scroll in. */}
+                    <div className="flex items-center gap-1 border-b border-black/8 p-1.5">
                       <button
                         type="button"
-                        aria-label={`Hide ${label(key)}`}
-                        onClick={() => onChange(columns.filter((entry) => entry !== key))}
-                        className="grid size-8 shrink-0 cursor-pointer place-items-center rounded text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 sm:size-6"
+                        onClick={leaveAdding}
+                        aria-label="Back to shown columns"
+                        className={iconButton}
                       >
-                        <X className="size-3.5" strokeWidth={2} />
+                        <ChevronLeft className="size-4" strokeWidth={2} />
                       </button>
-                    </li>
-                  ))}
+                      <label htmlFor={searchId} className="sr-only">
+                        Search columns
+                      </label>
+                      <input
+                        ref={searchRef}
+                        id={searchId}
+                        type="search"
+                        value={term}
+                        onChange={(event) => setTerm(event.target.value)}
+                        onKeyDown={(event) => {
+                          // Enter takes the first match; Escape steps back
+                          // to the list rather than closing the whole menu.
+                          if (event.key === "Enter" && matches[0]) {
+                            event.preventDefault()
+                            add(matches[0].key)
+                          }
+                          if (event.key === "Escape") {
+                            event.preventDefault()
+                            leaveAdding()
+                          }
+                        }}
+                        placeholder="Search columns"
+                        autoComplete="off"
+                        className={cn("h-9 sm:h-8", CONTROL_SURFACE)}
+                      />
+                    </div>
 
-                  {columns.length === 0 ? (
-                    <li className="px-3 py-2 text-sm text-neutral-500">
-                      Only the first column is shown.
-                    </li>
-                  ) : null}
-                </ul>
+                    <ul className="min-h-0 flex-1 overflow-y-auto py-1">
+                      {matches.map((column) => (
+                        <li key={column.key}>
+                          <button
+                            type="button"
+                            onClick={() => add(column.key)}
+                            className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left text-sm text-neutral-900 transition-colors hover:bg-neutral-50 sm:py-1.5"
+                          >
+                            <Plus className="size-3.5 shrink-0 text-neutral-400" strokeWidth={2} />
+                            <span className="min-w-0 flex-1 truncate">{column.label}</span>
+                          </button>
+                        </li>
+                      ))}
 
-                {adding && hidden.length > 0 ? (
-                  <ul className="border-t border-black/8 py-1">
-                    {hidden.map((column) => (
-                      <li key={column.key}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onChange([...columns, column.key])
-                            if (hidden.length === 1) setAdding(false)
+                      {matches.length === 0 ? (
+                        <li className="px-3 py-2 text-sm text-neutral-500">
+                          {hidden.length === 0
+                            ? "Every column is already shown."
+                            : "No column matches that."}
+                        </li>
+                      ) : null}
+                    </ul>
+                  </>
+                ) : (
+                  <>
+                    <ul className="min-h-0 flex-1 overflow-y-auto py-1">
+                      {columns.map((key, index) => (
+                        <li
+                          key={key}
+                          // The row is only the target: a drag has to start on the
+                          // handle, so the label and the × stay ordinary controls.
+                          onDragOver={(event) => {
+                            event.preventDefault()
+                            if (dragging === null || dragging === index) return
+                            onChange(reorderColumns(columns, dragging, index))
+                            setDragging(index)
                           }}
-                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left text-sm text-neutral-900 transition-colors hover:bg-neutral-50 sm:py-1.5"
+                          className={cn(
+                            "flex items-center gap-1 px-2 py-2 text-sm sm:gap-2 sm:py-1.5",
+                            dragging === index && "bg-neutral-100",
+                          )}
                         >
-                          <Plus className="size-3.5 shrink-0 text-neutral-400" strokeWidth={2} />
-                          {column.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                          <span
+                            draggable
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Reorder ${label(key)}`}
+                            onDragStart={(event) => {
+                              setDragging(index)
+                              event.dataTransfer.effectAllowed = "move"
+                            }}
+                            onDragEnd={() => setDragging(null)}
+                            onKeyDown={(event) => {
+                              if (event.key === "ArrowUp") {
+                                event.preventDefault()
+                                move(index, index - 1)
+                              }
+                              if (event.key === "ArrowDown") {
+                                event.preventDefault()
+                                move(index, index + 1)
+                              }
+                            }}
+                            className="hidden shrink-0 cursor-grab rounded text-neutral-400 hover:text-neutral-600 focus-visible:outline-2 focus-visible:outline-neutral-800 sm:block"
+                          >
+                            <GripVertical className="size-4" strokeWidth={1.75} />
+                          </span>
+                          <span className="flex shrink-0 items-center sm:hidden">
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => move(index, index - 1)}
+                              aria-label={`Move ${label(key)} up`}
+                              className={iconButton}
+                            >
+                              <ChevronUp className="size-4" strokeWidth={2} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === columns.length - 1}
+                              onClick={() => move(index, index + 1)}
+                              aria-label={`Move ${label(key)} down`}
+                              className={iconButton}
+                            >
+                              <ChevronDown className="size-4" strokeWidth={2} />
+                            </button>
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-neutral-900">
+                            {label(key)}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Hide ${label(key)}`}
+                            onClick={() => onChange(columns.filter((entry) => entry !== key))}
+                            className="grid size-8 shrink-0 cursor-pointer place-items-center rounded text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 sm:size-6"
+                          >
+                            <X className="size-3.5" strokeWidth={2} />
+                          </button>
+                        </li>
+                      ))}
 
-                <div className="flex items-center justify-between gap-2 border-t border-black/8 px-2 py-1.5">
-                  <button
-                    type="button"
-                    disabled={hidden.length === 0}
-                    onClick={() => setAdding((value) => !value)}
-                    className={footerButton}
-                  >
-                    {adding ? (
-                      <Check className="size-3.5 shrink-0" strokeWidth={2} />
-                    ) : (
-                      <Plus className="size-3.5 shrink-0" strokeWidth={2} />
-                    )}
-                    Add Column
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isDefault}
-                    onClick={() => onChange([...defaults])}
-                    className={footerButton}
-                  >
-                    Reset
-                  </button>
-                </div>
+                      {columns.length === 0 ? (
+                        <li className="px-3 py-2 text-sm text-neutral-500">
+                          Only the first column is shown.
+                        </li>
+                      ) : null}
+                    </ul>
+
+                    <div className="flex items-center justify-between gap-2 border-t border-black/8 px-2 py-1.5">
+                      <button
+                        type="button"
+                        disabled={hidden.length === 0}
+                        onClick={() => setAdding(true)}
+                        className={footerButton}
+                      >
+                        <Plus className="size-3.5 shrink-0" strokeWidth={2} />
+                        Add Column
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isDefault}
+                        onClick={() => onChange([...defaults])}
+                        className={footerButton}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </>,
             container,
