@@ -32,6 +32,7 @@ export function LeaveList({
 }) {
   const { columns, setColumns } = useTableColumns(
     LEAVE_COLUMNS_STORAGE_KEY,
+    LEAVE_COLUMNS,
     DEFAULT_LEAVE_COLUMNS,
   )
 

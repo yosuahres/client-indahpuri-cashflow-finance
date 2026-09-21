@@ -12,6 +12,7 @@ import {
   BUDGET_SORTS,
   DEFAULT_BUDGET_COLUMNS,
   DEFAULT_BUDGET_SORT,
+  type BudgetColumnKey,
 } from "../columns"
 import { MONTH_OPTIONS, yearOptions, type BudgetPeriodSelection } from "../period"
 import type { BudgetQuery } from "../query"
@@ -37,8 +38,19 @@ export function BudgetToolbar({
 }) {
   const { columns, setColumns } = useTableColumns(
     BUDGET_COLUMNS_STORAGE_KEY,
+    BUDGET_COLUMNS,
     DEFAULT_BUDGET_COLUMNS,
   )
+
+  // Period only varies on the yearly view, and Account only while the list is
+  // not narrowed to one — the sheet draws neither otherwise. The menu offers
+  // what this view can show, so adding a column always puts one on screen.
+  const offered = BUDGET_COLUMNS.filter(
+    (column) =>
+      (column.key !== "period" || selection.period === "yearly") &&
+      (column.key !== "account" || !account),
+  )
+  const isOffered = (key: BudgetColumnKey) => offered.some((column) => column.key === key)
 
   const fields: ToolbarField[] = [
     {
@@ -97,10 +109,12 @@ export function BudgetToolbar({
       }}
     >
       <ColumnMenu
-        all={BUDGET_COLUMNS}
-        defaults={DEFAULT_BUDGET_COLUMNS}
-        columns={columns}
-        onChange={setColumns}
+        all={offered}
+        defaults={DEFAULT_BUDGET_COLUMNS.filter(isOffered)}
+        columns={columns.filter(isOffered)}
+        // A pick this view cannot show is kept for the views that can, rather
+        // than lost the first time the list is edited here.
+        onChange={(next) => setColumns([...next, ...columns.filter((key) => !isOffered(key))])}
       />
     </TableToolbar>
   )

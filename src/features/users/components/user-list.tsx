@@ -34,6 +34,7 @@ export function UserList({
 }) {
   const { columns, setColumns } = useTableColumns(
     USER_COLUMNS_STORAGE_KEY,
+    USER_COLUMNS,
     DEFAULT_USER_COLUMNS,
   )
 

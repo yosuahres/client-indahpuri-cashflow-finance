@@ -30,6 +30,7 @@ export function AccountList({
 }) {
   const { columns, setColumns } = useTableColumns(
     ACCOUNT_COLUMNS_STORAGE_KEY,
+    ACCOUNT_COLUMNS,
     DEFAULT_ACCOUNT_COLUMNS,
   )
 

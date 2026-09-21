@@ -2,7 +2,7 @@
 
 import { useTableColumns } from "@/components/table/use-table-columns"
 
-import { BUDGET_COLUMNS_STORAGE_KEY, DEFAULT_BUDGET_COLUMNS } from "../columns"
+import { BUDGET_COLUMNS, BUDGET_COLUMNS_STORAGE_KEY, DEFAULT_BUDGET_COLUMNS } from "../columns"
 import { BudgetSheet } from "./budget-table"
 
 /**
@@ -13,6 +13,10 @@ import { BudgetSheet } from "./budget-table"
 export function BudgetSheetColumns(
   props: Omit<React.ComponentProps<typeof BudgetSheet>, "columns">,
 ) {
-  const { columns } = useTableColumns(BUDGET_COLUMNS_STORAGE_KEY, DEFAULT_BUDGET_COLUMNS)
+  const { columns } = useTableColumns(
+    BUDGET_COLUMNS_STORAGE_KEY,
+    BUDGET_COLUMNS,
+    DEFAULT_BUDGET_COLUMNS,
+  )
   return <BudgetSheet {...props} columns={columns} />
 }

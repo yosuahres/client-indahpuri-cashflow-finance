@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react"
 
-import { parseColumns } from "./columns"
+import { parseColumns, type TableColumn } from "./columns"
 
 const listeners = new Map<string, Set<() => void>>()
 
@@ -40,9 +40,14 @@ function read(key: string) {
  * The columns this browser has chosen for a table, and a setter that remembers
  * them. The server renders `defaults`, so the first paint matches the markup
  * it sent before the stored choice is read.
+ *
+ * `all` is the whole registry, not just the defaults: a stored list is checked
+ * against every column the table can show, or adding one that is hidden by
+ * default would be dropped again the moment it was read back.
  */
 export function useTableColumns<Key extends string>(
   storageKey: string,
+  all: readonly TableColumn<Key>[],
   defaults: readonly Key[],
 ) {
   const subscribe = useCallback(
@@ -55,9 +60,10 @@ export function useTableColumns<Key extends string>(
     () => null,
   )
 
+  const known = useMemo(() => all.map((column) => column.key), [all])
   const columns = useMemo(
-    () => parseColumns(stored, defaults) ?? [...defaults],
-    [stored, defaults],
+    () => parseColumns(stored, known) ?? [...defaults],
+    [stored, known, defaults],
   )
 
   const setColumns = useCallback(

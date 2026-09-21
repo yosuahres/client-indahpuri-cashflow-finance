@@ -30,6 +30,7 @@ export function ShiftList({
 }) {
   const { columns, setColumns } = useTableColumns(
     SHIFT_COLUMNS_STORAGE_KEY,
+    SHIFT_COLUMNS,
     DEFAULT_SHIFT_COLUMNS,
   )
 

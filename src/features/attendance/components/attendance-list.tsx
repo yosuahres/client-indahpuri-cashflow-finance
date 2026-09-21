@@ -34,6 +34,7 @@ export function AttendanceList({
 }) {
   const { columns, setColumns } = useTableColumns(
     ATTENDANCE_COLUMNS_STORAGE_KEY,
+    ATTENDANCE_COLUMNS,
     DEFAULT_ATTENDANCE_COLUMNS,
   )
 

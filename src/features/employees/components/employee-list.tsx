@@ -38,6 +38,7 @@ export function EmployeeList({
 }) {
   const { columns, setColumns } = useTableColumns(
     EMPLOYEE_COLUMNS_STORAGE_KEY,
+    EMPLOYEE_COLUMNS,
     DEFAULT_EMPLOYEE_COLUMNS,
   )
 

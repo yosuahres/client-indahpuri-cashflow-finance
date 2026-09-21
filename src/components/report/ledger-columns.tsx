@@ -19,6 +19,7 @@ import { TransactionTable } from "./transaction-table"
 export function LedgerColumnMenu() {
   const { columns, setColumns } = useTableColumns(
     TRANSACTION_COLUMNS_STORAGE_KEY,
+    TRANSACTION_COLUMNS,
     DEFAULT_TRANSACTION_COLUMNS,
   )
 
@@ -35,6 +36,7 @@ export function LedgerColumnMenu() {
 export function LedgerTable(props: Omit<React.ComponentProps<typeof TransactionTable>, "columns">) {
   const { columns } = useTableColumns(
     TRANSACTION_COLUMNS_STORAGE_KEY,
+    TRANSACTION_COLUMNS,
     DEFAULT_TRANSACTION_COLUMNS,
   )
 

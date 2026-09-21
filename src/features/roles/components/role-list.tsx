@@ -33,6 +33,7 @@ export function RoleList({
 }) {
   const { columns, setColumns } = useTableColumns(
     ROLE_COLUMNS_STORAGE_KEY,
+    ROLE_COLUMNS,
     DEFAULT_ROLE_COLUMNS,
   )
 

@@ -30,6 +30,7 @@ export function DepartmentList({
 }) {
   const { columns, setColumns } = useTableColumns(
     DEPARTMENT_COLUMNS_STORAGE_KEY,
+    DEPARTMENT_COLUMNS,
     DEFAULT_DEPARTMENT_COLUMNS,
   )
 
