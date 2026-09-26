@@ -1,7 +1,7 @@
 import { compareKeys, direction, matchesTerm, oneOf, param } from "@/components/table/query"
 
 import type { LeaveEntry } from "./actions"
-import { DEFAULT_LEAVE_SORT, LEAVE_SORTS, type LeaveSortValue } from "./columns"
+import { DEFAULT_LEAVE_DIRECTION, DEFAULT_LEAVE_SORT, LEAVE_SORTS, type LeaveSortValue } from "./columns"
 import { LEAVE_TYPES, leaveDays, leaveStatusLabel, leaveTypeLabel } from "./constants"
 
 /** What the leave list is narrowed and ordered by, beyond its status. */
@@ -27,7 +27,7 @@ export function readLeaveQuery(
       LEAVE_SORTS.map((entry) => entry.value),
       DEFAULT_LEAVE_SORT,
     ),
-    direction: direction(params.direction),
+    direction: direction(params.direction, DEFAULT_LEAVE_DIRECTION),
   }
 }
 

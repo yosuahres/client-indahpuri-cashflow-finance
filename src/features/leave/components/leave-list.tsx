@@ -7,6 +7,7 @@ import { useTableColumns } from "@/components/table/use-table-columns"
 import type { LeaveEntry } from "../actions"
 import {
   DEFAULT_LEAVE_COLUMNS,
+  DEFAULT_LEAVE_DIRECTION,
   DEFAULT_LEAVE_SORT,
   LEAVE_COLUMNS,
   LEAVE_COLUMNS_STORAGE_KEY,
@@ -65,6 +66,7 @@ export function LeaveList({
           value: query.sort,
           direction: query.direction,
           defaultValue: DEFAULT_LEAVE_SORT,
+          defaultDirection: DEFAULT_LEAVE_DIRECTION,
           options: LEAVE_SORTS.map((entry) => ({ value: entry.value, label: entry.label })),
         }}
       >

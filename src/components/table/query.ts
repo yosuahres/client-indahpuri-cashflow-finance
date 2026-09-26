@@ -16,8 +16,12 @@ export function oneOf(
   return allowed.includes(choice) ? choice : fallback
 }
 
-export function direction(value: string | string[] | undefined): SortDirection {
-  return param(value) === "desc" ? "desc" : "asc"
+export function direction(
+  value: string | string[] | undefined,
+  fallback: SortDirection = "asc",
+): SortDirection {
+  const choice = param(value)
+  return choice === "asc" || choice === "desc" ? choice : fallback
 }
 
 /**

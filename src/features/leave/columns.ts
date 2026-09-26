@@ -1,4 +1,5 @@
 import type { TableColumn } from "@/components/table/columns"
+import type { SortDirection } from "@/components/table/query"
 
 /**
  * The leave table's optional columns. The employee is the first column and
@@ -48,3 +49,5 @@ export const LEAVE_SORTS: { value: LeaveSortValue; label: string }[] = [
 ]
 
 export const DEFAULT_LEAVE_SORT: LeaveSortValue = "startDate"
+/** Newest leave first, so what is coming up or just taken leads the list. */
+export const DEFAULT_LEAVE_DIRECTION: SortDirection = "desc"

@@ -40,6 +40,8 @@ export type ToolbarSort = {
   options: SelectOption[]
   /** The ordering that does not count as a choice on the button's badge. */
   defaultValue: string
+  /** The order that does not count as a choice; ascending unless said. */
+  defaultDirection?: string
 }
 
 /** The URL keys the sort controls own. */
@@ -91,7 +93,7 @@ export function TableToolbar({
   const applied =
     filters.filter((filter) => filter.value !== (filter.defaultValue ?? "")).length +
     (sort && sort.value !== sort.defaultValue ? 1 : 0) +
-    (sort && sort.direction !== "asc" ? 1 : 0)
+    (sort && sort.direction !== (sort.defaultDirection ?? "asc") ? 1 : 0)
 
   function replace(params: URLSearchParams) {
     const query = params.toString()
