@@ -1,9 +1,20 @@
 "use client"
 
-import Link from "next/link"
 import { useState, useTransition, type ReactNode } from "react"
-import { KeyRound, Pencil, Trash2 } from "lucide-react"
+import {
+  FileText,
+  Hash,
+  KeyRound,
+  Lock,
+  Pencil,
+  ShieldCheck,
+  Trash2,
+  UsersRound,
+  type LucideIcon,
+} from "lucide-react"
 
+import { RowMenu, SortHeader } from "@/components/table/data-table"
+import { ACTION_CELL, ACTION_HEAD, BODY_ROW, CELL, HEAD_ROW, TABLE } from "@/components/table/styles"
 import type { RoleSummary } from "@/features/auth/roles"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
@@ -11,15 +22,13 @@ import { cn } from "@/lib/cn"
 import { deleteRole } from "../actions"
 import { DEFAULT_ROLE_COLUMNS, ROLE_COLUMNS, type RoleColumnKey } from "../columns"
 
-const headCell = "px-2 py-2.5 text-left font-medium text-neutral-700 sm:px-3"
-const cell = "px-2 py-2.5 sm:px-3"
-
-const iconButton = cn(
-  "grid size-8 place-items-center rounded-md text-neutral-400",
-  "hover:bg-neutral-100 hover:text-neutral-900",
-  "focus-visible:outline-2 focus-visible:outline-neutral-800",
-  "disabled:pointer-events-none disabled:opacity-40",
-)
+const ICONS: Record<RoleColumnKey, LucideIcon> = {
+  key: Hash,
+  description: FileText,
+  builtIn: Lock,
+  members: UsersRound,
+  permissions: KeyRound,
+}
 
 type RoleRow = RoleSummary & { members: number; permissions: number }
 
@@ -49,6 +58,8 @@ export function RoleTable({
   totalPermissions,
   editable,
   columns = DEFAULT_ROLE_COLUMNS,
+  sort,
+  direction,
 }: {
   roles: RoleRow[]
   totalPermissions: number
@@ -56,6 +67,8 @@ export function RoleTable({
   editable: boolean
   /** Which optional columns to show, in the order they appear. */
   columns?: RoleColumnKey[]
+  sort: string
+  direction: string
 }) {
   const [confirmingKey, setConfirmingKey] = useState<string | null>(null)
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set())
@@ -90,19 +103,30 @@ export function RoleTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      <table className={TABLE}>
         <caption className="sr-only">Every role, who holds it, and how much it may do.</caption>
         <thead>
-          <tr className="bg-neutral-50">
-            <th scope="col" className={cn("min-w-[240px]", headCell)}>
-              Role
-            </th>
+          <tr className={HEAD_ROW}>
+            <SortHeader
+              label="Role"
+              icon={ShieldCheck}
+              sortKey="role"
+              sort={sort}
+              direction={direction}
+              className="min-w-[240px]"
+            />
             {columns.map((key) => (
-              <th key={key} scope="col" className={cn(WIDTHS[key], headCell)}>
-                {LABELS[key]}
-              </th>
+              <SortHeader
+                key={key}
+                label={LABELS[key]}
+                icon={ICONS[key]}
+                sortKey={key}
+                sort={sort}
+                direction={direction}
+                className={WIDTHS[key]}
+              />
             ))}
-            <th scope="col" className="w-40 px-2 py-2.5">
+            <th scope="col" className={ACTION_HEAD}>
               <span className="sr-only">Row actions</span>
             </th>
           </tr>
@@ -118,28 +142,28 @@ export function RoleTable({
                 : null
 
             return (
-              <tr key={role.key} className="border-t border-black/5">
-                <td className={cell}>
+              <tr key={role.key} className={BODY_ROW}>
+                <td className="px-3 py-2">
                   <span className="font-medium text-neutral-900">{role.name}</span>
                   {role.builtIn ? (
-                    <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-600">
+                    <span className="ml-2 rounded-md border border-black/10 bg-neutral-50 px-1.5 text-xs leading-5 font-medium text-neutral-600">
                       Built in
                     </span>
                   ) : null}
-                  {role.description ? (
+                  {role.description && !columns.includes("description") ? (
                     <span className="mt-0.5 block text-xs text-neutral-500">{role.description}</span>
                   ) : null}
                 </td>
 
                 {columns.map((key) => (
-                  <td key={key} className={cn(cell, "tabular-nums text-neutral-700")}>
+                  <td key={key} className={cn(CELL, "tabular-nums")}>
                     {CELLS[key](role, totalPermissions)}
                   </td>
                 ))}
 
-                <td className="w-40 px-2 py-1.5">
+                <td className={ACTION_CELL}>
                   {confirming ? (
-                    <span className="flex items-center justify-end gap-1">
+                    <span className="inline-flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => setConfirmingKey(null)}
@@ -157,38 +181,25 @@ export function RoleTable({
                       </button>
                     </span>
                   ) : (
-                    <span className="flex items-center justify-end gap-0.5">
-                      <Link
-                        href="/settings/permissions"
-                        aria-label={`Permissions for ${role.name}`}
-                        title="Permissions"
-                        className={iconButton}
-                      >
-                        <KeyRound className="size-4" strokeWidth={1.75} />
-                      </Link>
-                      {editable ? (
-                        <>
-                          <Link
-                            href={`/settings/roles/${role.key}`}
-                            aria-label={`Edit ${role.name}`}
-                            title="Edit"
-                            className={iconButton}
-                          >
-                            <Pencil className="size-4" strokeWidth={1.75} />
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmingKey(role.key)}
-                            disabled={pending || blocked !== null}
-                            aria-label={`Delete ${role.name}`}
-                            title={blocked ?? "Delete"}
-                            className={cn(iconButton, "cursor-pointer hover:text-rose-600")}
-                          >
-                            <Trash2 className="size-4" strokeWidth={1.75} />
-                          </button>
-                        </>
-                      ) : null}
-                    </span>
+                    <RowMenu
+                      label={`Actions for ${role.name}`}
+                      items={[
+                        { label: "Permissions", icon: KeyRound, href: `/settings/permissions?role=${role.key}` },
+                        ...(editable
+                          ? [
+                              { label: "Edit", icon: Pencil, href: `/settings/roles/${role.key}` },
+                              {
+                                label: "Delete role",
+                                icon: Trash2,
+                                danger: true,
+                                disabled: pending || blocked !== null,
+                                title: blocked ?? undefined,
+                                onSelect: () => setConfirmingKey(role.key),
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
                   )}
                 </td>
               </tr>
@@ -196,9 +207,9 @@ export function RoleTable({
           })}
 
           {live.length === 0 ? (
-            <tr className="border-t border-black/5">
+            <tr>
               <td colSpan={columns.length + 2} className="px-3 py-6 text-center text-neutral-500">
-                No roles yet.
+                No roles match.
               </td>
             </tr>
           ) : null}

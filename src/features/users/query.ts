@@ -56,6 +56,7 @@ export function applyUserQuery(
     user: (member) => member.name || member.email,
     email: (member) => member.email,
     role: (member) => roleName(member.role),
+    lastSignIn: (member) => member.lastSignInAt ?? "",
     joined: (member) => member.joinedAt,
   }
 

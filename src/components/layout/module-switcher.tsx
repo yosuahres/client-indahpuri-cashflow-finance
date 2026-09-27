@@ -72,6 +72,8 @@ const panel = "z-50 rounded-xl border border-black/10 bg-white p-1 shadow-lg"
 
 /** Width to fall back on before the header has been measured. */
 const PANEL_WIDTH = 256
+/** The header is narrower than a menu wants to be; panels never go below this. */
+const MIN_PANEL_WIDTH = 190
 /** Between a row and the panel it opens, so the two read as separate cards. */
 const GAP = 10
 /** Between a panel and the edge of the screen. */
@@ -302,8 +304,8 @@ export function ModuleSwitcher({
   const [refreshing, startRefresh] = useTransition()
   const currentName = SWITCH_TARGETS.find((entry) => entry.key === current)?.name
   const workspaces = workspacesFor(role, permissions)
-  // The first panel hangs off the header and so is its width; the ones beside
-  // it are given the same figure, so the menu is one column wide throughout.
+  // The first panel hangs off the header and is at least its width; the ones
+  // beside it are given the same figure, so the menu is one column wide throughout.
   const [panelWidth, setPanelWidth] = useState(PANEL_WIDTH)
 
   useLayoutEffect(() => {
@@ -311,7 +313,7 @@ export function ModuleSwitcher({
     if (!open || !node) return
 
     function measure() {
-      setPanelWidth(node!.offsetWidth)
+      setPanelWidth(Math.max(node!.offsetWidth, MIN_PANEL_WIDTH))
     }
 
     measure()
@@ -348,22 +350,26 @@ export function ModuleSwitcher({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100",
+          "flex w-full cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1.5 text-left hover:bg-neutral-100",
           open && "bg-neutral-100",
         )}
       >
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-600 text-sm font-bold text-white">
+        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-blue-600 text-xs font-bold text-white">
           IP
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-neutral-900">Indah Puri</span>
-          <span className="block truncate text-xs text-neutral-500">{currentName}</span>
+          <span className="block truncate text-[13px] font-semibold text-neutral-900">Indah Puri</span>
+          <span className="block truncate text-[11px] text-neutral-500">{currentName}</span>
         </span>
-        <ChevronsUpDown className="size-4 shrink-0 text-neutral-400" strokeWidth={2} />
+        <ChevronsUpDown className="size-3.5 shrink-0 text-neutral-400" strokeWidth={2} />
       </button>
 
       {open ? (
-        <div role="menu" className={cn("absolute inset-x-0 top-full mt-1", panel)}>
+        <div
+          role="menu"
+          className={cn("absolute top-full left-0 mt-1 max-w-[calc(100vw-1rem)]", panel)}
+          style={{ width: panelWidth }}
+        >
           <Link
             href="/"
             role="menuitem"

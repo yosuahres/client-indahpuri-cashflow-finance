@@ -10,13 +10,13 @@ import type { Permission } from "@/features/auth/permissions"
 import type { Role } from "@/features/auth/roles"
 
 import { ModuleSwitcher } from "./module-switcher"
-import { activeHref, navFor, type NavGroup, type NavLink, type SidebarArea } from "./nav-config"
+import { activeHref, navFor, type NavGroup, type NavLink, type NavSection, type SidebarArea } from "./nav-config"
 import { useSidebar } from "./sidebar-state"
 import { UserMenu } from "./user-menu"
 
 function NavLinks({ links, active }: { links: NavLink[]; active: string | null }) {
   return (
-    <ul className="mb-1">
+    <ul className="mb-2">
       {links.map((link) => {
         const Icon = link.icon
 
@@ -26,13 +26,13 @@ function NavLinks({ links, active }: { links: NavLink[]; active: string | null }
               href={link.href}
               aria-current={active === link.href ? "page" : undefined}
               className={cn(
-                "flex items-center gap-2.5 rounded-md px-2 py-2 text-sm sm:py-1.5",
+                "flex items-center gap-2 rounded-md px-2 py-2 text-[13px] sm:py-1",
                 active === link.href
                   ? "bg-white font-medium text-neutral-900 shadow-sm ring-1 ring-black/5"
                   : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900",
               )}
             >
-              <Icon className="size-4 shrink-0 text-neutral-500" strokeWidth={1.75} />
+              <Icon className="size-3.5 shrink-0 text-neutral-500" strokeWidth={1.75} />
               <span className="flex-1 truncate text-left">{link.label}</span>
             </Link>
           </li>
@@ -42,26 +42,35 @@ function NavLinks({ links, active }: { links: NavLink[]; active: string | null }
   )
 }
 
+function NavSectionBlock({ section, active }: { section: NavSection; active: string | null }) {
+  return (
+    <div className="mb-3">
+      <p className="px-2 pt-1 pb-1 text-[11px] font-medium text-neutral-500">{section.label}</p>
+      <NavLinks links={section.links} active={active} />
+    </div>
+  )
+}
+
 function NavGroupBlock({ group, active }: { group: NavGroup; active: string | null }) {
   const [open, setOpen] = useState(group.defaultOpen)
   const Icon = group.icon
   const Chevron = open ? ChevronDown : ChevronRight
 
   return (
-    <div className="mb-1">
+    <div className="mb-0.5">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 sm:py-1.5"
+        className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-[13px] text-neutral-700 hover:bg-neutral-100 sm:py-1"
       >
-        <Icon className="size-4 shrink-0 text-neutral-500" strokeWidth={1.75} />
+        <Icon className="size-3.5 shrink-0 text-neutral-500" strokeWidth={1.75} />
         <span className="flex-1 text-left">{group.label}</span>
-        <Chevron className="size-4 shrink-0 text-neutral-400" strokeWidth={2} />
+        <Chevron className="size-3.5 shrink-0 text-neutral-400" strokeWidth={2} />
       </button>
 
       {open ? (
-        <ul className="mt-0.5">
+        <ul>
           {group.items.map((item) => {
             const current = Boolean(item.href) && item.href === active
 
@@ -72,7 +81,7 @@ function NavGroupBlock({ group, active }: { group: NavGroup; active: string | nu
                     href={item.href}
                     aria-current={current ? "page" : undefined}
                     className={cn(
-                      "block truncate rounded-md py-2 pr-2 pl-8 text-sm sm:py-1.5",
+                      "block truncate rounded-md py-2 pr-2 pl-7.5 text-[13px] sm:py-1",
                       current
                         ? "bg-white font-medium text-neutral-900 shadow-sm ring-1 ring-black/5"
                         : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900",
@@ -83,7 +92,7 @@ function NavGroupBlock({ group, active }: { group: NavGroup; active: string | nu
                 ) : (
                   <span
                     title="Not built yet"
-                    className="block cursor-default truncate rounded-md py-2 pr-2 pl-8 text-sm text-neutral-400 sm:py-1.5"
+                    className="block cursor-default truncate rounded-md py-2 pr-2 pl-7.5 text-[13px] text-neutral-400 sm:py-1"
                   >
                     {item.label}
                   </span>
@@ -124,9 +133,9 @@ function SidebarBody({
   return (
     <>
       {/* App switcher, or the Settings title */}
-      <div className="flex items-center gap-1 p-3">
+      <div className="flex items-center gap-1 p-2.5">
         {module === "settings" ? (
-          <p className="min-w-0 flex-1 truncate px-2 py-1.5 text-base font-semibold text-neutral-900">
+          <p className="min-w-0 flex-1 truncate px-2 py-1.5 text-sm font-semibold text-neutral-900">
             Settings
           </p>
         ) : (
@@ -151,21 +160,24 @@ function SidebarBody({
       </div>
 
       {/* Report navigation */}
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-        <NavLinks links={nav.links} active={active} />
+      <nav className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4">
+        {nav.links.length > 0 ? <NavLinks links={nav.links} active={active} /> : null}
+        {nav.sections.map((section) => (
+          <NavSectionBlock key={section.label} section={section} active={active} />
+        ))}
         {nav.groups.map((group) => (
           <NavGroupBlock key={group.label} group={group} active={active} />
         ))}
       </nav>
 
       {/* Footer: who is signed in, or in Settings the way back out */}
-      <div className="border-t border-black/8 p-3">
+      <div className="border-t border-black/8 p-2.5">
         {module === "settings" ? (
           <Link
             href="/dashboard"
-            className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
+            className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
           >
-            <ArrowLeft className="size-4 shrink-0 text-neutral-500" strokeWidth={1.75} />
+            <ArrowLeft className="size-3.5 shrink-0 text-neutral-500" strokeWidth={1.75} />
             Back to Dashboard
           </Link>
         ) : (
@@ -191,7 +203,7 @@ export function AppSidebar({
   return (
     <>
       {/* Desktop rail */}
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-black/8 bg-neutral-50 lg:flex">
+      <aside className="hidden w-46 shrink-0 flex-col border-r border-black/8 bg-neutral-50 lg:flex">
         <SidebarBody module={module} user={user} signOut={signOut} />
       </aside>
 
@@ -214,7 +226,7 @@ export function AppSidebar({
           aria-modal={open}
           aria-label="Navigation"
           className={cn(
-            "absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-black/8 bg-neutral-50 shadow-xl transition-transform duration-200",
+            "absolute inset-y-0 left-0 flex w-64 max-w-[85vw] flex-col border-r border-black/8 bg-neutral-50 shadow-xl transition-transform duration-200",
             open ? "translate-x-0" : "-translate-x-full",
           )}
         >

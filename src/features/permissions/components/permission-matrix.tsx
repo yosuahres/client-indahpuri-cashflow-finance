@@ -1,11 +1,13 @@
 "use client"
 
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useState, useTransition } from "react"
 import {
   CalendarClock,
   Check,
   ReceiptText,
   ScanEye,
+  ScrollText,
   Settings2,
   UserCog,
   UsersRound,
@@ -19,6 +21,8 @@ import {
   type PermissionGroupKey,
 } from "@/features/auth/permissions"
 import type { Role, RoleSummary } from "@/features/auth/roles"
+import { Select } from "@/components/form/select"
+import { BODY_ROW, HEAD_CELL, HEAD_ROW, TABLE, TABLE_FRAME } from "@/components/table/styles"
 import { toast } from "@/components/ui/toast"
 import { cn } from "@/lib/cn"
 
@@ -31,9 +35,8 @@ const GROUP_ICONS: Record<PermissionGroupKey, LucideIcon> = {
   hris: UsersRound,
   shift: CalendarClock,
   users: UserCog,
+  audit: ScrollText,
 }
-
-const roleCell = "w-24 px-2 text-center sm:w-32 sm:px-3"
 
 function Tick({
   checked,
@@ -74,19 +77,28 @@ function Tick({
   )
 }
 
+const TOTAL = PERMISSION_GROUPS.reduce((sum, group) => sum + group.permissions.length, 0)
+
 /**
- * The permission grid: one row per action, one column per role. A tick applies
- * as soon as it is clicked.
+ * One role's permissions at a time, picked at the top: a grid with a column
+ * per role stops fitting once a team has more than a few. A tick applies as
+ * soon as it is clicked. The role sits in the URL, so Roles can link here.
  */
 export function PermissionMatrix({
   roles,
+  role,
   grants,
   disabled,
 }: {
   roles: RoleSummary[]
+  /** The role being edited. */
+  role: Role
   grants: Grants
   disabled?: boolean
 }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
   // A tick paints before the server answers. Fresh grants after `refresh()`
@@ -118,63 +130,93 @@ export function PermissionMatrix({
     })
   }
 
+  function pick(next: string) {
+    const params = new URLSearchParams(searchParams)
+    params.set("role", next)
+    router.replace(`${pathname}?${params}`, { scroll: false })
+  }
+
+  const name = roles.find((entry) => entry.key === role)?.name ?? role
+  const granted = PERMISSION_GROUPS.reduce(
+    (sum, group) =>
+      sum + group.permissions.filter((permission) => isGranted(role, permission.key)).length,
+    0,
+  )
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
-        <caption className="sr-only">What each role may do.</caption>
-        <thead>
-          <tr className="border-b border-black/8">
-            <th scope="col" className="min-w-[220px] px-4 py-3 text-left font-normal text-neutral-500 sm:px-5">
-              Actions
-            </th>
-            {roles.map((role) => (
-              <th key={role.key} scope="col" className={cn(roleCell, "py-3 font-medium text-neutral-700")}>
-                {role.name}
+    <>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <label htmlFor="permission-role" className="text-lg font-semibold tracking-tight text-neutral-900">
+            Role
+          </label>
+          <div className="w-full sm:w-64">
+            <Select
+              id="permission-role"
+              value={role}
+              onValueChange={pick}
+              options={roles.map((entry) => ({ value: entry.key, label: entry.name }))}
+            />
+          </div>
+        </div>
+        <p className="text-sm text-neutral-500 tabular-nums">
+          {granted} of {TOTAL} allowed
+        </p>
+      </div>
+
+      <div className={TABLE_FRAME}>
+        <table className={TABLE}>
+          <caption className="sr-only">What {name} may do.</caption>
+          <thead>
+            <tr className={HEAD_ROW}>
+              <th scope="col" className={HEAD_CELL}>
+                Permission
               </th>
-            ))}
-          </tr>
-        </thead>
+              <th scope="col" className={cn(HEAD_CELL, "w-24 text-center")}>
+                Allowed
+              </th>
+            </tr>
+          </thead>
 
-        {PERMISSION_GROUPS.map((group) => {
-          const Icon = GROUP_ICONS[group.key]
+          {PERMISSION_GROUPS.map((group) => {
+            const Icon = GROUP_ICONS[group.key]
 
-          return (
-            <tbody key={group.key}>
-              <tr className="border-b border-black/8 bg-neutral-50">
-                <th
-                  scope="colgroup"
-                  colSpan={1 + roles.length}
-                  className="px-4 py-2.5 text-left font-semibold text-neutral-900 sm:px-5"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <Icon className="size-4 shrink-0 text-neutral-500" strokeWidth={1.75} />
-                    {group.label}
-                  </span>
-                </th>
-              </tr>
-
-              {group.permissions.map((permission) => (
-                <tr key={permission.key} className="border-b border-black/5 last:border-black/8">
-                  <th scope="row" className="px-4 py-3.5 text-left font-normal text-neutral-800 sm:px-5">
-                    {permission.label}
+            return (
+              <tbody key={group.key}>
+                <tr className="border-b border-black/12 bg-neutral-50/60">
+                  <th
+                    scope="colgroup"
+                    colSpan={2}
+                    className="px-3 py-2 text-left font-semibold text-neutral-900"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icon className="size-4 shrink-0 text-neutral-500" strokeWidth={1.75} />
+                      {group.label}
+                    </span>
                   </th>
-                  {roles.map((role) => (
-                    <td key={role.key} className={cn(roleCell, "py-3.5")}>
+                </tr>
+
+                {group.permissions.map((permission) => (
+                  <tr key={permission.key} className={cn(BODY_ROW, "last:border-b")}>
+                    <th scope="row" className="px-3 py-2 text-left font-normal text-neutral-800">
+                      {permission.label}
+                    </th>
+                    <td className="w-24 px-3 py-2 text-center">
                       <Tick
-                        label={`${permission.label} — ${role.name}`}
-                        checked={isGranted(role.key, permission.key)}
-                        locked={isLocked(role.key, permission.key)}
+                        label={permission.label}
+                        checked={isGranted(role, permission.key)}
+                        locked={isLocked(role, permission.key)}
                         disabled={Boolean(disabled)}
-                        onChange={(checked) => change(role.key, permission.key, checked)}
+                        onChange={(checked) => change(role, permission.key, checked)}
                       />
                     </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          )
-        })}
-      </table>
-    </div>
+                  </tr>
+                ))}
+              </tbody>
+            )
+          })}
+        </table>
+      </div>
+    </>
   )
 }

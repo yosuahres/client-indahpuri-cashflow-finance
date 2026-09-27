@@ -6,6 +6,7 @@ import {
   PlaneTakeoff,
   PlusCircle,
   ScanEye,
+  ScrollText,
   Settings2,
   ShieldCheck,
   UsersRound,
@@ -42,9 +43,16 @@ export type NavGroup = {
   items: NavItem[]
 }
 
+/** Links under a plain heading that never collapses, as Settings lays them out. */
+export type NavSection = {
+  label: string
+  links: NavLink[]
+}
+
 type ModuleNav = {
   /** Standalone links, pinned above the collapsible groups. */
   links: NavLink[]
+  sections?: NavSection[]
   groups: NavGroup[]
 }
 
@@ -116,11 +124,24 @@ const SHIFT_NAV: ModuleNav = {
 
 /** Your own account, and for managers the team's. Not an app of its own, so not in the switcher. */
 const SETTINGS_NAV: ModuleNav = {
-  links: [
-    { label: "Account", href: "/settings/account", icon: CircleUserRound },
-    { label: "Users", href: "/settings/users", icon: UsersRound },
-    { label: "Roles", href: "/settings/roles", icon: ShieldCheck },
-    { label: "Permissions", href: "/settings/permissions", icon: KeyRound },
+  links: [],
+  sections: [
+    {
+      label: "Account",
+      links: [{ label: "Account", href: "/settings/account", icon: CircleUserRound }],
+    },
+    {
+      label: "Workspace",
+      links: [
+        { label: "Users", href: "/settings/users", icon: UsersRound },
+        { label: "Roles", href: "/settings/roles", icon: ShieldCheck },
+        { label: "Permissions", href: "/settings/permissions", icon: KeyRound },
+      ],
+    },
+    {
+      label: "Security",
+      links: [{ label: "Audit Log", href: "/settings/audit-log", icon: ScrollText }],
+    },
   ],
   groups: [],
 }
@@ -137,9 +158,13 @@ const NAV: Record<SidebarArea, ModuleNav> = {
  * it is dropped rather than shown as an empty heading.
  */
 export function navFor(module: SidebarArea, role: Role | null, permissions: readonly Permission[]) {
-  const { links, groups } = NAV[module]
+  const { links, sections = [], groups } = NAV[module]
+  const visible = (link: NavLink) => canVisit(role, permissions, link.href)
   return {
-    links: links.filter((link) => canVisit(role, permissions, link.href)),
+    links: links.filter(visible),
+    sections: sections
+      .map((section) => ({ ...section, links: section.links.filter(visible) }))
+      .filter((section) => section.links.length > 0),
     groups: groups.map((group) => ({
       ...group,
       items: group.items.filter((item) => item.href && canVisit(role, permissions, item.href)),
@@ -153,10 +178,7 @@ export function navFor(module: SidebarArea, role: Role | null, permissions: read
  * lit on /hris/attendance/dashboard instead of Attendance above it.
  */
 export function activeHref(nav: ReturnType<typeof navFor>, pathname: string): string | null {
-  const hrefs = [
-    ...nav.links.map((link) => link.href),
-    ...nav.groups.flatMap((group) => group.items.map((item) => item.href)),
-  ]
+  const hrefs = navHrefs(nav)
 
   let best: string | null = null
   for (const href of hrefs) {
@@ -165,6 +187,15 @@ export function activeHref(nav: ReturnType<typeof navFor>, pathname: string): st
     if (!best || href.length > best.length) best = href
   }
   return best
+}
+
+/** Every href a sidebar shows, whether pinned, under a heading or in a group. */
+function navHrefs(nav: ReturnType<typeof navFor>): (string | undefined)[] {
+  return [
+    ...nav.links.map((link) => link.href),
+    ...nav.sections.flatMap((section) => section.links.map((link) => link.href)),
+    ...nav.groups.flatMap((group) => group.items.map((item) => item.href)),
+  ]
 }
 
 /** Which sidebar an area opens: its own, or the app's when it has none of its own. */
@@ -183,10 +214,7 @@ export function canOpen(
   permissions: readonly Permission[],
 ): boolean {
   const nav = navFor(area, role, permissions)
-  return [
-    ...nav.links.map((link) => link.href),
-    ...nav.groups.flatMap((group) => group.items.map((item) => item.href)),
-  ].some((href) => Boolean(href) && isGated(href!))
+  return navHrefs(nav).some((href) => Boolean(href) && isGated(href!))
 }
 
 /**

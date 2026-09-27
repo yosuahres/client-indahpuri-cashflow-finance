@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
+import { SettingsPage } from "@/components/layout/settings-page"
 import { Topbar, TOPBAR_ACTION_CLASS } from "@/components/layout/topbar"
 import { PERMISSIONS } from "@/features/auth/permissions"
 import { requirePermission } from "@/features/auth/session"
@@ -52,7 +53,7 @@ export default async function SettingsRolesPage({
         }
       />
 
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <SettingsPage title="Roles" description="What each role is called and how many people hold it.">
         {/* Nobody is shut out silently: a role waiting to be given is said
             here, above the roles it could be given from. */}
         {waiting > 0 ? (
@@ -68,7 +69,7 @@ export default async function SettingsRolesPage({
           query={query}
           notice={error ?? undefined}
         />
-      </main>
+      </SettingsPage>
     </>
   )
 }

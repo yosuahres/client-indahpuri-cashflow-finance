@@ -1,6 +1,8 @@
 "use client"
 
 import { ColumnMenu } from "@/components/table/column-menu"
+import { TablePager, usePagination } from "@/components/table/data-table"
+import { TABLE_FRAME } from "@/components/table/styles"
 import { TableToolbar } from "@/components/table/table-toolbar"
 import { useTableColumns } from "@/components/table/use-table-columns"
 import type { RoleSummary } from "@/features/auth/roles"
@@ -36,13 +38,15 @@ export function RoleList({
     ROLE_COLUMNS,
     DEFAULT_ROLE_COLUMNS,
   )
+  const { rows, pager } = usePagination(roles)
 
   return (
     <>
       <TableToolbar
+        title="All roles"
         search={query.q}
         searchLabel="Search roles"
-        searchPlaceholder="Search name or description"
+        searchPlaceholder="Search by name or description"
         filters={[
           {
             key: "kind",
@@ -67,22 +71,25 @@ export function RoleList({
         />
       </TableToolbar>
 
-      {notice ? (
-        <p
-          role="alert"
-          className="border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6"
-        >
-          {notice}
-        </p>
-      ) : null}
+      <div className={TABLE_FRAME}>
+        {notice ? (
+          <p
+            role="alert"
+            className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            {notice}
+          </p>
+        ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto border-t border-black/8">
         <RoleTable
-          roles={roles}
+          roles={rows}
           totalPermissions={totalPermissions}
           editable={editable}
           columns={columns}
+          sort={query.sort}
+          direction={query.direction}
         />
+        <TablePager {...pager} />
       </div>
     </>
   )

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
+import { SettingsPage } from "@/components/layout/settings-page"
 import { Topbar, TOPBAR_ACTION_CLASS } from "@/components/layout/topbar"
 import { requirePermission } from "@/features/auth/session"
 import { listRoles } from "@/features/roles/actions"
@@ -35,7 +36,7 @@ export default async function SettingsUsersPage({
         }
       />
 
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <SettingsPage title="Users" description="Everyone who can sign in, and the role each one has.">
         <UserList
           members={applyUserQuery(result.members, query, roles)}
           roles={roles}
@@ -43,7 +44,7 @@ export default async function SettingsUsersPage({
           query={query}
           notice={result.ok ? undefined : result.error}
         />
-      </main>
+      </SettingsPage>
     </>
   )
 }

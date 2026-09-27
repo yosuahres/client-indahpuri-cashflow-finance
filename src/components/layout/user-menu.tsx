@@ -145,14 +145,14 @@ export function UserMenu({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100",
+          "flex w-full cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1.5 text-left hover:bg-neutral-100",
           open && "bg-neutral-100",
         )}
       >
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-neutral-900 text-xs font-semibold text-white">
+        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-neutral-900 text-[11px] font-semibold text-white">
           {userInitials}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900">
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-900">
           {user.name}
         </span>
       </button>

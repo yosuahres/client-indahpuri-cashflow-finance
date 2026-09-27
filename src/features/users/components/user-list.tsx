@@ -1,6 +1,8 @@
 "use client"
 
 import { ColumnMenu } from "@/components/table/column-menu"
+import { TablePager, usePagination } from "@/components/table/data-table"
+import { TABLE_FRAME } from "@/components/table/styles"
 import { TableToolbar } from "@/components/table/table-toolbar"
 import { useTableColumns } from "@/components/table/use-table-columns"
 import type { RoleSummary } from "@/features/auth/roles"
@@ -37,13 +39,15 @@ export function UserList({
     USER_COLUMNS,
     DEFAULT_USER_COLUMNS,
   )
+  const { rows, pager } = usePagination(members)
 
   return (
     <>
       <TableToolbar
+        title="All members"
         search={query.q}
         searchLabel="Search the team"
-        searchPlaceholder="Search name or email"
+        searchPlaceholder="Search by name or email address"
         filters={[
           {
             key: "role",
@@ -71,17 +75,25 @@ export function UserList({
         />
       </TableToolbar>
 
-      {notice ? (
-        <p
-          role="alert"
-          className="border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6"
-        >
-          {notice}
-        </p>
-      ) : null}
+      <div className={TABLE_FRAME}>
+        {notice ? (
+          <p
+            role="alert"
+            className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            {notice}
+          </p>
+        ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto border-t border-black/8">
-        <UserTable members={members} roles={roles} meId={meId} columns={columns} />
+        <UserTable
+          members={rows}
+          roles={roles}
+          meId={meId}
+          columns={columns}
+          sort={query.sort}
+          direction={query.direction}
+        />
+        <TablePager {...pager} />
       </div>
     </>
   )

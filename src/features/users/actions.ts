@@ -19,6 +19,8 @@ export type TeamMember = {
   /** Null for someone who signed up and is waiting to be let in. */
   role: Role | null
   joinedAt: string
+  /** Null when they never have, or when the service key is not set to ask. */
+  lastSignInAt: string | null
 }
 
 export type TeamResult =
@@ -33,15 +35,39 @@ const FOREIGN_KEY_VIOLATION = "23503"
 const MIGRATION_HINT =
   "The profiles table does not exist yet. Run supabase/migrations/0016_roles.sql against the project."
 
+/**
+ * When each login last signed in. Only auth knows, and only the service key
+ * may ask it; without one the column reads as never rather than failing.
+ */
+async function readLastSignIns(): Promise<Map<string, string>> {
+  const admin = createAdminClient()
+  const seen = new Map<string, string>()
+  if (!admin) return seen
+
+  // A small team fits on one page; the cap keeps a runaway loop impossible.
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error) break
+    for (const user of data.users) {
+      if (user.last_sign_in_at) seen.set(user.id, user.last_sign_in_at)
+    }
+    if (data.users.length < 1000) break
+  }
+  return seen
+}
+
 /** Everyone who has signed up, newest waiting first, then the team by name. */
 export async function listTeam(): Promise<TeamResult> {
   await requirePermission("users.manage")
 
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, role, created_at")
-    .order("created_at", { ascending: false })
+  const [{ data, error }, lastSignIns] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, role, created_at")
+      .order("created_at", { ascending: false }),
+    readLastSignIns(),
+  ])
 
   if (error) {
     return {
@@ -59,6 +85,7 @@ export async function listTeam(): Promise<TeamResult> {
       name: (row.full_name as string | null)?.trim() || email.split("@")[0],
       role: isRole(row.role) ? row.role : null,
       joinedAt: row.created_at as string,
+      lastSignInAt: lastSignIns.get(row.id as string) ?? null,
     }
   })
 
