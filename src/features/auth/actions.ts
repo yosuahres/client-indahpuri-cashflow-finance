@@ -5,6 +5,7 @@ import { refresh } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
 import { safeRedirectPath } from "@/lib/site-url"
+import { recordAuditEvent } from "@/features/audit/record"
 
 import { hasErrors, validateLogin, type AuthFormState } from "./validation"
 
@@ -27,12 +28,16 @@ export async function login(
     return { error: "Incorrect email or password." }
   }
 
+  await recordAuditEvent(supabase, "auth.sign_in")
+
   refresh()
   redirect(next)
 }
 
 export async function signOut() {
   const supabase = await createClient()
+  // Before signing out: afterwards there is nobody to record it against.
+  await recordAuditEvent(supabase, "auth.sign_out")
   await supabase.auth.signOut()
 
   refresh()

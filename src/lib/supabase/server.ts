@@ -1,7 +1,7 @@
 import "server-only"
 
 import { cache } from "react"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { createServerClient } from "@supabase/ssr"
 
 import { env } from "@/lib/env"
@@ -21,9 +21,13 @@ import { env } from "@/lib/env"
  * round trip each, one after another.
  */
 export const createClient = cache(async () => {
-  const cookieStore = await cookies()
+  const [cookieStore, requestHeaders] = await Promise.all([cookies(), headers()])
 
   return createServerClient(env.supabaseUrl, env.supabaseKey, {
+    // Every request reaches Supabase from this server, so the database would
+    // only ever see the server's address. The audit log (0030) records the
+    // browser's instead.
+    global: { headers: clientIpHeader(requestHeaders) },
     cookies: {
       getAll() {
         return cookieStore.getAll()
@@ -41,3 +45,11 @@ export const createClient = cache(async () => {
     },
   })
 })
+
+/** The visitor's address as the host saw it: the first hop of the forwarded chain. */
+function clientIpHeader(requestHeaders: Headers): Record<string, string> {
+  const ip =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    requestHeaders.get("x-real-ip")?.trim()
+  return ip ? { "x-client-ip": ip } : {}
+}

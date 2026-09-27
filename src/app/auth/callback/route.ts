@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { createClient } from "@/lib/supabase/server"
+import { recordAuditEvent } from "@/features/audit/record"
 import { safeRedirectPath } from "@/lib/site-url"
 
 /**
@@ -28,6 +29,8 @@ export async function GET(request: NextRequest) {
       `${origin}/login?error=${encodeURIComponent("That link is invalid or has expired.")}`,
     )
   }
+
+  await recordAuditEvent(supabase, "auth.sign_in")
 
   return NextResponse.redirect(`${origin}${next}`)
 }

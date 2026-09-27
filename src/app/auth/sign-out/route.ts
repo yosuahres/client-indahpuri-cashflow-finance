@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { createClient } from "@/lib/supabase/server"
+import { recordAuditEvent } from "@/features/audit/record"
 
 /**
  * POST-only sign out, for clients that cannot call the Server Action (plain
@@ -16,6 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createClient()
+  await recordAuditEvent(supabase, "auth.sign_out")
   await supabase.auth.signOut()
 
   return NextResponse.redirect(`${request.nextUrl.origin}/login`, {

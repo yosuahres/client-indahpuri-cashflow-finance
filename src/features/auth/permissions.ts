@@ -61,6 +61,11 @@ export const PERMISSION_GROUPS = [
     label: "User management",
     permissions: [{ key: "users.manage", label: "Manage users, roles and permissions" }],
   },
+  {
+    key: "audit",
+    label: "Security",
+    permissions: [{ key: "audit.view", label: "View the audit log" }],
+  },
 ] as const
 
 export type PermissionGroupKey = (typeof PERMISSION_GROUPS)[number]["key"]
@@ -133,6 +138,7 @@ const ROUTES: { prefix: string; allowed: (permissions: readonly Permission[]) =>
   { prefix: "/hris/attendance", allowed: (p) => can(p, "attendance.manage") },
   { prefix: "/hris/leave", allowed: (p) => can(p, "leave.manage") },
   { prefix: "/settings/account", allowed: () => true },
+  { prefix: "/settings/audit-log", allowed: (p) => can(p, "audit.view") },
   { prefix: "/settings", allowed: (p) => can(p, "users.manage") },
 ]
 
