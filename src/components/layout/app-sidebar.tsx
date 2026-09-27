@@ -16,7 +16,7 @@ import { UserMenu } from "./user-menu"
 
 function NavLinks({ links, active }: { links: NavLink[]; active: string | null }) {
   return (
-    <ul className="mb-2">
+    <ul className="mb-2 space-y-0.5">
       {links.map((link) => {
         const Icon = link.icon
 
@@ -70,7 +70,7 @@ function NavGroupBlock({ group, active }: { group: NavGroup; active: string | nu
       </button>
 
       {open ? (
-        <ul>
+        <ul className="mt-0.5 space-y-0.5">
           {group.items.map((item) => {
             const current = Boolean(item.href) && item.href === active
 

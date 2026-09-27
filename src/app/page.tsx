@@ -21,7 +21,7 @@ export default async function HomePage() {
             alt="Indah Puri Golf Resort"
             width={363}
             height={158}
-            className="h-10 w-auto rounded-md border border-black/8"
+            className="h-10 w-auto"
           />
           Indah Puri Apps
         </span>
