@@ -13,7 +13,7 @@ export function leaveStatusLabel(value: LeaveStatusValue) {
 /**
  * Calendar days a spell covers, both ends included. Weekends and public
  * holidays are counted: there is no working calendar on file to take them off,
- * and the budget check in the database (0029 §3) counts the same way.
+ * and the entitlement check in the database (0029 §3) counts the same way.
  */
 export function leaveDays(startDate: string, endDate: string): number {
   const start = Date.parse(`${startDate}T00:00:00Z`)
@@ -32,11 +32,4 @@ export function leaveDaysInYear(startDate: string, endDate: string, year: number
 /** A day count as it reads in a table: "12", "7.5". */
 export function formatDays(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1)
-}
-
-/** The same date shifted by whole days, still as `YYYY-MM-DD`. */
-export function addDays(date: string, days: number) {
-  const moved = new Date(`${date}T00:00:00Z`)
-  moved.setUTCDate(moved.getUTCDate() + days)
-  return moved.toISOString().slice(0, 10)
 }

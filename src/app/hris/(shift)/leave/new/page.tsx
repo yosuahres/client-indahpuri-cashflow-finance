@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 import { requirePermission } from "@/features/auth/session"
 import { loadRoster } from "@/features/employees/roster"
-import { loadLeaveBudgets } from "@/features/leave/budgets"
+import { loadLeaveEntitlements } from "@/features/leave/entitlements"
 import { LeaveForm } from "@/features/leave/components/leave-form"
 import { listLeaveTypes } from "@/features/leave/type-actions"
 
@@ -15,12 +15,12 @@ export default async function NewLeavePage() {
   const today = new Date().toISOString().slice(0, 10)
   const year = Number(today.slice(0, 4))
   // Next year too: leave booked in December for January draws on that.
-  const [roster, budgets, types] = await Promise.all([
+  const [roster, entitlements, types] = await Promise.all([
     loadRoster(),
-    loadLeaveBudgets([year, year + 1]),
+    loadLeaveEntitlements([year, year + 1]),
     listLeaveTypes(),
   ])
-  const notice = roster.error ?? types.error ?? budgets.error
+  const notice = roster.error ?? types.error ?? entitlements.error
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -36,7 +36,7 @@ export default async function NewLeavePage() {
       <LeaveForm
         roster={roster.employees}
         types={types.types}
-        budgets={budgets.budgets}
+        entitlements={entitlements.entitlements}
         today={today}
       />
     </div>

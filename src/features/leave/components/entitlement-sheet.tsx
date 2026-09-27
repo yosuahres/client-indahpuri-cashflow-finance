@@ -9,8 +9,8 @@ import { cn } from "@/lib/cn"
 import type { FormState } from "@/lib/form-state"
 import type { RosterEntry } from "@/features/employees/roster"
 
-import { saveLeaveBudgets } from "../budget-actions"
-import type { LeaveBudget } from "../budgets"
+import { saveLeaveEntitlements } from "../entitlement-actions"
+import type { LeaveEntitlement } from "../entitlements"
 import { formatDays } from "../constants"
 
 const initialState: FormState = {}
@@ -21,23 +21,23 @@ const cell = "px-3 py-2 text-sm"
 const numberCell = cn(cell, "text-right text-neutral-700 tabular-nums")
 
 /**
- * Everyone's budget of one leave type for one year, typed in per person. One
+ * Everyone's entitlement of one leave type for one year, typed in per person. One
  * Save writes the sheet. "Set everyone to" fills every box at once, for when
  * the rule is the same for all — then change the odd one by hand.
  */
-export function BudgetSheet({
+export function EntitlementSheet({
   year,
   leaveTypeId,
   roster,
-  budgets,
+  entitlements,
 }: {
   year: number
   leaveTypeId: string
   roster: RosterEntry[]
   /** What is on file for this type and year, keyed by employee id. */
-  budgets: Record<string, LeaveBudget>
+  entitlements: Record<string, LeaveEntitlement>
 }) {
-  const [state, formAction, pending] = useActionState(saveLeaveBudgets, initialState)
+  const [state, formAction, pending] = useActionState(saveLeaveEntitlements, initialState)
   const errors = state.fieldErrors ?? {}
   useActionToast(state)
 
@@ -46,8 +46,8 @@ export function BudgetSheet({
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       roster.map((employee) => {
-        const budget = budgets[employee.id]
-        return [employee.id, budget ? String(budget.days) : ""]
+        const entitlement = entitlements[employee.id]
+        return [employee.id, entitlement ? String(entitlement.days) : ""]
       }),
     ),
   )
@@ -71,11 +71,11 @@ export function BudgetSheet({
       <input type="hidden" name="leaveTypeId" value={leaveTypeId} />
 
       <div className="flex flex-wrap items-center gap-2 border-b border-black/8 px-4 py-3 sm:px-6">
-        <label htmlFor="budget-everyone" className="text-sm text-neutral-600">
+        <label htmlFor="entitlement-everyone" className="text-sm text-neutral-600">
           Set everyone to
         </label>
         <TextInput
-          id="budget-everyone"
+          id="entitlement-everyone"
           type="number"
           inputMode="decimal"
           min={0}
@@ -105,12 +105,12 @@ export function BudgetSheet({
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <caption className="sr-only">
-            Leave budget for every employee on the roll, with what is taken and left.
+            Leave entitlement for every employee on the roll, with what is taken and left.
           </caption>
           <thead>
             <tr className="bg-neutral-50">
               <th scope="col" className={cn("min-w-[200px]", headCell)}>Employee</th>
-              <th scope="col" className={cn("w-32", headCell)}>Budget</th>
+              <th scope="col" className={cn("w-32", headCell)}>Entitlement</th>
               <th scope="col" className={numberHead}>Taken</th>
               <th scope="col" className={numberHead}>Pending</th>
               <th scope="col" className={numberHead}>Left</th>
@@ -119,9 +119,9 @@ export function BudgetSheet({
 
           <tbody>
             {roster.map((employee) => {
-              const budget = budgets[employee.id]
-              const taken = budget?.taken ?? 0
-              const waiting = budget?.pending ?? 0
+              const entitlement = entitlements[employee.id]
+              const taken = entitlement?.taken ?? 0
+              const waiting = entitlement?.pending ?? 0
               const raw = values[employee.id] ?? ""
               // Left follows the box as it is typed in, not only once saved.
               const typed = raw === "" ? null : Number(raw)
@@ -140,7 +140,7 @@ export function BudgetSheet({
                   </td>
                   <td className={cell}>
                     <TextInput
-                      aria-label={`Budget for ${employee.fullName}`}
+                      aria-label={`Entitlement for ${employee.fullName}`}
                       name={`days:${employee.id}`}
                       type="number"
                       inputMode="decimal"
@@ -180,7 +180,7 @@ export function BudgetSheet({
 
       <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-black/8 bg-white px-4 py-3 sm:px-6">
         <p className="text-xs text-neutral-500">Empty means no limit for that person.</p>
-        <SaveButton pending={pending}>Save Budgets</SaveButton>
+        <SaveButton pending={pending}>Save Entitlements</SaveButton>
       </div>
     </form>
   )

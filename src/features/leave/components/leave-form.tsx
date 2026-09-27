@@ -17,19 +17,19 @@ import type { FormState } from "@/lib/form-state"
 import type { RosterEntry } from "@/features/employees/roster"
 
 import { recordLeave } from "../actions"
-import type { LeaveBudget } from "../budgets"
+import type { LeaveEntitlement } from "../entitlements"
 import { formatDays, LEAVE_STATUSES, leaveDays, leaveDaysInYear } from "../constants"
 import { ManageTypesFooter } from "./manage-types-footer"
 
 const initialState: FormState = {}
 
 /**
- * The budget line under the type, for the year the first day falls in. The
+ * The entitlement line under the type, for the year the first day falls in. The
  * database has the final say when saving (0029 §3); this is so nobody has to
  * find out by trying.
  */
-function budgetHint(
-  budgets: LeaveBudget[],
+function entitlementHint(
+  entitlements: LeaveEntitlement[],
   employeeId: string,
   type: { id: string; name: string } | undefined,
   startDate: string,
@@ -38,18 +38,18 @@ function budgetHint(
   if (!employeeId || !type || !startDate) return undefined
 
   const year = Number(startDate.slice(0, 4))
-  const budget = budgets.find(
+  const entitlement = entitlements.find(
     (entry) =>
       entry.employeeId === employeeId && entry.leaveTypeId === type.id && entry.year === year,
   )
   const label = type.name.toLowerCase()
-  if (!budget) return { text: `No ${label} budget set for ${year} — not limited.`, over: false }
+  if (!entitlement) return { text: `No ${label} entitlement set for ${year} — not limited.`, over: false }
 
-  const available = budget.days - budget.taken - budget.pending
+  const available = entitlement.days - entitlement.taken - entitlement.pending
   const wanted = leaveDaysInYear(startDate, endDate, year)
-  const pendingNote = budget.pending > 0 ? `, ${formatDays(budget.pending)} pending` : ""
+  const pendingNote = entitlement.pending > 0 ? `, ${formatDays(entitlement.pending)} pending` : ""
   return {
-    text: `${formatDays(Math.max(available, 0))} of ${formatDays(budget.days)} ${label} days left in ${year}${pendingNote}.`,
+    text: `${formatDays(Math.max(available, 0))} of ${formatDays(entitlement.days)} ${label} days left in ${year}${pendingNote}.`,
     over: wanted > available,
   }
 }
@@ -58,14 +58,14 @@ function budgetHint(
 export function LeaveForm({
   roster,
   types,
-  budgets,
+  entitlements,
   today,
 }: {
   roster: RosterEntry[]
   /** The leave types to choose from, as set up under Leave Types. */
   types: { id: string; name: string }[]
-  /** Budgets for this year and next, with what is drawn on each. */
-  budgets: LeaveBudget[]
+  /** Entitlements for this year and next, with what is drawn on each. */
+  entitlements: LeaveEntitlement[]
   today: string
 }) {
   const [state, formAction, pending] = useActionState(recordLeave, initialState)
@@ -79,8 +79,8 @@ export function LeaveForm({
   const [status, setStatus] = useState("pending")
 
   const days = leaveDays(startDate, endDate)
-  const budget = budgetHint(
-    budgets,
+  const entitlement = entitlementHint(
+    entitlements,
     employeeId,
     types.find((type) => type.id === leaveTypeId),
     startDate,
@@ -126,12 +126,12 @@ export function LeaveForm({
                 footer={() => <ManageTypesFooter />}
               />
             </Field>
-            {budget && !errors.leaveTypeId ? (
+            {entitlement && !errors.leaveTypeId ? (
               <p
                 aria-live="polite"
-                className={budget.over ? "text-xs text-rose-600" : "text-xs text-neutral-500"}
+                className={entitlement.over ? "text-xs text-rose-600" : "text-xs text-neutral-500"}
               >
-                {budget.text}
+                {entitlement.text}
               </p>
             ) : null}
           </div>

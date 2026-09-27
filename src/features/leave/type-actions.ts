@@ -76,7 +76,7 @@ export async function createLeaveType(
   }
 
   refresh()
-  // Back to whatever sent us here — the budget sheet or the leave form, often.
+  // Back to whatever sent us here — the entitlement sheet or the leave form, often.
   const next = safeRedirectPath(formData.get("next")?.toString(), "/hris/leave/types")
   await flash("success", "Leave type added.")
   redirect(next)
@@ -84,7 +84,7 @@ export async function createLeaveType(
 
 export type RowResult = { ok: boolean; error?: string }
 
-/** Removes a leave type no leave is recorded against. Its budgets go with it. */
+/** Removes a leave type no leave is recorded against. Its entitlements go with it. */
 export async function deleteLeaveType(id: string): Promise<RowResult> {
   if (!id) return { ok: false, error: "Nothing to remove." }
   await requirePermission("leave.manage")

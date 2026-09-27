@@ -16,7 +16,6 @@ import {
 import { LEAVE_STATUSES } from "../constants"
 import type { LeaveQuery } from "../query"
 import { LeaveTable } from "./leave-table"
-import { OnLeaveQuickPick } from "./on-leave-quick-pick"
 
 /** The leave and the controls above it, as every list here is laid out. */
 export function LeaveList({
@@ -77,7 +76,6 @@ export function LeaveList({
           options: LEAVE_SORTS.map((entry) => ({ value: entry.value, label: entry.label })),
         }}
       >
-        <OnLeaveQuickPick on={query.on} today={today} />
         <ColumnMenu
           all={LEAVE_COLUMNS}
           defaults={DEFAULT_LEAVE_COLUMNS}

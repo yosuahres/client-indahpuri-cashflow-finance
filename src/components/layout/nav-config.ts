@@ -120,7 +120,7 @@ const SHIFT_NAV: ModuleNav = {
       items: [
         { label: "Shifts", href: "/hris/attendance/shifts" },
         { label: "Leave Types", href: "/hris/leave/types" },
-        { label: "Leave Budgets", href: "/hris/leave/budgets" },
+        { label: "Leave Entitlements", href: "/hris/leave/entitlements" },
       ],
     },
   ],

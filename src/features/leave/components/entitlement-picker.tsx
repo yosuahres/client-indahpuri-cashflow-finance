@@ -13,10 +13,10 @@ const STEP =
   "grid size-10 shrink-0 cursor-pointer place-items-center rounded-md bg-neutral-100 text-neutral-600 hover:text-neutral-900"
 
 /**
- * Which year and leave type the budget sheet shows. Both sit in the URL, so a
+ * Which year and leave type the entitlement sheet shows. Both sit in the URL, so a
  * sheet is shareable and comes back from the server already filled.
  */
-export function BudgetPicker({
+export function EntitlementPicker({
   year,
   leaveTypeId,
   types,
@@ -63,11 +63,11 @@ export function BudgetPicker({
       </div>
 
       <div className="w-full sm:w-48">
-        <label htmlFor="budget-type" className="sr-only">
+        <label htmlFor="entitlement-type" className="sr-only">
           Leave type
         </label>
         <Select
-          id="budget-type"
+          id="entitlement-type"
           value={leaveTypeId}
           onValueChange={(value) => set("type", value)}
           options={types.map((type) => ({ value: type.id, label: `${type.name} leave` }))}

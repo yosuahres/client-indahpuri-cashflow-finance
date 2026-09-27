@@ -8,14 +8,14 @@ import { hasFieldErrors, type FormState } from "@/lib/form-state"
 
 const UNDEFINED_TABLE = "42P01"
 const MIGRATION_HINT =
-  "Leave budgets are not set up yet. Run supabase/migrations/0029_leave_budgets.sql and 0031_leave_types.sql against the project."
+  "Leave entitlements are not set up yet. Run supabase/migrations/0029_leave_budgets.sql and 0031_leave_types.sql against the project."
 
 /**
- * Saves the whole budget sheet for one type and year. Each row comes in as an
- * `employeeId` and its `days:<id>`; a row left empty has no budget, which
+ * Saves the whole entitlement sheet for one type and year. Each row comes in as an
+ * `employeeId` and its `days:<id>`; a row left empty has no entitlement, which
  * means that person's leave of the type is not limited that year.
  */
-export async function saveLeaveBudgets(
+export async function saveLeaveEntitlements(
   _prevState: FormState,
   formData: FormData,
 ): Promise<FormState> {
@@ -72,5 +72,5 @@ export async function saveLeaveBudgets(
   }
 
   refresh()
-  return { message: "Leave budgets saved.", savedAt: Date.now() }
+  return { message: "Leave entitlements saved.", savedAt: Date.now() }
 }

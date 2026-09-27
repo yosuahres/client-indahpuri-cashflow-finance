@@ -5,38 +5,38 @@ import { requirePermission } from "@/features/auth/session"
 
 import { leaveDaysInYear, type LeaveStatusValue } from "./constants"
 
-/** One person's budget of one type for a year, and what they have drawn on it. */
-export type LeaveBudget = {
+/** One person's entitlement of one type for a year, and what they have drawn on it. */
+export type LeaveEntitlement = {
   employeeId: string
   leaveTypeId: string
   year: number
-  /** The budget itself. */
+  /** The entitlement itself. */
   days: number
   /** Approved days that fall in the year. */
   taken: number
-  /** Days waiting on a decision. They hold the budget until decided (0029 §3). */
+  /** Days waiting on a decision. They hold the entitlement until decided (0029 §3). */
   pending: number
 }
 
 const UNDEFINED_TABLE = "42P01"
 const MIGRATION_HINT =
-  "Leave budgets are not set up yet. Run supabase/migrations/0029_leave_budgets.sql and 0031_leave_types.sql against the project."
+  "Leave entitlements are not set up yet. Run supabase/migrations/0029_leave_budgets.sql and 0031_leave_types.sql against the project."
 
-export type LeaveBudgetsResult = { ok: boolean; error?: string; budgets: LeaveBudget[] }
+export type LeaveEntitlementsResult = { ok: boolean; error?: string; entitlements: LeaveEntitlement[] }
 
 /**
- * Every budget set for the given years, with the leave drawn on each. Left is
+ * Every entitlement set for the given years, with the leave drawn on each. Left is
  * `days - taken`, and what can still be asked for is that less `pending`.
  */
-export async function loadLeaveBudgets(years: number[]): Promise<LeaveBudgetsResult> {
+export async function loadLeaveEntitlements(years: number[]): Promise<LeaveEntitlementsResult> {
   await requirePermission("leave.manage")
-  if (years.length === 0) return { ok: true, budgets: [] }
+  if (years.length === 0) return { ok: true, entitlements: [] }
 
   const first = Math.min(...years)
   const last = Math.max(...years)
 
   const supabase = await createClient()
-  const [budgets, spells] = await Promise.all([
+  const [entitlements, spells] = await Promise.all([
     supabase
       .from("leave_budgets")
       .select("employee_id, leave_type_id, year, days")
@@ -49,12 +49,12 @@ export async function loadLeaveBudgets(years: number[]): Promise<LeaveBudgetsRes
       .gte("end_date", `${first}-01-01`),
   ])
 
-  const error = budgets.error ?? spells.error
+  const error = entitlements.error ?? spells.error
   if (error) {
     return {
       ok: false,
       error: error.code === UNDEFINED_TABLE ? MIGRATION_HINT : error.message,
-      budgets: [],
+      entitlements: [],
     }
   }
 
@@ -68,22 +68,22 @@ export async function loadLeaveBudgets(years: number[]): Promise<LeaveBudgetsRes
 
   return {
     ok: true,
-    budgets: (budgets.data ?? []).map((budget) => {
+    entitlements: (entitlements.data ?? []).map((entitlement) => {
       let taken = 0
       let pending = 0
       for (const row of rows) {
-        if (row.employee_id !== budget.employee_id || row.leave_type_id !== budget.leave_type_id) {
+        if (row.employee_id !== entitlement.employee_id || row.leave_type_id !== entitlement.leave_type_id) {
           continue
         }
-        const inYear = leaveDaysInYear(row.start_date, row.end_date, budget.year as number)
+        const inYear = leaveDaysInYear(row.start_date, row.end_date, entitlement.year as number)
         if (row.status === "approved") taken += inYear
         else pending += inYear
       }
       return {
-        employeeId: budget.employee_id as string,
-        leaveTypeId: budget.leave_type_id as string,
-        year: budget.year as number,
-        days: Number(budget.days),
+        employeeId: entitlement.employee_id as string,
+        leaveTypeId: entitlement.leave_type_id as string,
+        year: entitlement.year as number,
+        days: Number(entitlement.days),
         taken,
         pending,
       }

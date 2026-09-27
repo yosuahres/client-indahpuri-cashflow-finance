@@ -41,7 +41,7 @@ const OVERLAP_HINT =
 function errorMessage(error: { code?: string; message: string }) {
   if (error.code === UNDEFINED_TABLE) return MIGRATION_HINT
   if (error.code === EXCLUSION_VIOLATION) return OVERLAP_HINT
-  // Anything else — going over a leave budget (0029 §3) among it — says in its
+  // Anything else — going over a leave entitlement (0029 §3) among it — says in its
   // own words what does not fit.
   return error.message
 }
@@ -158,8 +158,8 @@ export type RowResult = { ok: boolean; error?: string }
 
 /**
  * Approves or rejects a spell already on the record. Approving checks the
- * budget again (0029 §3); rejecting frees its days, so the same dates can be
- * asked for again and the budget gets them back.
+ * entitlement again (0029 §3); rejecting frees its days, so the same dates can be
+ * asked for again and the entitlement gets them back.
  */
 export async function setLeaveStatus(id: string, status: LeaveStatusValue): Promise<RowResult> {
   if (!id) return { ok: false, error: "That leave is no longer on the record." }
