@@ -17,23 +17,75 @@ import type { FormState } from "@/lib/form-state"
 import type { RosterEntry } from "@/features/employees/roster"
 
 import { recordLeave } from "../actions"
-import { LEAVE_STATUSES, LEAVE_TYPES, leaveDays } from "../constants"
+import type { LeaveBudget } from "../budgets"
+import { formatDays, LEAVE_STATUSES, leaveDays, leaveDaysInYear } from "../constants"
+import { ManageTypesFooter } from "./manage-types-footer"
 
 const initialState: FormState = {}
 
+/**
+ * The budget line under the type, for the year the first day falls in. The
+ * database has the final say when saving (0029 §3); this is so nobody has to
+ * find out by trying.
+ */
+function budgetHint(
+  budgets: LeaveBudget[],
+  employeeId: string,
+  type: { id: string; name: string } | undefined,
+  startDate: string,
+  endDate: string,
+): { text: string; over: boolean } | undefined {
+  if (!employeeId || !type || !startDate) return undefined
+
+  const year = Number(startDate.slice(0, 4))
+  const budget = budgets.find(
+    (entry) =>
+      entry.employeeId === employeeId && entry.leaveTypeId === type.id && entry.year === year,
+  )
+  const label = type.name.toLowerCase()
+  if (!budget) return { text: `No ${label} budget set for ${year} — not limited.`, over: false }
+
+  const available = budget.days - budget.taken - budget.pending
+  const wanted = leaveDaysInYear(startDate, endDate, year)
+  const pendingNote = budget.pending > 0 ? `, ${formatDays(budget.pending)} pending` : ""
+  return {
+    text: `${formatDays(Math.max(available, 0))} of ${formatDays(budget.days)} ${label} days left in ${year}${pendingNote}.`,
+    over: wanted > available,
+  }
+}
+
 /** One spell of leave, for anyone on the roll. */
-export function LeaveForm({ roster, today }: { roster: RosterEntry[]; today: string }) {
+export function LeaveForm({
+  roster,
+  types,
+  budgets,
+  today,
+}: {
+  roster: RosterEntry[]
+  /** The leave types to choose from, as set up under Leave Types. */
+  types: { id: string; name: string }[]
+  /** Budgets for this year and next, with what is drawn on each. */
+  budgets: LeaveBudget[]
+  today: string
+}) {
   const [state, formAction, pending] = useActionState(recordLeave, initialState)
   const errors = state.fieldErrors ?? {}
   useActionToast(state)
 
   const [employeeId, setEmployeeId] = useState("")
-  const [leaveType, setLeaveType] = useState("annual")
+  const [leaveTypeId, setLeaveTypeId] = useState(types[0]?.id ?? "")
   const [startDate, setStartDate] = useState(today)
   const [endDate, setEndDate] = useState(today)
   const [status, setStatus] = useState("pending")
 
   const days = leaveDays(startDate, endDate)
+  const budget = budgetHint(
+    budgets,
+    employeeId,
+    types.find((type) => type.id === leaveTypeId),
+    startDate,
+    endDate,
+  )
 
   return (
     <form action={formAction} noValidate className="flex min-h-full flex-col">
@@ -61,16 +113,28 @@ export function LeaveForm({ roster, today }: { roster: RosterEntry[]; today: str
             />
           </Field>
 
-          <Field label="Type" htmlFor="leaveType" required error={errors.leaveType}>
-            <Select
-              id="leaveType"
-              name="leaveType"
-              value={leaveType}
-              onValueChange={setLeaveType}
-              options={LEAVE_TYPES}
-              invalid={Boolean(errors.leaveType)}
-            />
-          </Field>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Field label="Type" htmlFor="leaveTypeId" required error={errors.leaveTypeId}>
+              <Select
+                id="leaveTypeId"
+                name="leaveTypeId"
+                value={leaveTypeId}
+                onValueChange={setLeaveTypeId}
+                options={types.map((type) => ({ value: type.id, label: type.name }))}
+                placeholder={types.length === 0 ? "No leave types yet" : "Choose a type"}
+                invalid={Boolean(errors.leaveTypeId)}
+                footer={() => <ManageTypesFooter />}
+              />
+            </Field>
+            {budget && !errors.leaveTypeId ? (
+              <p
+                aria-live="polite"
+                className={budget.over ? "text-xs text-rose-600" : "text-xs text-neutral-500"}
+              >
+                {budget.text}
+              </p>
+            ) : null}
+          </div>
 
           <Field label="First Day" htmlFor="startDate" required error={errors.startDate}>
             <DatePicker

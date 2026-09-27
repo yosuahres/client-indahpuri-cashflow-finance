@@ -10,12 +10,7 @@ import { formatDate } from "@/lib/format"
 
 import { deleteLeave, setLeaveStatus, type LeaveEntry } from "../actions"
 import { DEFAULT_LEAVE_COLUMNS, LEAVE_COLUMNS, type LeaveColumnKey } from "../columns"
-import {
-  leaveDays,
-  leaveStatusLabel,
-  leaveTypeLabel,
-  type LeaveStatusValue,
-} from "../constants"
+import { leaveDays, leaveStatusLabel, type LeaveStatusValue } from "../constants"
 
 const WIDTHS = Object.fromEntries(
   LEAVE_COLUMNS.map((column) => [column.key, column.width]),
@@ -42,7 +37,7 @@ function leaveCell(key: LeaveColumnKey, entry: LeaveEntry) {
     case "leaveType":
       return (
         <td className={cn(cell, "whitespace-nowrap text-neutral-700")}>
-          {leaveTypeLabel(entry.leaveType)}
+          {entry.leaveTypeName}
         </td>
       )
     case "days":

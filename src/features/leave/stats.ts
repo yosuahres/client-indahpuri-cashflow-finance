@@ -3,7 +3,7 @@ import "server-only"
 import { createClient } from "@/lib/supabase/server"
 import { requireUser } from "@/features/auth/session"
 import type { Slice } from "@/features/employees/dashboard"
-import { LEAVE_TYPES, leaveDays, type LeaveStatusValue, type LeaveTypeValue } from "./constants"
+import { leaveDays, type LeaveStatusValue } from "./constants"
 
 /**
  * The leave figures the HR dashboard carries: who is off right now, what is
@@ -49,7 +49,7 @@ export async function loadLeaveStats(today: string): Promise<LeaveStatsResult> {
   // left undecided since last year is exactly the one worth surfacing.
   const { data, error } = await supabase
     .from("leave_requests")
-    .select("leave_type, start_date, end_date, status")
+    .select("start_date, end_date, status, leave_types(name)")
     .or(`end_date.gte.${yearStart},status.eq.pending`)
 
   if (error) {
@@ -61,13 +61,14 @@ export async function loadLeaveStats(today: string): Promise<LeaveStatsResult> {
   }
 
   const rows = (data ?? []) as {
-    leave_type: LeaveTypeValue
     start_date: string
     end_date: string
     status: LeaveStatusValue
+    leave_types: { name?: unknown } | { name?: unknown }[] | null
   }[]
 
-  const days = new Map<LeaveTypeValue, number>(LEAVE_TYPES.map((type) => [type.value, 0]))
+  // Keyed by type name — the types are set up in the app, not fixed here.
+  const days = new Map<string, number>()
   let onLeaveToday = 0
   let pending = 0
   let total = 0
@@ -83,7 +84,9 @@ export async function loadLeaveStats(today: string): Promise<LeaveStatsResult> {
     const from = row.start_date < yearStart ? yearStart : row.start_date
     if (from > row.end_date) continue
     const length = leaveDays(from, row.end_date)
-    days.set(row.leave_type, (days.get(row.leave_type) ?? 0) + length)
+    const joined = Array.isArray(row.leave_types) ? row.leave_types[0] : row.leave_types
+    const type = typeof joined?.name === "string" ? joined.name : "Unknown type"
+    days.set(type, (days.get(type) ?? 0) + length)
     total += length
   }
 
@@ -92,12 +95,10 @@ export async function loadLeaveStats(today: string): Promise<LeaveStatsResult> {
     stats: {
       onLeaveToday,
       pending,
-      // Kept in the types' own order, with the empty ones dropped.
-      daysByType: LEAVE_TYPES.map((type) => ({
-        label: type.label,
-        count: days.get(type.value) ?? 0,
-        share: total > 0 ? (days.get(type.value) ?? 0) / total : 0,
-      })).filter((slice) => slice.count > 0),
+      // Most days first; only types someone has actually taken show.
+      daysByType: [...days.entries()]
+        .map(([label, count]) => ({ label, count, share: total > 0 ? count / total : 0 }))
+        .sort((a, b) => b.count - a.count),
       daysThisYear: total,
     },
   }

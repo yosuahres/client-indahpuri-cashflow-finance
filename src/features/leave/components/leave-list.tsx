@@ -13,18 +13,24 @@ import {
   LEAVE_COLUMNS_STORAGE_KEY,
   LEAVE_SORTS,
 } from "../columns"
-import { LEAVE_STATUSES, LEAVE_TYPES } from "../constants"
+import { LEAVE_STATUSES } from "../constants"
 import type { LeaveQuery } from "../query"
 import { LeaveTable } from "./leave-table"
+import { OnLeaveQuickPick } from "./on-leave-quick-pick"
 
 /** The leave and the controls above it, as every list here is laid out. */
 export function LeaveList({
   entries,
   status,
   query,
+  types,
+  today,
   notice,
 }: {
   entries: LeaveEntry[]
+  /** The leave types to filter by, as set up under Leave Types. */
+  types: { id: string; name: string }[]
+  today: string
   /** Narrowed in the database; empty shows every status. */
   status: string
   query: LeaveQuery
@@ -59,8 +65,9 @@ export function LeaveList({
             label: "Type",
             allLabel: "All types",
             value: query.leaveType,
-            options: LEAVE_TYPES.map((entry) => ({ value: entry.value, label: entry.label })),
+            options: types.map((type) => ({ value: type.id, label: type.name })),
           },
+          { key: "on", label: "On leave on", kind: "date", value: query.on, today },
         ]}
         sort={{
           value: query.sort,
@@ -70,6 +77,7 @@ export function LeaveList({
           options: LEAVE_SORTS.map((entry) => ({ value: entry.value, label: entry.label })),
         }}
       >
+        <OnLeaveQuickPick on={query.on} today={today} />
         <ColumnMenu
           all={LEAVE_COLUMNS}
           defaults={DEFAULT_LEAVE_COLUMNS}

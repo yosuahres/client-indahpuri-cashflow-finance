@@ -117,7 +117,11 @@ const SHIFT_NAV: ModuleNav = {
       label: "Setup",
       icon: Settings2,
       defaultOpen: true,
-      items: [{ label: "Shifts", href: "/hris/attendance/shifts" }],
+      items: [
+        { label: "Shifts", href: "/hris/attendance/shifts" },
+        { label: "Leave Types", href: "/hris/leave/types" },
+        { label: "Leave Budgets", href: "/hris/leave/budgets" },
+      ],
     },
   ],
 }

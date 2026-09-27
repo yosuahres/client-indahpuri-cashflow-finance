@@ -7,12 +7,7 @@ import { createClient } from "@/lib/supabase/server"
 import { requirePermission } from "@/features/auth/session"
 import { flash } from "@/lib/flash"
 import { hasFieldErrors, type FormState } from "@/lib/form-state"
-import {
-  LEAVE_STATUSES,
-  LEAVE_TYPES,
-  type LeaveStatusValue,
-  type LeaveTypeValue,
-} from "./constants"
+import { LEAVE_STATUSES, type LeaveStatusValue } from "./constants"
 
 /** One spell of leave, with whose it is. */
 export type LeaveEntry = {
@@ -20,7 +15,8 @@ export type LeaveEntry = {
   employeeId: string
   employeeName: string
   employeeNo: string
-  leaveType: LeaveTypeValue
+  leaveTypeId: string
+  leaveTypeName: string
   /** ISO `YYYY-MM-DD`, both ends inclusive. */
   startDate: string
   endDate: string
@@ -29,6 +25,8 @@ export type LeaveEntry = {
   /** When the leave was filed, as an ISO timestamp. */
   createdAt: string
 }
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 const UNDEFINED_TABLE = "42P01"
 /** An exclusion constraint refused the row — `leave_no_overlap`. */
@@ -43,6 +41,8 @@ const OVERLAP_HINT =
 function errorMessage(error: { code?: string; message: string }) {
   if (error.code === UNDEFINED_TABLE) return MIGRATION_HINT
   if (error.code === EXCLUSION_VIOLATION) return OVERLAP_HINT
+  // Anything else — going over a leave budget (0029 §3) among it — says in its
+  // own words what does not fit.
   return error.message
 }
 
@@ -54,18 +54,27 @@ export type LeaveResult = {
 
 /**
  * Leave across everyone, most recent spell first. Narrowed to one status when
- * given one — the list opens on Pending, which is the queue to work through.
+ * given one, and to whoever is off on `onDate` when given a day — "who is out
+ * tomorrow".
  */
-export async function listLeave(status?: LeaveStatusValue): Promise<LeaveResult> {
+export async function listLeave(
+  status?: LeaveStatusValue,
+  onDate?: string,
+): Promise<LeaveResult> {
   await requirePermission("leave.manage")
 
   const supabase = await createClient()
   let query = supabase
     .from("leave_requests")
-    .select("id, employee_id, leave_type, start_date, end_date, status, reason, created_at, employees(full_name, employee_no)")
+    .select(
+      "id, employee_id, leave_type_id, start_date, end_date, status, reason, created_at, employees(full_name, employee_no), leave_types(name)",
+    )
     .order("start_date", { ascending: false })
 
   if (status) query = query.eq("status", status)
+  if (onDate && ISO_DATE.test(onDate)) {
+    query = query.lte("start_date", onDate).gte("end_date", onDate)
+  }
 
   const { data, error } = await query
   if (error) return { ok: false, error: errorMessage(error), entries: [] }
@@ -80,6 +89,8 @@ export async function listLeave(status?: LeaveStatusValue): Promise<LeaveResult>
         | { full_name?: unknown; employee_no?: unknown }[]
         | null
       const employee = Array.isArray(joined) ? joined[0] : joined
+      const typeJoined = row.leave_types as { name?: unknown } | { name?: unknown }[] | null
+      const type = Array.isArray(typeJoined) ? typeJoined[0] : typeJoined
 
       return {
         id: row.id as string,
@@ -87,7 +98,8 @@ export async function listLeave(status?: LeaveStatusValue): Promise<LeaveResult>
         employeeName:
           typeof employee?.full_name === "string" ? employee.full_name : "Unknown employee",
         employeeNo: typeof employee?.employee_no === "string" ? employee.employee_no : "",
-        leaveType: row.leave_type as LeaveTypeValue,
+        leaveTypeId: row.leave_type_id as string,
+        leaveTypeName: typeof type?.name === "string" ? type.name : "Unknown type",
         startDate: row.start_date as string,
         endDate: row.end_date as string,
         status: row.status as LeaveStatusValue,
@@ -98,14 +110,12 @@ export async function listLeave(status?: LeaveStatusValue): Promise<LeaveResult>
   }
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
-
 export async function recordLeave(
   _prevState: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const employeeId = String(formData.get("employeeId") ?? "")
-  const leaveType = String(formData.get("leaveType") ?? "").trim()
+  const leaveTypeId = String(formData.get("leaveTypeId") ?? "").trim()
   const startDate = String(formData.get("startDate") ?? "").trim()
   const endDate = String(formData.get("endDate") ?? "").trim()
   const status = String(formData.get("status") ?? "").trim()
@@ -113,9 +123,7 @@ export async function recordLeave(
 
   const fieldErrors: Record<string, string> = {}
   if (!employeeId) fieldErrors.employeeId = "Choose an employee."
-  if (!LEAVE_TYPES.some((entry) => entry.value === leaveType)) {
-    fieldErrors.leaveType = "Choose a leave type."
-  }
+  if (!leaveTypeId) fieldErrors.leaveTypeId = "Choose a leave type."
   if (!ISO_DATE.test(startDate)) fieldErrors.startDate = "Pick a valid date."
   if (!ISO_DATE.test(endDate)) fieldErrors.endDate = "Pick a valid date."
   if (!fieldErrors.startDate && !fieldErrors.endDate && endDate < startDate) {
@@ -132,7 +140,7 @@ export async function recordLeave(
 
   const { error } = await supabase.from("leave_requests").insert({
     employee_id: employeeId,
-    leave_type: leaveType,
+    leave_type_id: leaveTypeId,
     start_date: startDate,
     end_date: endDate,
     status,
@@ -149,8 +157,9 @@ export async function recordLeave(
 export type RowResult = { ok: boolean; error?: string }
 
 /**
- * Approves or rejects a spell already on the record. Rejecting frees its days,
- * so the same dates can be asked for again.
+ * Approves or rejects a spell already on the record. Approving checks the
+ * budget again (0029 §3); rejecting frees its days, so the same dates can be
+ * asked for again and the budget gets them back.
  */
 export async function setLeaveStatus(id: string, status: LeaveStatusValue): Promise<RowResult> {
   if (!id) return { ok: false, error: "That leave is no longer on the record." }

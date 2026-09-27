@@ -2,13 +2,16 @@ import { compareKeys, direction, matchesTerm, oneOf, param } from "@/components/
 
 import type { LeaveEntry } from "./actions"
 import { DEFAULT_LEAVE_DIRECTION, DEFAULT_LEAVE_SORT, LEAVE_SORTS, type LeaveSortValue } from "./columns"
-import { LEAVE_TYPES, leaveDays, leaveStatusLabel, leaveTypeLabel } from "./constants"
+import { leaveDays, leaveStatusLabel } from "./constants"
 
 /** What the leave list is narrowed and ordered by, beyond its status. */
 export type LeaveQuery = {
   /** Matches an employee, a leave type or the reason given. */
   q: string
+  /** A leave type's id; empty shows every type. */
   leaveType: string
+  /** `YYYY-MM-DD`: only who is off that day. Narrowed in the database. */
+  on: string
   sort: string
   direction: string
 }
@@ -18,10 +21,8 @@ export function readLeaveQuery(
 ): LeaveQuery {
   return {
     q: param(params.q).trim(),
-    leaveType: oneOf(
-      params.leaveType,
-      LEAVE_TYPES.map((entry) => entry.value),
-    ),
+    leaveType: param(params.leaveType),
+    on: /^\d{4}-\d{2}-\d{2}$/.test(param(params.on)) ? param(params.on) : "",
     sort: oneOf(
       params.sort,
       LEAVE_SORTS.map((entry) => entry.value),
@@ -35,12 +36,12 @@ export function readLeaveQuery(
 export function applyLeaveQuery(entries: LeaveEntry[], query: LeaveQuery) {
   const term = query.q.toLowerCase()
   const matching = entries.filter((entry) => {
-    if (query.leaveType && entry.leaveType !== query.leaveType) return false
+    if (query.leaveType && entry.leaveTypeId !== query.leaveType) return false
     // Every field is searched, not just the ones on show.
     return matchesTerm(term, [
       entry.employeeName,
       entry.employeeNo,
-      leaveTypeLabel(entry.leaveType),
+      entry.leaveTypeName,
       leaveStatusLabel(entry.status),
       entry.reason,
     ])
@@ -54,7 +55,7 @@ export function applyLeaveQuery(entries: LeaveEntry[], query: LeaveQuery) {
       case "employee":
         return entry.employeeName
       case "leaveType":
-        return leaveTypeLabel(entry.leaveType)
+        return entry.leaveTypeName
       case "status":
         return leaveStatusLabel(entry.status)
       case "reason":

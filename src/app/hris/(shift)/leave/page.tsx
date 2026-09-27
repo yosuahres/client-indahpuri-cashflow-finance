@@ -8,6 +8,7 @@ import { listLeave } from "@/features/leave/actions"
 import { LeaveList } from "@/features/leave/components/leave-list"
 import { applyLeaveQuery, readLeaveQuery } from "@/features/leave/query"
 import { LEAVE_STATUSES, type LeaveStatusValue } from "@/features/leave/constants"
+import { listLeaveTypes } from "@/features/leave/type-actions"
 
 export const metadata: Metadata = {
   title: "Leave",
@@ -27,8 +28,9 @@ export default async function LeavePage({
     ? (asked as LeaveStatusValue)
     : undefined
 
-  const result = await listLeave(status)
   const query = readLeaveQuery(params)
+  const [result, types] = await Promise.all([listLeave(status, query.on), listLeaveTypes()])
+  const today = new Date().toISOString().slice(0, 10)
 
   return (
     <>
@@ -51,6 +53,8 @@ export default async function LeavePage({
           entries={applyLeaveQuery(result.entries, query)}
           status={status ?? ""}
           query={query}
+          types={types.types}
+          today={today}
           notice={result.ok ? undefined : result.error}
         />
       </main>
