@@ -24,6 +24,9 @@ const COLUMNS =
 /** One slice of a breakdown: a label, how many people, and its share of them. */
 export type Slice = { label: string; count: number; share: number }
 
+/** One age band split by gender, for the population pyramid. */
+export type AgeBand = { label: string; male: number; female: number }
+
 export type HrStats = {
   /** Everyone on file, whatever their status. */
   headcount: number
@@ -41,8 +44,9 @@ export type HrStats = {
   byStatus: Slice[]
   byGender: Slice[]
   byTenure: Slice[]
-  byAge: Slice[]
-  /** People taken on per calendar year, most recent first. */
+  /** Active people with both a date of birth and a gender on file, youngest band first. */
+  byAgeAndGender: AgeBand[]
+  /** People taken on per calendar year, oldest first, a year with no hires kept as zero. */
   byHireYear: Slice[]
 }
 
@@ -75,7 +79,7 @@ const EMPTY: HrStats = {
   byStatus: [],
   byGender: [],
   byTenure: [],
-  byAge: [],
+  byAgeAndGender: [],
   byHireYear: [],
 }
 
@@ -160,8 +164,9 @@ function summarize(rows: Row[], today: Date): HrStats {
 
   const tenures = new Map<string, number>(TENURE_BANDS.map((entry) => [entry.label, 0]))
   let tenureKnown = 0
-  const ages = new Map<string, number>(AGE_BANDS.map((entry) => [entry.label, 0]))
-  let ageKnown = 0
+  const ages = new Map<string, AgeBand>(
+    AGE_BANDS.map((entry) => [entry.label, { label: entry.label, male: 0, female: 0 }]),
+  )
 
   for (const row of active) {
     const tenure = yearsSince(row.join_date, today)
@@ -172,16 +177,18 @@ function summarize(rows: Row[], today: Date): HrStats {
     }
 
     const age = yearsSince(row.date_of_birth, today)
-    if (age !== null) {
-      const label = band(age, AGE_BANDS)
-      ages.set(label, (ages.get(label) ?? 0) + 1)
-      ageKnown += 1
-    }
+    const ageBand = age === null ? undefined : ages.get(band(age, AGE_BANDS))
+    if (ageBand && row.gender === "Male") ageBand.male += 1
+    if (ageBand && row.gender === "Female") ageBand.female += 1
   }
 
   // Everyone on file, not just the active ones: someone who has since left
   // was still a hire in the year they joined.
-  const hires = new Map<string, number>()
+  // Every year in the window starts at zero, so a year nobody joined still
+  // holds its place on the timeline.
+  const hires = new Map<string, number>(
+    Array.from({ length: HIRE_YEARS }, (_, index) => [String(year - HIRE_YEARS + 1 + index), 0]),
+  )
   let hiresKnown = 0
   for (const row of rows) {
     const joined = row.join_date?.slice(0, 4)
@@ -215,10 +222,8 @@ function summarize(rows: Row[], today: Date): HrStats {
     byGender: tally(active, ["Male", "Female"], (row) => row.gender),
     // Bands stay in order and keep their zeroes, so the scale reads as a scale.
     byTenure: toSlices(tenures, tenureKnown),
-    byAge: toSlices(ages, ageKnown),
-    // Newest year first, and a year nobody joined in is left out rather than
-    // drawn as an empty bar.
-    byHireYear: toSlices(hires, hiresKnown).sort((a, b) => b.label.localeCompare(a.label)),
+    byAgeAndGender: [...ages.values()],
+    byHireYear: toSlices(hires, hiresKnown),
   }
 }
 

@@ -6,10 +6,18 @@ import { Topbar } from "@/components/layout/topbar"
 import { CARD_ACTION_CLASS } from "@/components/ui/card"
 import { LoadingRegion, Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/features/auth/session"
+import { EMPLOYMENT_COLORS, GENDER_COLORS, STATUS_COLORS } from "@/features/employees/chart-colors"
 import { BreakdownList } from "@/features/employees/components/breakdown-list"
+import { AgePyramid } from "@/features/employees/components/charts/age-pyramid"
+import { ChartCard } from "@/features/employees/components/charts/chart-card"
+import { ColumnChart } from "@/features/employees/components/charts/column-chart"
+import { DonutChart } from "@/features/employees/components/charts/donut-chart"
+import { SegmentedBar } from "@/features/employees/components/charts/segmented-bar"
+import { TrendChart } from "@/features/employees/components/charts/trend-chart"
+import { WaffleChart } from "@/features/employees/components/charts/waffle-chart"
 import { StatTiles } from "@/features/employees/components/stat-tiles"
 import { loadHrStats } from "@/features/employees/dashboard"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, formatPercent } from "@/lib/format"
 
 export const metadata: Metadata = {
   title: "HR Dashboard",
@@ -101,42 +109,74 @@ async function HrFigures() {
           </h2>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <BreakdownList
+            <ChartCard
               title="By Employment Status"
               caption="Active people, per contract type"
-              slices={stats.byEmploymentType}
+              empty={stats.byEmploymentType.length === 0}
               emptyLabel="No active employees yet."
-            />
-            <BreakdownList
+            >
+              <DonutChart
+                slices={stats.byEmploymentType}
+                colors={EMPLOYMENT_COLORS}
+                label="Active people by contract type"
+                totalLabel="active"
+              />
+            </ChartCard>
+            <ChartCard
               title="By Status"
               caption="Everyone on file, active or not"
-              slices={stats.byStatus}
+              empty={stats.byStatus.length === 0}
               emptyLabel="No employees yet."
-            />
-            <BreakdownList
+            >
+              <SegmentedBar
+                slices={stats.byStatus}
+                colors={STATUS_COLORS}
+                headline={
+                  <>
+                    <span className="text-2xl font-semibold text-neutral-900 tabular-nums">
+                      {formatPercent(stats.headcount > 0 ? stats.active / stats.headcount : 0)}
+                    </span>{" "}
+                    of the {stats.headcount} on file are active
+                  </>
+                }
+              />
+            </ChartCard>
+            <ChartCard
               title="Length of Service"
               caption="Active people, counted from their date of joining"
-              slices={stats.byTenure}
+              empty={stats.byTenure.every((slice) => slice.count === 0)}
               emptyLabel="No joining dates on file yet."
-            />
-            <BreakdownList
+            >
+              <ColumnChart slices={stats.byTenure} label="Active people by length of service" />
+            </ChartCard>
+            <ChartCard
               title="Age"
-              caption="Active people, counted from their date of birth"
-              slices={stats.byAge}
+              caption="Active people with a date of birth and gender on file"
+              empty={stats.byAgeAndGender.every((band) => band.male + band.female === 0)}
               emptyLabel="No dates of birth on file yet."
-            />
-            <BreakdownList
+            >
+              <AgePyramid bands={stats.byAgeAndGender} />
+            </ChartCard>
+            <ChartCard
               title="Hiring by Year"
               caption="Everyone on file, by the year they joined"
-              slices={stats.byHireYear}
+              empty={stats.byHireYear.every((slice) => slice.count === 0)}
               emptyLabel="No joining dates on file yet."
-            />
-            <BreakdownList
+            >
+              <TrendChart slices={stats.byHireYear} label="People hired per year" />
+            </ChartCard>
+            <ChartCard
               title="Gender"
               caption="Active people who have it on file"
-              slices={stats.byGender}
+              empty={stats.byGender.length === 0}
               emptyLabel="No gender on file yet."
-            />
+            >
+              <WaffleChart
+                slices={stats.byGender}
+                colors={GENDER_COLORS}
+                label="Active people by gender"
+              />
+            </ChartCard>
           </div>
         </section>
       </div>
