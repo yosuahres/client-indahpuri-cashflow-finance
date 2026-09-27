@@ -2,12 +2,14 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react"
-import { SlidersHorizontal, X } from "lucide-react"
+import { Search, SlidersHorizontal, X } from "lucide-react"
 
 import { DatePicker } from "@/components/form/date-picker"
 import { CONTROL_SURFACE, Field, TextInput } from "@/components/form/fields"
 import { Select, type SelectOption } from "@/components/form/select"
 import { cn } from "@/lib/cn"
+
+import { TOOLBAR_BUTTON, TOOLBAR_SEARCH } from "./styles"
 
 /**
  * One control in the Filters panel. A field counts towards the button's badge
@@ -69,8 +71,14 @@ export function TableToolbar({
   searchLabel = "Search",
   filters,
   sort,
+  title,
   children,
 }: {
+  /**
+   * A heading for the list. With one, the toolbar sits above a boxed table:
+   * the title on the left, Filter and the search box on the right.
+   */
+  title?: string
   /** The term in the URL, or undefined on a table with nothing to search. */
   search?: string
   searchPlaceholder?: string
@@ -145,46 +153,84 @@ export function TableToolbar({
     return () => document.removeEventListener("keydown", onKeyDown)
   }, [open])
 
+  const filterButton = (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      aria-expanded={open}
+      className={TOOLBAR_BUTTON}
+    >
+      <SlidersHorizontal className="size-4 shrink-0" strokeWidth={1.75} />
+      {title ? "Filter" : "Filters"}
+      {applied > 0 ? (
+        <span className="grid size-5 place-items-center rounded-full bg-neutral-900 text-xs font-medium text-white">
+          {applied}
+        </span>
+      ) : null}
+    </button>
+  )
+
   return (
     <>
-      <div className={cn("px-4 py-3 sm:px-6 sm:py-4", pending && "opacity-60")}>
-        <div className="flex flex-wrap items-center gap-2">
-          {search !== undefined ? (
-            <div className="w-full min-w-0 sm:w-auto sm:max-w-xs sm:flex-1">
-              <label htmlFor="table-search" className="sr-only">
-                {searchLabel}
-              </label>
-              <input
-                id="table-search"
-                type="search"
-                value={term}
-                onChange={(event) => setTerm(event.target.value)}
-                placeholder={searchPlaceholder}
-                className={cn("h-9 sm:h-8", CONTROL_SURFACE)}
-              />
-            </div>
-          ) : null}
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              aria-expanded={open}
-              className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-black/10 px-3 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-800 sm:h-8"
-            >
-              <SlidersHorizontal className="size-4 shrink-0" strokeWidth={1.75} />
-              Filters
-              {applied > 0 ? (
-                <span className="grid size-5 place-items-center rounded-full bg-neutral-900 text-xs font-medium text-white">
-                  {applied}
-                </span>
-              ) : null}
-            </button>
-
+      {title ? (
+        <div
+          className={cn(
+            "mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+            pending && "opacity-60",
+          )}
+        >
+          <h2 className="text-lg font-semibold tracking-tight text-neutral-900">{title}</h2>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {filterButton}
             {children}
+            {search !== undefined ? (
+              <div className="relative min-w-0 flex-1 basis-full sm:w-72 sm:flex-none sm:basis-auto">
+                <label htmlFor="table-search" className="sr-only">
+                  {searchLabel}
+                </label>
+                <Search
+                  aria-hidden
+                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-neutral-400"
+                  strokeWidth={1.75}
+                />
+                <input
+                  id="table-search"
+                  type="search"
+                  value={term}
+                  onChange={(event) => setTerm(event.target.value)}
+                  placeholder={searchPlaceholder}
+                  className={TOOLBAR_SEARCH}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
-      </div>
+      ) : (
+        <div className={cn("px-4 py-3 sm:px-6 sm:py-4", pending && "opacity-60")}>
+          <div className="flex flex-wrap items-center gap-2">
+            {search !== undefined ? (
+              <div className="w-full min-w-0 sm:w-auto sm:max-w-xs sm:flex-1">
+                <label htmlFor="table-search" className="sr-only">
+                  {searchLabel}
+                </label>
+                <input
+                  id="table-search"
+                  type="search"
+                  value={term}
+                  onChange={(event) => setTerm(event.target.value)}
+                  placeholder={searchPlaceholder}
+                  className={cn("h-9 sm:h-8", CONTROL_SURFACE)}
+                />
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap items-center gap-2">
+              {filterButton}
+              {children}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Kept mounted so it can slide, and inert while closed so nothing
           inside it takes focus. */}

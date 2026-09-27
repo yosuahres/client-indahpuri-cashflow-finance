@@ -9,6 +9,7 @@ import { popoverContainer, usePopoverPosition } from "@/components/form/use-popo
 import { cn } from "@/lib/cn"
 
 import { reorderColumns, type TableColumn } from "./columns"
+import { TOOLBAR_BUTTON } from "./styles"
 
 const MENU_WIDTH = 264
 
@@ -97,7 +98,7 @@ export function ColumnMenu<Key extends string>({
           setOpen(true)
         }}
         className={cn(
-          "inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-black/10 px-3 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-800 sm:h-8",
+          TOOLBAR_BUTTON,
           open && "bg-neutral-100",
         )}
       >
