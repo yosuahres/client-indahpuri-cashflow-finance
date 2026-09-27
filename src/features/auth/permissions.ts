@@ -57,6 +57,11 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    key: "payroll",
+    label: "Payroll",
+    permissions: [{ key: "payroll.manage", label: "Run payroll and see everyone's pay" }],
+  },
+  {
     key: "users",
     label: "User management",
     permissions: [{ key: "users.manage", label: "Manage users, roles and permissions" }],
@@ -137,6 +142,8 @@ const ROUTES: { prefix: string; allowed: (permissions: readonly Permission[]) =>
   { prefix: "/hris/departments", allowed: (p) => can(p, "departments.manage") },
   { prefix: "/hris/attendance", allowed: (p) => can(p, "attendance.manage") },
   { prefix: "/hris/leave", allowed: (p) => can(p, "leave.manage") },
+  { prefix: "/hris/payroll", allowed: (p) => can(p, "payroll.manage") },
+  { prefix: "/hris/payslip", allowed: (p) => can(p, "payroll.manage") },
   { prefix: "/settings/account", allowed: () => true },
   { prefix: "/settings/audit-log", allowed: (p) => can(p, "audit.view") },
   { prefix: "/settings", allowed: (p) => can(p, "users.manage") },

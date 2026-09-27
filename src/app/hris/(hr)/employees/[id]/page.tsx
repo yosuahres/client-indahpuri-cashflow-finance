@@ -50,6 +50,7 @@ export default async function EmployeePage({
         preset={openOn(query, shifts.shifts)}
         today={today}
         shifts={shifts.shifts}
+        tab={typeof query.tab === "string" ? query.tab : undefined}
       />
     </div>
   )

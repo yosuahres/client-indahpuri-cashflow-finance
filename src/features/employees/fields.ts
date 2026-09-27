@@ -119,7 +119,15 @@ export const EMPLOYEE_TABS: EmployeeTab[] = [
       {
         title: "Salary",
         fields: [
-          { name: "basicSalary", column: "basic_salary", label: "Basic Salary", type: "money", hint: "Per month." },
+          { name: "basicSalary", column: "basic_salary", label: "Basic Salary", type: "money", hint: "Per month. Daily workers are paid their daily rate instead." },
+          {
+            name: "dailyRate",
+            column: "daily_rate",
+            label: "Daily Rate",
+            type: "money",
+            showWhen: { field: "employmentType", equals: "daily_worker" },
+            hint: "Paid for each day marked present or late.",
+          },
           { name: "fixedAllowance", column: "fixed_allowance", label: "Fixed Allowance", type: "money", hint: "Per month." },
           { name: "bankAccountNo", column: "bank_account_no", label: "Bank Account No.", type: "text" },
         ],
@@ -136,8 +144,8 @@ export const EMPLOYEE_TABS: EmployeeTab[] = [
             options: choices("TK", "TK/0", "TK/1", "TK/2", "TK/3", "K/0", "K/1", "K/2", "K/3"),
             hint: "Decides the non-taxable income for PPh 21.",
           },
-          { name: "bpjsKesehatan", column: "bpjs_kesehatan", label: "BPJS Kesehatan No.", type: "text" },
-          { name: "bpjsKetenagakerjaan", column: "bpjs_ketenagakerjaan", label: "BPJS Ketenagakerjaan No.", type: "text" },
+          { name: "bpjsKesehatan", column: "bpjs_kesehatan", label: "BPJS Kesehatan No.", type: "text", hint: "With a number, payroll deducts BPJS Kesehatan." },
+          { name: "bpjsKetenagakerjaan", column: "bpjs_ketenagakerjaan", label: "BPJS Ketenagakerjaan No.", type: "text", hint: "With a number, payroll deducts JHT and JP." },
         ],
       },
     ],

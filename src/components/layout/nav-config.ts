@@ -1,4 +1,5 @@
 import {
+  Banknote,
   CalendarCheck,
   CircleUserRound,
   KeyRound,
@@ -126,6 +127,22 @@ const SHIFT_NAV: ModuleNav = {
   ],
 }
 
+/** Payroll keeps its own sidebar inside HRIS: whoever runs pay each month works here. */
+const PAYROLL_NAV: ModuleNav = {
+  links: [
+    { label: "Dashboard", href: "/hris/payroll/dashboard", icon: LayoutDashboard },
+    { label: "Payroll", href: "/hris/payroll", icon: Banknote },
+  ],
+  groups: [
+    {
+      label: "Setup",
+      icon: Settings2,
+      defaultOpen: true,
+      items: [{ label: "Payroll Settings", href: "/hris/payroll/settings" }],
+    },
+  ],
+}
+
 /** Your own account, and for managers the team's. Not an app of its own, so not in the switcher. */
 const SETTINGS_NAV: ModuleNav = {
   links: [],
@@ -154,6 +171,7 @@ const NAV: Record<SidebarArea, ModuleNav> = {
   finance: FINANCE_NAV,
   hris: HRIS_NAV,
   shift: SHIFT_NAV,
+  payroll: PAYROLL_NAV,
   settings: SETTINGS_NAV,
 }
 

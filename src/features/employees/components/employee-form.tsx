@@ -51,6 +51,7 @@ export function EmployeeForm({
   departments,
   preset = {},
   shifts = [],
+  tab,
 }: {
   today: string
   /** Given when opening an existing employee; the form starts on their details. */
@@ -61,6 +62,8 @@ export function EmployeeForm({
   preset?: Record<string, string>
   /** The shifts set up under Shift & Attendance, for the dropdown. */
   shifts?: Shift[]
+  /** The tab to open on — Payroll sends people straight to Salary. */
+  tab?: string
 }) {
   const [state, formAction, pending] = useActionState(
     employee ? updateEmployee : createEmployee,
@@ -69,7 +72,9 @@ export function EmployeeForm({
   const errors = state.fieldErrors ?? {}
   useActionToast(state)
 
-  const [activeTab, setActiveTab] = useState(EMPLOYEE_TABS[0].key)
+  const [activeTab, setActiveTab] = useState(
+    EMPLOYEE_TABS.some((entry) => entry.key === tab) ? tab! : EMPLOYEE_TABS[0].key,
+  )
 
   const initialFor = (field: EmployeeField) =>
     preset[field.name] ??

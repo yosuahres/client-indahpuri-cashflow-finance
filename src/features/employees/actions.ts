@@ -42,7 +42,7 @@ const MIGRATION_HINT =
   "The employees table does not exist yet. Run supabase/migrations/0017_employees.sql against the project."
 
 const DETAILS_MIGRATION_HINT =
-  "Some employee columns do not exist yet. Run supabase/migrations/0018_employee_details.sql, 0019_employee_photos.sql and 0023_employee_data_fields.sql against the project."
+  "Some employee columns do not exist yet. Run supabase/migrations/0018_employee_details.sql, 0019_employee_photos.sql, 0023_employee_data_fields.sql and 0032_payroll.sql against the project."
 
 function errorMessage(error: { code?: string; message: string }) {
   if (error.code === UNDEFINED_TABLE) return MIGRATION_HINT

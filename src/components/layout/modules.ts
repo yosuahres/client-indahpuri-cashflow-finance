@@ -6,7 +6,7 @@ export type ModuleKey = "finance" | "hris"
  * An area inside a module that runs its own sidebar, so opening it feels like
  * opening an app of its own rather than a page inside another one.
  */
-export type AreaKey = "shift"
+export type AreaKey = "shift" | "payroll"
 
 /** One area inside a module, shown in its panel on the home launcher. */
 export type ModuleArea = {
@@ -43,7 +43,7 @@ export const MODULES: AppModule[] = [
     href: "/hris/dashboard",
     areas: [
       { name: "HR Setup", icon: UserCog, href: "/hris/dashboard" },
-      { name: "Payroll", icon: Banknote, href: null },
+      { name: "Payroll", icon: Banknote, href: "/hris/payroll/dashboard", area: "payroll" },
       {
         name: "Shift & Attendance",
         icon: CalendarClock,

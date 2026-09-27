@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useState, useTransition } from "react"
 import {
+  Banknote,
   CalendarClock,
   Check,
   ReceiptText,
@@ -34,6 +35,7 @@ const GROUP_ICONS: Record<PermissionGroupKey, LucideIcon> = {
   setup: Settings2,
   hris: UsersRound,
   shift: CalendarClock,
+  payroll: Banknote,
   users: UserCog,
   audit: ScrollText,
 }
